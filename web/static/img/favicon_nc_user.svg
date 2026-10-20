@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="14" fill="#0891B2"/>
+  <!-- Cloud shape (upper portion - same as NC Admin for family consistency) -->
+  <g fill="white">
+    <circle cx="22" cy="26" r="7"/>
+    <circle cx="32" cy="20" r="9"/>
+    <circle cx="42" cy="26" r="7"/>
+    <rect x="22" y="26" width="20" height="7"/>
+  </g>
+  <!-- User silhouette (lower portion) -->
+  <circle cx="32" cy="43" r="6" fill="white" stroke="#0891B2" stroke-width="1.5"/>
+  <path d="M 20 58 C 20 48 44 48 44 58 Z" fill="white" stroke="#0891B2" stroke-width="1.5"/>
+</svg>

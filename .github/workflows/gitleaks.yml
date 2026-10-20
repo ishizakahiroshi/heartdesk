@@ -1,0 +1,30 @@
+name: gitleaks
+
+# 秘密（トークン・鍵・パスワードの形の文字列）が入った commit を、push のときに gitleaks で見つける。
+# 手元の commit の検査（hook）を通らない commit（GitHub の上で作られたもの・ほかの人の PC から来たもの）を見るために置く。
+# 2026-10-21 追加。既知の見本の値の例外はリポの .gitleaks.toml（ファイルと値の両方が合うときだけ許す）に書く。
+# 個人アカウントのリポなので gitleaks のライセンスキーは要らない。
+# pull_request では起動しない。PR の commit は branch への push の時点で同じ検査を通っている。
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@dcedce43c6f43de0b836d1fe38946645c9c638dc # v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: false
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: false

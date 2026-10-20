@@ -1,0 +1,92 @@
+{{define "settings_2fa"}}<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2FA設定</title>
+<link rel="stylesheet" href="{{.StaticBase}}/css/shared.css?v={{.AssetVersion}}">
+<style>
+body { margin: 0; background: #0f1117; color: #e6edf3; }
+.wrap { max-width: 880px; margin: 24px auto; padding: 0 16px; }
+.card { background: #151a23; border: 1px solid #293142; border-radius: 12px; padding: 18px; margin-bottom: 12px; }
+h1 { font-size: 1.2rem; margin: 0 0 14px; }
+h2 { font-size: 1rem; margin: 0 0 10px; color: #bdd6ff; }
+.note { font-size: 0.82rem; color: #9eb0d4; margin-top: 6px; }
+.secret { font-family: Consolas, "Courier New", monospace; font-size: 0.9rem; background: #0d131d; border: 1px solid #2f3d55; border-radius: 8px; padding: 10px; word-break: break-all; }
+.uri { font-family: Consolas, "Courier New", monospace; font-size: 0.78rem; color: #8cb2ff; word-break: break-all; }
+label { display: block; margin: 10px 0 6px; color: #9eb0d4; font-size: 0.86rem; }
+input[type="text"] { width: 100%; height: 38px; border-radius: 8px; border: 1px solid #33425d; background: #0e1420; color: #e6edf3; padding: 0 10px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+button, .link-btn { border: none; border-radius: 8px; height: 36px; padding: 0 14px; background: #2b82ff; color: #fff; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; }
+button.warn { background: #e67e22; }
+button.sec { background: #3b4556; }
+.link-btn { background: #3b4556; }
+.msg { margin-bottom: 10px; padding: 8px 10px; border-radius: 7px; font-size: 0.88rem; }
+.msg.ok { background: #173521; border: 1px solid #2f8f4e; color: #a8edbc; }
+.msg.err { background: #3a1f26; border: 1px solid #8f3e4a; color: #ffbdc8; }
+.status { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 10px; font-size: 0.8rem; font-weight: 600; }
+.status.on { background: #173521; color: #a8edbc; border: 1px solid #2f8f4e; }
+.status.off { background: #3a2830; color: #ffc7d0; border: 1px solid #8f3e4a; }
+.nav { margin-bottom: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+	<div class="nav">
+		<a class="link-btn" href="{{.BackURL}}">Monitorへ戻る</a>
+		<a class="link-btn" href="{{.SettingsPasswordPath}}">パスワード変更</a>
+	</div>
+
+	<div class="card">
+		<h1>2FA設定（{{.CurrentUser}}）</h1>
+		{{if .Message}}<div class="msg ok">{{.Message}}</div>{{end}}
+		{{if .Error}}<div class="msg err">{{.Error}}</div>{{end}}
+		<div>状態:
+			{{if .Enabled}}
+				<span class="status on">有効</span>
+			{{else}}
+				<span class="status off">無効</span>
+			{{end}}
+		</div>
+		<div class="note">2FA設定は現在メモリ保持です。サービス再起動でリセットされます。</div>
+	</div>
+
+	<div class="card">
+		<h2>1. 秘密鍵の生成</h2>
+		<form method="post" action="{{.Path}}">
+			<input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+			<input type="hidden" name="action" value="generate">
+			<div class="row">
+				<button type="submit">秘密鍵を生成する</button>
+			</div>
+		</form>
+		{{if .Secret}}
+		<div class="note">秘密鍵</div>
+		<div class="secret">{{.Secret}}</div>
+		<div class="note">Authenticatorアプリで手動入力、または URI を使用してください。</div>
+		<div class="uri">{{.ProvisioningURI}}</div>
+		{{end}}
+	</div>
+
+	<div class="card">
+		<h2>2. 2FA有効化 / 無効化</h2>
+		<form method="post" action="{{.Path}}">
+			<input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+			<input type="hidden" name="action" value="enable">
+			<label for="totp_code">6桁コード</label>
+			<input id="totp_code" type="text" name="totp_code" maxlength="6" pattern="[0-9]{6}" inputmode="numeric" required autocomplete="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true">
+			<div class="row">
+				<button type="submit">2FAを有効化</button>
+			</div>
+		</form>
+		<form method="post" action="{{.Path}}">
+			<input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+			<input type="hidden" name="action" value="disable">
+			<div class="row">
+				<button type="submit" class="warn">2FAを無効化</button>
+			</div>
+		</form>
+	</div>
+</div>
+</body>
+</html>{{end}}

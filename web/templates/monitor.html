@@ -1,0 +1,220 @@
+{{define "monitor"}}{{template "layout" .}}{{end}}
+
+{{define "header_links"}}
+{{end}}
+
+{{define "header_icons"}}
+{{range .HeaderLinks}}
+{{if or .IsAction (not .NewTab)}}
+<a class="header-link" href="{{.Href}}" title="{{.Title}}" aria-label="{{.Title}}">
+{{else}}
+<a class="header-link" href="{{.Href}}" target="_blank" title="{{.Title}}" aria-label="{{.Title}}" rel="noopener">
+{{end}}
+{{if eq .IconType "svg"}}<img src="{{.IconSrc}}" alt="{{.Title}}" width="22" height="22">
+{{else if eq .IconType "url"}}<img src="{{.IconSrc}}" alt="{{.Title}}" width="22" height="22">
+{{else if eq .IconType "emoji"}}{{.IconEmoji}}
+{{end}}
+</a>
+{{end}}
+{{end}}
+
+{{define "card-item"}}
+<section id="{{.ID}}" class="card"
+         data-card-id="{{.ID}}"
+         data-card-count-mode="{{if .CountMode}}{{.CountMode}}{{else}}none{{end}}"
+         data-card-default-limit="{{.DefaultLimit}}"
+         data-card-slot-id="{{if .SlotID}}{{.SlotID}}{{else}}{{.ID}}-count-btn{{end}}"
+         {{if .NoRefresh}}data-card-no-refresh="1"{{end}}
+         {{if .HasFilter}}data-card-filter="1"{{end}}>
+	<div class="card-header section-toggle" data-target="{{.ID}}">
+		<h2>{{if .ParentGroup}}<span class="card-parent-group">{{.ParentGroup}}</span>{{end}}{{.Label}}</h2>
+		<div class="card-header-actions">
+			<span id="{{.ID}}-filter-ui" data-header-order="5"></span>
+			{{range .Exports}}<a href="?export={{.}}" class="export-btn" data-header-order="30" title="ダウンロード" aria-label="ダウンロード"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><polyline points="7 11 12 16 17 11"/><path d="M5 21h14"/></svg></a>{{end}}
+		</div>
+	</div>
+	<div id="{{.ID}}-content" class="card-body async-content">
+		<p class="section-loading">読み込み中...</p>
+	</div>
+</section>
+{{end}}
+
+{{define "card-sec-resource-graph"}}
+<section id="sec-resource-graph" class="card"
+         data-card-id="sec-resource-graph"
+         data-card-count-mode="none"
+         data-card-default-limit="0"
+         data-card-slot-id="sec-resource-graph-count-btn">
+	<div class="card-header section-toggle" data-target="sec-resource-graph">
+		<h2>{{cardLabel "sec-resource-graph"}}</h2>
+		<div class="card-header-actions"></div>
+	</div>
+	<div class="card-body" id="rg-body">
+		<p class="section-loading">読み込み中...</p>
+	</div>
+</section>
+{{end}}
+
+{{define "modals"}}
+<!-- Nginx URL 詳細モーダル -->
+<div id="nginx-url-modal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="nginx-url-title">
+	<div class="modal-content modal-content-wide">
+		<div class="modal-header">
+			<h3 id="nginx-url-title">URL詳細</h3>
+			<div class="modal-header-actions">
+				<button type="button" class="modal-close" onclick="closeNginxUrlModal()" aria-label="閉じる">&times;</button>
+			</div>
+		</div>
+		<div class="modal-body" id="nginx-url-body"></div>
+	</div>
+</div>
+<script>
+document.addEventListener('click', function(ev) {
+	if (ev.target && ev.target.id === 'nginx-url-modal') closeNginxUrlModal();
+});
+</script>
+<!-- HP Heatmap Detail Modal -->
+<div id="hp-hm-detail-modal" class="modal-overlay" style="display:none;">
+	<div class="modal-content modal-content-wide">
+		<div class="modal-header">
+			<h3 id="hp-hm-detail-title">ハニーポットヒートマップ詳細</h3>
+			<div class="modal-header-actions">
+				<button type="button" class="modal-close" onclick="closeHpHeatmapModal()">&times;</button>
+			</div>
+		</div>
+		<div id="hp-hm-detail-body" class="modal-body">
+			<p class="section-loading">読み込み中...</p>
+		</div>
+	</div>
+</div>
+<script>
+document.addEventListener('click', function(ev) {
+	if (ev.target && ev.target.id === 'hp-hm-detail-modal') closeHpHeatmapModal();
+});
+</script>
+<!-- BAN Heatmap Detail Modal -->
+<div id="hm-detail-modal" class="modal-overlay" style="display:none;">
+	<div class="modal-content modal-content-wide">
+		<div class="modal-header">
+			<h3 id="hm-detail-title">BANヒートマップ詳細</h3>
+			<div class="modal-header-actions">
+				<button type="button" class="modal-close" onclick="closeBanHeatmapModal()">&times;</button>
+			</div>
+		</div>
+		<div id="hm-detail-body" class="modal-body">
+			<p class="section-loading">読み込み中...</p>
+		</div>
+	</div>
+</div>
+<script>
+// モーダルの背景クリックで閉じる
+document.addEventListener('click', function(ev) {
+	if (ev.target && ev.target.id === 'hm-detail-modal') closeBanHeatmapModal();
+});
+</script>
+<!-- fail2ban BAN履歴モーダル -->
+<div id="ban-history-modal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="ban-history-title">
+	<div class="modal-content modal-content-wide">
+		<div class="modal-header">
+			<h3 id="ban-history-title">BAN履歴</h3>
+			<div class="modal-header-actions">
+				<button type="button" class="modal-download-btn" id="ban-history-download" title="ダウンロード" aria-label="ダウンロード"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><polyline points="7 11 12 16 17 11"/><path d="M5 21h14"/></svg></button>
+				<button type="button" class="modal-close" onclick="closeBanHistoryModal()" aria-label="閉じる">&times;</button>
+			</div>
+		</div>
+		<div id="ban-history-body" class="modal-body">
+			<p class="section-loading">読み込み中...</p>
+		</div>
+	</div>
+</div>
+<!-- fail2ban jail BAN詳細モーダル -->
+<div id="jail-detail-modal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="jail-modal-title">
+	<div class="modal-content">
+		<div class="modal-header">
+			<h3 id="jail-modal-title">Jail詳細</h3>
+			<div class="modal-header-actions">
+				<button type="button" class="modal-download-btn" id="jail-modal-download" title="ダウンロード" aria-label="ダウンロード"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><polyline points="7 11 12 16 17 11"/><path d="M5 21h14"/></svg></button>
+				<button type="button" class="modal-close" onclick="closeJailModal()" aria-label="閉じる">&times;</button>
+			</div>
+		</div>
+		<div id="jail-modal-body" class="modal-body">
+			<p class="section-loading">読み込み中...</p>
+		</div>
+	</div>
+</div>
+<script>
+document.addEventListener('click', function(ev) {
+	if (ev.target && ev.target.id === 'ban-history-modal') closeBanHistoryModal();
+	if (ev.target && ev.target.id === 'jail-detail-modal') closeJailModal();
+});
+document.addEventListener('keydown', function(e) {
+	if (e.key === 'Escape') { closeBanHistoryModal(); closeJailModal(); }
+});
+</script>
+<!-- IP 詳細モーダル -->
+<div id="ip-search-modal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-ip-title">
+	<div class="modal-content modal-content-wide">
+		<div class="modal-header">
+			<h3 id="modal-ip-title">IP検索</h3>
+			<div class="modal-header-actions">
+				<button type="button" class="modal-close" onclick="closeIpModal()" aria-label="閉じる">&times;</button>
+			</div>
+		</div>
+		<div id="modal-ip-body" class="modal-body">
+			<p class="section-loading">読み込み中...</p>
+		</div>
+	</div>
+</div>
+<script>
+document.addEventListener('click', function(ev) {
+	if (ev.target && ev.target.id === 'ip-search-modal') closeIpModal();
+});
+</script>
+{{end}}
+
+{{define "card-sec-storage-forecast"}}
+<section id="sec-storage-forecast" class="card"
+         data-card-id="sec-storage-forecast"
+         data-card-count-mode="none"
+         data-card-default-limit="0"
+         data-card-slot-id="sec-storage-forecast-count-btn">
+	<div class="card-header section-toggle" data-target="sec-storage-forecast">
+		<h2>{{cardLabel "sec-storage-forecast"}}</h2>
+		<div class="card-header-actions"></div>
+	</div>
+	<div class="card-body">
+		{{if not .HasData}}
+		<p class="empty">データ収集中...5分ごとに記録されます</p>
+		{{else}}
+		<div class="stats-grid stats-grid-child">
+			<div class="stat-box">
+				<span class="stat-label">現在の使用率</span>
+				<span class="stat-value">{{printf "%.1f" .Current}}%</span>
+			</div>
+			<div class="stat-box">
+				<span class="stat-label">増加率（平均）</span>
+				<span class="stat-value">{{.SlopeLabel}}</span>
+			</div>
+			<div class="stat-box">
+				<span class="stat-label">90%到達予測</span>
+				<span class="stat-value">{{.ETA90Label}}</span>
+			</div>
+			<div class="stat-box">
+				<span class="stat-label">95%到達予測</span>
+				<span class="stat-value">{{.ETA95Label}}</span>
+			</div>
+		</div>
+		<div class="forecast-meta">
+			<span class="result-badge {{.StatusClass}}">{{.StatusLabel}}</span>
+			<span class="forecast-meta-text">対象期間: {{printf "%.1f" .WindowDays}}日 / サンプル {{.Samples}}件</span>
+		</div>
+		{{end}}
+	</div>
+</section>
+{{end}}
+
+{{/* ==========================================================================
+   server-detail — サーバー詳細画面（?view=server_detail&agent=<agent_id>）
+   ServerDetailPageData を受け取り、layout テンプレートを継承する。
+   ========================================================================== */}}
+{{define "server-detail"}}{{template "layout" .}}{{end}}

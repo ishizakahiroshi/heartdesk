@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+# pre-commit: 秘密の検査と CLAUDE.md の検査（core.hooksPath = .githooks）
+# 有効化: bash scripts/install-hooks.sh  または  pwsh scripts/install-hooks.ps1
+#
+# 検査を足すときは必ず `|| exit 1` を付ける。付けずに 2 本目を並べると hook の
+# 終了コードが「最後のコマンドの結果」になり、前段の BLOCKED が握り潰される。
+
+# 1. gitleaks: この commit で足した分（ステージした変更）の秘密の形を見る。値は --redact で伏せる。
+#    既知の見本の値の例外は .gitleaks.toml。gitleaks が無い端末では警告だけ出して次へ進む。
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks git --pre-commit --staged --redact --no-banner --verbose || exit 1
+else
+  echo "pre-commit: gitleaks が見つからないので秘密の検査（gitleaks）を飛ばしました（Windows なら scoop install gitleaks）" >&2
+fi
+
+# 2. 固有名詞・私的パスなどの検査（scripts/secrets-scan.mjs）
+node scripts/secrets-scan.mjs --staged --block || exit 1
+
+# 3. CLAUDE.md の肥大の検査
+node scripts/check-claude-md.mjs || exit 1

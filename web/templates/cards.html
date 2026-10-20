@@ -1,0 +1,1034 @@
+{{/* ==========================================================================
+   cards.html — 各カードの HTML テンプレート定義
+   handler.go の renderCard() から ExecuteTemplate で呼ばれる。
+   各 define の名前 = "card-<sectionID>" 形式。
+   ========================================================================== */}}
+
+{{/* -------------------------------------------------------------------------
+   C5: updates — システムアップデート
+   データ型: UpdatesData
+   ------------------------------------------------------------------------- */}}
+{{define "card-sec-updates"}}
+<section id="sec-updates" class="card"
+         data-card-id="sec-updates"
+         data-card-count-mode="none"
+         data-card-default-limit="0"
+         data-card-slot-id="sec-updates-count-btn">
+	<div class="card-header section-toggle" data-target="sec-updates">
+		<h2>{{cardLabel "sec-updates"}}</h2>
+		<div class="card-header-actions"></div>
+	</div>
+	<div class="card-body">
+		<div class="svc-grid">
+			{{if .UbuntuVer}}
+			<div class="svc-box svc-ok">
+				<div class="svc-row"><span class="svc-dot"></span><span class="svc-name">OS</span></div>
+				<span class="svc-st">{{.UbuntuVer}}</span>
+			</div>
+			{{end}}
+			{{if not .Unavailable}}
+			<div class="svc-box {{if .AutoEnabled}}svc-ok{{else}}svc-down{{end}}"
+				title="セキュリティ更新のみ自動適用。通常パッケージは手動で apt-get upgrade が必要">
+				<div class="svc-row"><span class="svc-dot"></span><span class="svc-name">自動更新</span></div>
+				<span class="svc-st">{{if .AutoEnabled}}有効{{else}}無効{{end}}</span>
+			</div>
+			<div class="svc-box">
+				<div class="svc-row">
+				{{if gt .UpdateCount 0}}
+				<span class="svc-dot" style="background:#ff9800;box-shadow:0 0 6px #ff9800;"></span>
+				{{else}}
+				<span class="svc-dot" style="background:#4caf50;box-shadow:0 0 6px #4caf50;"></span>
+				{{end}}
+				<span class="svc-name">利用可能な更新</span>
+				</div>
+				<span class="svc-st {{if gt .UpdateCount 0}}warning{{else}}ok{{end}}">{{.UpdateCount}} パッケージ</span>
+			</div>
+			<div class="svc-box" title="apt-get update が最後に成功した時刻（/var/lib/apt/periodic/update-success-stamp）">
+				<div class="svc-row"><span class="svc-dot" style="background:#4caf50;box-shadow:0 0 6px #4caf50;"></span><span class="svc-name">最終リスト更新</span></div>
+				<span class="svc-st">{{if .UpdateListLast}}{{.UpdateListLast}}{{else}}-{{end}}</span>
+			</div>
+			<div class="svc-box" title="最後に apt install / upgrade を実行した時刻（/var/log/apt/history.log）">
+				<div class="svc-row"><span class="svc-dot" style="background:#4caf50;box-shadow:0 0 6px #4caf50;"></span><span class="svc-name">最終インストール</span></div>
+				<span class="svc-st">{{if .UpdateLast}}{{.UpdateLast}}{{else}}-{{end}}</span>
+			</div>
+			{{end}}
+			{{if .KernelCurrent}}
+			<div class="svc-box {{if .KernelOutdated}}svc-down{{else}}svc-ok{{end}}">
+				<div class="svc-row"><span class="svc-dot"></span><span class="svc-name">カーネル</span></div>
+				<span class="svc-st">{{.KernelCurrent}}{{if and (not .Unavailable) (not .KernelOutdated)}} (最新){{end}}</span>
+			</div>
+			{{if and (not .Unavailable) .KernelOutdated}}
+			<div class="svc-box svc-ok">
+				<div class="svc-row"><span class="svc-dot"></span><span class="svc-name">最新カーネル</span></div>
+				<span class="svc-st">{{.KernelLatest}}</span>
+			</div>
+			{{end}}
+			{{end}}
+			{{if not .Unavailable}}
+			<div class="svc-box {{if gt .HeldCount 0}}svc-warn{{else}}svc-ok{{end}}"
+				title="apt-mark hold で明示的に更新を保留されたパッケージ">
+				<div class="svc-row"><span class="svc-dot"></span><span class="svc-name">保留パッケージ</span></div>
+				<span class="svc-st">{{.HeldCount}} 件</span>
+			</div>
+			{{end}}
+		</div>
+		{{if and (not .Unavailable) .IsLocal}}
+		<div class="kernel-section">
+			<div class="command-cards-grid">
+				<div class="command-card command-card--apt-update-lists">
+					<button type="button" class="btn-success"
+						title="パッケージリストを最新化するだけ。インストールは行わない。upgrade の前に必ず実行する"
+						onclick="updatesAction('apt_update', this, 'パッケージリストを更新します（apt-get update）。よろしいですか？')">apt-get update</button>
+				</div>
+				<div class="command-card command-card--apt-upgrade">
+					<button type="button" class="btn-success"
+						title="現在インストール済みのパッケージを安全に更新。新規パッケージの追加や既存パッケージの削除は行わない"
+						onclick="updatesAction('apt_upgrade', this, 'apt-get upgrade をバックグラウンドで実行しますか？\n\n※ 新規パッケージの追加・既存パッケージの削除を伴う更新は保留されます。')">apt-get upgrade</button>
+				</div>
+				<div class="command-card command-card--apt-fullupgrade">
+					<button type="button" class="btn-success"
+						title="依存関係を解決しながら全パッケージを更新。必要に応じて新規追加や削除も行う。upgrade より積極的"
+						onclick="updatesAction('apt_full_upgrade', this, '⚠ apt-get full-upgrade を実行しますか？\n\n依存関係解決のため新規パッケージの追加・既存パッケージの削除が発生する可能性があります。')">apt-get full-upgrade</button>
+				</div>
+				<div class="command-card command-card--auto-update">
+					{{if .AutoEnabled}}
+					<button type="button" class="btn-warning"
+						onclick="updatesAction('toggle_auto_update', this, '自動更新を無効にしますか？', 'mode=disable')">自動更新を無効にする</button>
+					{{else}}
+					<button type="button" class="btn-warning"
+						onclick="updatesAction('toggle_auto_update', this, '自動更新を有効にしますか？', 'mode=enable')">自動更新を有効にする</button>
+					{{end}}
+				</div>
+			</div>
+		</div>
+		{{end}}
+		{{if .UpdateList}}
+		<details style="margin-top:12px;">
+			<summary class="details-summary-meta warning" style="cursor:pointer;">
+				更新可能なパッケージ ({{.UpdateCount}}件)
+			</summary>
+			<pre class="pre-output-mini" style="margin-top:6px; max-height:200px; overflow-y:auto;">{{range .UpdateList}}{{.}}
+{{end}}</pre>
+		</details>
+		{{end}}
+		{{if .UpdateLog}}
+		<details style="margin-top:8px;">
+			<summary class="details-summary-meta" style="cursor:pointer;">自動更新ログ (直近)</summary>
+			<pre class="pre-output-mini details-pre-meta" style="margin-top:6px; max-height:200px; overflow-y:auto;">{{.UpdateLog}}</pre>
+		</details>
+		{{end}}
+		{{if .HeldPackages}}
+		<details style="margin-top:8px;">
+			<summary class="details-summary-meta warning" style="cursor:pointer;">
+				保留パッケージ一覧 ({{.HeldCount}}件)
+			</summary>
+			<pre class="pre-output-mini" style="margin-top:6px; max-height:120px; overflow-y:auto;">{{range .HeldPackages}}{{.}}
+{{end}}</pre>
+		</details>
+		{{end}}
+	</div>
+</section>
+{{end}}
+
+{{/* -------------------------------------------------------------------------
+   C5: realtime_monitor — リアルタイムモニター（静的HTML、データはJSポーリング）
+   データ型: nil (データなし)
+   ------------------------------------------------------------------------- */}}
+{{define "card-sec-realtime-monitor"}}
+<section id="sec-realtime-monitor" class="card"
+         data-card-id="sec-realtime-monitor"
+         data-card-count-mode="none"
+         data-card-default-limit="0"
+         data-card-slot-id="sec-realtime-monitor-count-btn"
+         data-card-no-refresh="1">
+	<div class="card-header section-toggle" data-target="sec-realtime-monitor">
+		<h2>{{cardLabel "sec-realtime-monitor"}}</h2>
+		<div class="card-header-actions">
+			<span class="stat-sub" id="rtm-status" data-header-order="50">停止中</span>
+			<button type="button" id="rtm-toggle" class="btn-primary btn-sm" data-header-order="10" onclick="toggleRealtimeMonitor()">開始</button>
+		</div>
+	</div>
+	<div class="card-body">
+	<div class="rtm-grid">
+		<div class="rtm-panel">
+			<div class="rtm-panel-header">
+				<span class="rtm-panel-title">CPU</span>
+				<span class="rtm-panel-value" id="rtm-cpu-val">-- %</span>
+			</div>
+			<canvas id="rtm-cpu-canvas"></canvas>
+			<div class="rtm-panel-sub" id="rtm-load-val">負荷: -- / -- / --</div>
+		</div>
+		<div class="rtm-panel">
+			<div class="rtm-panel-header">
+				<span class="rtm-panel-title">メモリ</span>
+				<span class="rtm-panel-value" id="rtm-mem-val">-- %</span>
+			</div>
+			<canvas id="rtm-mem-canvas"></canvas>
+			<div class="rtm-panel-sub" id="rtm-mem-detail">-- / --</div>
+		</div>
+		<div class="rtm-panel">
+			<div class="rtm-panel-header">
+				<span class="rtm-panel-title">SWAP</span>
+				<span class="rtm-panel-value" id="rtm-swap-val">-- %</span>
+			</div>
+			<canvas id="rtm-swap-canvas"></canvas>
+			<div class="rtm-panel-sub" id="rtm-swap-detail">-- / --</div>
+		</div>
+		<div class="rtm-panel">
+			<div class="rtm-panel-header">
+				<span class="rtm-panel-title">ディスク</span>
+				<span class="rtm-panel-value" id="rtm-disk-val">-- %</span>
+			</div>
+			<canvas id="rtm-disk-canvas"></canvas>
+			<div class="rtm-panel-sub" id="rtm-disk-detail">-- / --</div>
+		</div>
+		<div class="rtm-panel rtm-panel-wide">
+			<div class="rtm-panel-header">
+				<span class="rtm-panel-title">ネットワーク</span>
+				<span class="rtm-panel-value" id="rtm-net-val">-- / --</span>
+			</div>
+			<canvas id="rtm-net-canvas"></canvas>
+			<div class="rtm-panel-sub" id="rtm-net-iface"></div>
+		</div>
+	</div>
+	</div>
+</section>
+{{end}}
+
+{{/* -------------------------------------------------------------------------
+   C5: notification_rules — 通知設定
+   データ型: NotificationRulesCardData
+   ------------------------------------------------------------------------- */}}
+{{define "card-sec-notification-rules"}}
+<section id="sec-notification-rules" class="card"
+         data-card-id="sec-notification-rules"
+         data-card-count-mode="none"
+         data-card-default-limit="0"
+         data-card-slot-id="sec-notification-rules-count-btn">
+	<div class="card-header section-toggle" data-target="sec-notification-rules">
+		<h2>{{cardLabel "sec-notification-rules"}}</h2>
+		<div class="card-header-actions">
+			<span class="notification-rules-save-status" data-alert-save-status data-refresh-insert-after data-header-order="15" aria-live="polite"></span>
+			<button type="button" class="btn-secondary btn-sm" data-header-order="20" data-open-recipient-modal>通知先一覧</button>
+		</div>
+	</div>
+	<div class="card-body">
+	<div class="notification-rules-summary-line">
+		<span class="stat-label">送信設定中の通知先</span>
+		<span class="stat-value">{{.EnabledCount}} 件</span>
+		<span class="notification-rules-sep">｜</span>
+		<span class="notification-rules-help">しきい値（発報/復旧）: 左がアラート発報値、右が復旧判定値。通知判定ON: このルールを監視対象にする。</span>
+	</div>
+	<form method="post" class="notification-rules-form" data-alert-rules-form>
+		<input type="hidden" name="csrf_token" value="">
+		<input type="hidden" name="action" value="save_alert_rules">
+		<div class="table-scroll">
+			<table class="notification-rules-table no-row-num">
+				<thead>
+					<tr>
+						<th>ルール名</th>
+						<th>現在値</th>
+						<th>しきい値（発報/復旧）</th>
+						<th>継続秒</th>
+						<th>クールダウン秒</th>
+						<th>通知判定</th>
+						<th>復旧通知</th>
+					</tr>
+				</thead>
+				<tbody>
+				{{range .DefOrder}}
+				{{$ruleID := .}}
+				{{$def := index $.Defs .}}
+				{{$row := index $.Rules .}}
+				<tr data-alert-rule-row="{{$ruleID}}">
+					<td>{{$def.Label}}{{if $def.Desc}} （{{$def.Desc}}）{{end}}</td>
+					<td>
+						<span class="result-badge" data-alert-last-value="{{$ruleID}}">-</span>
+						<span class="result-badge" data-alert-active="{{$ruleID}}">inactive</span>
+					</td>
+					<td>
+						{{if $def.HasThreshold}}
+							<input type="number" min="{{printf "%.0f" $def.ThresholdMin}}" max="{{if $def.ThresholdMax}}{{printf "%.0f" $def.ThresholdMax}}{{else}}100{{end}}" step="1"
+								name="alert_rules[{{$ruleID}}][threshold]"
+								value="{{if $row.Threshold}}{{printf "%.0f" $row.Threshold}}{{else}}{{printf "%.0f" $def.DefaultThreshold}}{{end}}"
+								class="notification-rules-input" required>
+						{{else}}
+							<span class="notification-rules-na">-</span>
+						{{end}}
+						{{if $def.HasRecovery}}
+							<input type="number" min="0" max="100" step="1"
+								name="alert_rules[{{$ruleID}}][recovery]"
+								value="{{printf "%.0f" $row.Recovery}}"
+								class="notification-rules-input notification-rules-input-recovery" required>
+						{{end}}
+					</td>
+					<td>
+						{{if $def.HasSustain}}
+							<input type="number" min="0" max="86400" step="1"
+								name="alert_rules[{{$ruleID}}][sustain_sec]"
+								value="{{$row.SustainSec}}"
+								class="notification-rules-input" required>
+						{{else}}
+							<span class="notification-rules-na">-</span>
+						{{end}}
+					</td>
+					<td>
+						<input type="number" min="0" max="86400" step="1"
+							name="alert_rules[{{$ruleID}}][cooldown_sec]"
+							value="{{if $row.CooldownSec}}{{$row.CooldownSec}}{{else}}{{$def.DefaultCooldownSec}}{{end}}"
+							class="notification-rules-input" required>
+					</td>
+					<td>
+						<label class="notification-rules-check-wrap toggle-switch">
+							<input type="checkbox" name="alert_rules[{{$ruleID}}][enabled]" value="1"
+								{{if $row.Enabled}}checked{{end}}>
+							<span class="toggle-slider" aria-hidden="true"></span>
+							<span class="toggle-text">ON</span>
+						</label>
+					</td>
+					<td>
+						<label class="notification-rules-check-wrap toggle-switch">
+							<input type="checkbox" name="alert_rules[{{$ruleID}}][notify_recovery]" value="1"
+								{{if $row.NotifyRecovery}}checked{{end}}>
+							<span class="toggle-slider" aria-hidden="true"></span>
+							<span class="toggle-text">送る</span>
+						</label>
+					</td>
+				</tr>
+				{{end}}
+				</tbody>
+			</table>
+		</div>
+	</form>
+	</div>
+
+	{{/* 通知先モーダル */}}
+	<div id="notification-recipient-modal" class="modal-overlay" style="display:none;">
+		<div class="modal-content modal-content-wide notification-recipient-modal-content">
+			<div class="modal-header">
+				<h3>通知先一覧</h3>
+				<div class="modal-header-actions">
+					<span class="notification-rules-save-status" data-recipient-save-status aria-live="polite"></span>
+					<button type="button" class="modal-close" data-close-recipient-modal>&times;</button>
+				</div>
+			</div>
+			<form method="post" class="modal-body notification-recipient-form" data-recipients-form>
+				<input type="hidden" name="csrf_token" value="">
+				<input type="hidden" name="action" value="save_alert_recipients">
+				<div class="recipient-list" data-recipient-tbody>
+				{{range $i, $r := .Recipients}}
+				<div class="recipient-item" data-recipient-row>
+					<div class="recipient-item-main">
+						<input type="hidden" name="recipients[{{$i}}][id]" value="{{$r.ID}}">
+						<input type="text" name="recipients[{{$i}}][name]" value="{{$r.Name}}"
+							class="notification-recipient-input" placeholder="名前" required>
+						<input type="email" name="recipients[{{$i}}][email]" value="{{$r.Email}}"
+							class="notification-recipient-input recipient-email-input" placeholder="メールアドレス" required>
+						<span class="notification-recipient-updated">{{if $r.UpdatedAt}}{{$r.UpdatedAt}}{{else}}未登録{{end}}</span>
+						<label class="notification-rules-check-wrap toggle-switch recipient-enabled-toggle">
+							<input type="checkbox" name="recipients[{{$i}}][enabled]" value="1"
+								{{if $r.Enabled}}checked{{end}}>
+							<span class="toggle-slider" aria-hidden="true"></span>
+							<span class="toggle-text">{{if $r.Enabled}}送信ON{{else}}送信OFF{{end}}</span>
+						</label>
+						<button type="button" class="btn-secondary btn-sm" data-remove-recipient-row>削除</button>
+					</div>
+					<div class="recipient-item-rules">
+						<span class="recipient-rules-label">通知ルール:</span>
+						{{range $.DefOrder}}
+						{{$rID := .}}
+						{{$def2 := index $.Defs .}}
+						<label class="notification-rules-check-wrap">
+							<input type="checkbox"
+								name="recipients[{{$i}}][rules][{{$rID}}]" value="1"
+								{{if index $r.Rules $rID}}checked{{end}}>
+							<span>{{$def2.Label}}{{if $def2.Desc}} （{{$def2.Desc}}）{{end}}</span>
+						</label>
+						{{end}}
+					</div>
+				</div>
+				{{end}}
+				</div>
+				<div class="notification-recipient-actions">
+					<button type="button" class="btn-secondary btn-sm" data-add-recipient-row>通知先を追加</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</section>
+{{end}}
+
+{{/* -------------------------------------------------------------------------
+   C5: cron_status — Cron 実行状況
+   データ型: CronStatusData
+   ------------------------------------------------------------------------- */}}
+{{define "card-sec-cron-status"}}
+<section id="sec-cron-status" class="card"
+         data-card-id="sec-cron-status"
+         data-card-count-mode="none"
+         data-card-default-limit="0"
+         data-card-slot-id="sec-cron-status-count-btn">
+	<div class="card-header section-toggle" data-target="sec-cron-status">
+		<h2>{{cardLabel "sec-cron-status"}}</h2>
+		<div class="card-header-actions"></div>
+	</div>
+	<div class="card-body">
+		<div class="table-scroll">
+		<table class="log-table row-num-init">
+			<thead>
+				<tr class="thead-filter-row">
+					<th class="col-row-num"></th>
+					<th><input type="search" class="filter-input" data-filter="job" placeholder="ジョブ絞り込み"></th>
+					<th></th>
+					<th></th>
+					<th></th>
+					<th><span class="filter-count"></span></th>
+				</tr>
+				<tr>
+					<th class="col-row-num">#</th>
+					<th>ジョブ</th>
+					<th>概要</th>
+					<th>スケジュール</th>
+					<th>最終実行</th>
+					<th>結果</th>
+				</tr>
+			</thead>
+			<tbody>
+			{{range .Jobs}}
+			<tr data-job="{{.Label}}" data-result="{{.Result}}">
+				<td class="col-row-num"></td>
+				<td class="nowrap"><strong>{{.Label}}</strong></td>
+				<td>{{.Summary}}</td>
+				<td class="nowrap">
+					{{if .Registered}}
+						<code>{{.Schedule}}</code>
+						{{if .ScheduleHuman}}
+							<span class="stat-sub stat-sub-inline">{{.ScheduleHuman}}</span>
+						{{end}}
+						{{if .Command}}
+							<span class="stat-sub stat-sub-inline"><code>{{.Command}}</code></span>
+						{{end}}
+					{{else}}
+						<span class="result-badge result-fail">未登録</span>
+					{{end}}
+				</td>
+				<td class="nowrap">{{.LastTime}}</td>
+				<td class="nowrap">
+					{{if eq .Result "success"}}
+						<span class="result-badge result-success">成功</span>
+					{{else if eq .Result "fail"}}
+						<span class="result-badge result-fail">失敗</span>
+					{{else}}
+						<span class="result-badge result-fail">未取得</span>
+					{{end}}
+				</td>
+			</tr>
+			{{end}}
+			</tbody>
+		</table>
+		</div>
+	</div>
+</section>
+{{end}}
+
+{{/* -------------------------------------------------------------------------
+   C5: database — バックアップ情報
+   データ型: DatabaseCardData
+   ------------------------------------------------------------------------- */}}
+{{define "card-sec-database"}}
+<section id="sec-database" class="card"
+         data-card-id="sec-database"
+         data-card-count-mode="none"
+         data-card-default-limit="0"
+         data-card-slot-id="sec-database-count-btn">
+	<div class="card-header section-toggle" data-target="sec-database">
+		<h2>{{cardLabel "sec-database"}}</h2>
+		<div class="card-header-actions">
+			<button type="button" class="btn-success btn-sm" data-header-order="10" data-backup-run-btn
+				onclick="if(confirm('バックアップを今すぐ実行しますか？')){runBackupNow(this);}">
+				今すぐバックアップ
+			</button>
+			<span id="backup-expand-btn" data-header-order="50"></span>
+		</div>
+	</div>
+	<div class="card-body">
+		<div class="db-info-items">
+			<span id="db-list-display"><span class="db-info-label">バックアップ対象DB:</span> <code>読み込み中...</code></span>
+			<span><span class="db-info-label">ローカル保存先:</span> <code>/var/backups/mariadb/</code></span>
+			<span id="db-r2-path-display" style="display:none;"><span class="db-info-label">R2保存先:</span> <code>s3://nextcloud-backups/backups/db/</code></span>
+		</div>
+		<div id="backup-run-result" style="display:none;" class="backup-result-msg"></div>
+		<div id="sec-database-content" class="async-content"></div>
+	</div>
+</section>
+{{end}}
+
+{{/* -------------------------------------------------------------------------
+   C6: r2 — Cloudflare R2（PHP版と同じ構造。JS側で fetchR2Metrics() が描画）
+   ------------------------------------------------------------------------- */}}
+{{/* -------------------------------------------------------------------------
+   Agent 死活監視カード
+   データ型: []AgentLastSeen（API: agent_status）
+   ------------------------------------------------------------------------- */}}
+{{define "card-sec-agent-status"}}
+<section id="sec-agent-status" class="card"
+         data-card-id="sec-agent-status"
+         data-card-count-mode="none"
+         data-card-default-limit="0"
+         data-card-slot-id="sec-agent-status-count-btn">
+	<div class="card-header section-toggle" data-target="sec-agent-status">
+		<h2>{{cardLabel "sec-agent-status"}}</h2>
+		<div class="card-header-actions"></div>
+	</div>
+	<div class="card-body">
+		{{if .}}
+		<table class="log-table">
+			<thead>
+				<tr>
+					<th>Agent ID</th>
+					<th>ラベル</th>
+					<th>種別</th>
+					<th>最終受信</th>
+					<th>経過</th>
+					<th>状態</th>
+				</tr>
+			</thead>
+			<tbody>
+			{{range .}}
+			<tr>
+				<td><code>{{.AgentID}}</code></td>
+				<td>{{.AgentLabel}}</td>
+				<td>{{.AgentType}}</td>
+				<td class="nowrap">{{.ReceivedAt}}</td>
+				<td class="nowrap col-count">{{.MinutesAgo}} 分前</td>
+				<td class="nowrap">
+					{{if .IsAlert}}
+						<span class="result-badge result-fail">無通信</span>
+					{{else}}
+						<span class="result-badge result-success">正常</span>
+					{{end}}
+				</td>
+			</tr>
+			{{end}}
+			</tbody>
+		</table>
+		{{else}}
+		<p class="empty">受信データなし（Agentからの報告待ち）</p>
+		{{end}}
+	</div>
+</section>
+{{end}}
+
+{{/* -------------------------------------------------------------------------
+   全サーバー概要画面（?view=agents_overview）
+   データ型: agentOverviewPageData
+   ------------------------------------------------------------------------- */}}
+{{define "agents-overview"}}<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>全サーバー概要 - heartdesk</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+	background: #0f1117;
+	color: #e0e0e0;
+	padding: 56px 24px 60px;
+	line-height: 1.5;
+}
+a.back-link {
+	position: fixed;
+	top: 0; left: 0; right: 0;
+	display: block;
+	padding: 8px 24px;
+	background: #1a2233;
+	border-bottom: 1px solid #2d3a4f;
+	color: #90caf9;
+	text-decoration: none;
+	font-size: 0.9rem;
+	z-index: 100;
+}
+a.back-link:hover { text-decoration: underline; }
+h1 { color: #90caf9; font-size: 1.4rem; margin-bottom: 20px; }
+.agents-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+	gap: 16px;
+	max-width: 1200px;
+}
+.agent-card {
+	background: #1a1e2e;
+	border: 1px solid #2d3a4f;
+	border-radius: 8px;
+	padding: 16px;
+}
+.agent-card.alert { border-color: #c0392b; }
+.agent-card-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12px;
+}
+.agent-card-title { font-weight: 600; font-size: 1rem; }
+.badge-ok  { background: #1b5e20; color: #81c784; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; }
+.badge-ng  { background: #7f0000; color: #ef9a9a; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; }
+.agent-meta { font-size: 0.78rem; color: #8899aa; margin-bottom: 10px; }
+.metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; font-size: 0.85rem; }
+.metric-label { color: #8899aa; }
+.metric-value { font-variant-numeric: tabular-nums; }
+.metric-value.warn  { color: #ff9800; }
+.metric-value.danger { color: #ef5350; }
+.agent-metric { margin-top: 10px; }
+.agent-metric:first-child { margin-top: 0; }
+.agent-metric-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 4px;
+}
+.agent-metric-bar {
+	height: 4px;
+	background: #31394d;
+	border-radius: 999px;
+	overflow: hidden;
+}
+.agent-metric-fill {
+	height: 100%;
+	border-radius: inherit;
+	background: linear-gradient(90deg, #4caf50, #2e7d32);
+}
+.agent-metric-fill.bar-warn {
+	background: linear-gradient(90deg, #ff9800, #ef6c00);
+}
+.agent-metric-fill.bar-danger {
+	background: linear-gradient(90deg, #ef5350, #c62828);
+}
+.agent-metric-fill.bar-neutral {
+	background: linear-gradient(90deg, #42a5f5, #1565c0);
+}
+.agent-card-footer { margin-top: 12px; }
+.agent-card-footer a {
+	display: inline-block;
+	padding: 4px 12px;
+	background: #1565c0;
+	color: #e0e0e0;
+	border-radius: 4px;
+	font-size: 0.8rem;
+	text-decoration: none;
+}
+.agent-card-footer a:hover { background: #1976d2; }
+.empty { color: #666; font-size: 0.95rem; padding: 20px 0; }
+</style>
+</head>
+<body>
+<a class="back-link" href="{{.MonitorBase}}/">← heartdesk に戻る</a>
+<h1>🖥️ 全サーバー概要</h1>
+{{if .Items}}
+<div class="agents-grid">
+{{range .Items}}
+<div class="agent-card{{if .IsAlert}} alert{{end}}">
+	<div class="agent-card-header">
+		<span class="agent-card-title">{{if .AgentLabel}}{{.AgentLabel}}{{else}}{{.AgentID}}{{end}}</span>
+		{{if .IsAlert}}<span class="badge-ng">無通信</span>{{else}}<span class="badge-ok">正常</span>{{end}}
+	</div>
+	<div class="agent-meta">
+		<span>{{.AgentID}}</span> &nbsp;·&nbsp;
+		<span>{{.AgentType}}</span> &nbsp;·&nbsp;
+		<span>{{.MinutesAgo}} 分前</span>
+	</div>
+	{{if .HasData}}
+	<div class="metrics">
+		<div class="agent-metric" style="grid-column: 1 / -1;">
+			<div class="agent-metric-head">
+				<span class="metric-label">CPU</span>
+				<span class="metric-value {{pctClass .CPUPct}}">{{printf "%.1f" .CPUPct}}%</span>
+			</div>
+			<div class="agent-metric-bar"><div class="agent-metric-fill {{pctBarClass .CPUPct}}" style="width: {{pctWidth .CPUPct}}%;"></div></div>
+		</div>
+		<div class="agent-metric" style="grid-column: 1 / -1;">
+			<div class="agent-metric-head">
+				<span class="metric-label">メモリ</span>
+				<span class="metric-value {{pctClass .MemPct}}">{{printf "%.1f" .MemPct}}%</span>
+			</div>
+			<div class="agent-metric-bar"><div class="agent-metric-fill {{pctBarClass .MemPct}}" style="width: {{pctWidth .MemPct}}%;"></div></div>
+		</div>
+		<div class="agent-metric" style="grid-column: 1 / -1;">
+			<div class="agent-metric-head">
+				<span class="metric-label">ディスク</span>
+				<span class="metric-value {{if .DiskPct}}{{pctClassStr .DiskPct}}{{end}}">{{if .DiskPct}}{{.DiskPct}}{{else}}—{{end}}</span>
+			</div>
+			<div class="agent-metric-bar"><div class="agent-metric-fill {{if .DiskPct}}{{pctBarClassStr .DiskPct}}{{else}}bar-neutral{{end}}" style="width: {{if .DiskPct}}{{pctWidthStr .DiskPct}}{{else}}0{{end}}%;"></div></div>
+		</div>
+		<span class="metric-label">BAN中</span>
+		<span class="metric-value{{if gt .BanActive 0}} warn{{end}}">{{.BanActive}} 件</span>
+	</div>
+	{{else}}
+	<p class="empty" style="padding:8px 0; font-size:0.82rem;">データ取得中...</p>
+	{{end}}
+	<div class="agent-card-footer">
+		<a href="{{$.MonitorBase}}/?view=server_detail&agent={{.AgentID}}">詳細を見る</a>
+	</div>
+</div>
+{{end}}
+</div>
+{{else}}
+<p class="empty">Agent からの報告データがありません。sab-agent が起動しているか確認してください。</p>
+{{end}}
+</body>
+</html>
+{{end}}
+
+{{define "card-agents-overview-shell"}}
+<style>
+.agents-overview-shell { max-width: 1200px; }
+.agents-overview-shell .agents-title {
+	color: #90caf9;
+	font-size: 1.4rem;
+	margin-bottom: 20px;
+}
+.agents-overview-shell .agents-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+	gap: 16px;
+}
+.agents-overview-shell .agent-card {
+	background: #1a1e2e;
+	border: 1px solid #2d3a4f;
+	border-radius: 8px;
+	padding: 16px;
+}
+.agents-overview-shell .agent-card.alert { border-color: #c0392b; }
+.agents-overview-shell .agent-card-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12px;
+}
+.agents-overview-shell .agent-card-title { font-weight: 600; font-size: 1rem; }
+.agents-overview-shell .badge-ok  { background: #1b5e20; color: #81c784; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; }
+.agents-overview-shell .badge-ng  { background: #7f0000; color: #ef9a9a; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; }
+.agents-overview-shell .agent-meta { font-size: 0.78rem; color: #8899aa; margin-bottom: 10px; }
+.agents-overview-shell .agent-ip {
+	margin-bottom: 10px;
+	font-size: 0.76rem;
+	color: #9ab0c7;
+	font-family: Consolas, "Courier New", monospace;
+}
+.agents-overview-shell .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; font-size: 0.85rem; }
+.agents-overview-shell .metric-label { color: #8899aa; }
+.agents-overview-shell .metric-value { font-variant-numeric: tabular-nums; }
+.agents-overview-shell .metric-value.warn  { color: #ff9800; }
+.agents-overview-shell .metric-value.danger { color: #ef5350; }
+.agents-overview-shell .metric-sub {
+	margin-top: 3px;
+	font-size: 0.72rem;
+	color: #8899aa;
+	text-align: right;
+}
+.agents-overview-shell .agent-metric { margin-top: 10px; }
+.agents-overview-shell .agent-metric:first-child { margin-top: 0; }
+.agents-overview-shell .agent-metric-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+	margin-bottom: 4px;
+}
+.agents-overview-shell .agent-metric-bar {
+	height: 4px;
+	background: #31394d;
+	border-radius: 999px;
+	overflow: hidden;
+}
+.agents-overview-shell .agent-metric-fill {
+	display: block;
+	height: 100%;
+	border-radius: inherit;
+	background: linear-gradient(90deg, #4caf50, #2e7d32);
+}
+.agents-overview-shell .agent-metric-fill.bar-warn {
+	background: linear-gradient(90deg, #ff9800, #ef6c00);
+}
+.agents-overview-shell .agent-metric-fill.bar-danger {
+	background: linear-gradient(90deg, #ef5350, #c62828);
+}
+.agents-overview-shell .agent-metric-fill.bar-neutral {
+	background: linear-gradient(90deg, #42a5f5, #1565c0);
+}
+.agents-overview-shell .agent-card-footer { margin-top: 12px; }
+.agents-overview-shell .agent-card-footer a {
+	display: inline-block;
+	padding: 4px 12px;
+	background: #1565c0;
+	color: #e0e0e0;
+	border-radius: 4px;
+	font-size: 0.8rem;
+	text-decoration: none;
+}
+.agents-overview-shell .agent-card-footer a:hover { background: #1976d2; }
+.agents-overview-shell .empty { color: #666; font-size: 0.95rem; padding: 20px 0; }
+.agents-overview-shell .agent-card.primary { border-color: #1565c0; }
+.agents-overview-shell .badge-main-server {
+	background: rgba(21, 101, 192, 0.25);
+	color: #90caf9;
+	border: 1px solid rgba(21, 101, 192, 0.5);
+	padding: 1px 6px;
+	border-radius: 3px;
+	font-size: 0.72rem;
+	font-weight: 600;
+}
+.agents-overview-shell .badge-agent {
+	color: #8899aa;
+	font-size: 0.72rem;
+}
+</style>
+<section id="agents-overview" class="agents-overview-shell">
+	<h2 class="agents-title">🖥️ 全サーバー概要</h2>
+	{{if .Items}}
+	<div class="agents-grid">
+	{{range .Items}}
+	<div class="agent-card{{if .IsAlert}} alert{{end}}{{if .IsPrimary}} primary{{end}}">
+		<div class="agent-card-header">
+			<span class="agent-card-title">{{if .AgentLabel}}{{.AgentLabel}}{{else}}{{.AgentID}}{{end}}</span>
+			{{if .IsAlert}}<span class="badge-ng">無通信</span>{{else}}<span class="badge-ok">正常</span>{{end}}
+		</div>
+		<div class="agent-meta">
+			<span>{{.AgentID}}</span> &nbsp;·&nbsp;
+			<span>{{.AgentType}}</span> &nbsp;·&nbsp;
+			{{if .IsPrimary}}<span class="badge-main-server">Main Server</span>{{else}}<span class="badge-agent">Agent</span>{{end}} &nbsp;·&nbsp;
+			{{if .ReceivedAt}}<span>{{.MinutesAgo}} 分前</span>{{else}}<span>未報告</span>{{end}}
+		</div>
+		{{if .AgentIP}}<div class="agent-ip">IP {{.AgentIP}}</div>{{end}}
+		{{if .HasData}}
+		<div class="metrics">
+			<div class="agent-metric" style="grid-column: 1 / -1;">
+				<div class="agent-metric-head">
+					<span class="metric-label">CPU</span>
+					<span class="metric-value {{pctClass .CPUPct}}">{{printf "%.1f" .CPUPct}}%</span>
+				</div>
+				<div class="agent-metric-bar"><div class="agent-metric-fill {{pctBarClass .CPUPct}}" style="width: {{pctWidth .CPUPct}}%;"></div></div>
+			</div>
+			<div class="agent-metric" style="grid-column: 1 / -1;">
+				<div class="agent-metric-head">
+					<span class="metric-label">メモリ</span>
+					<span class="metric-value {{pctClass .MemPct}}">{{printf "%.1f" .MemPct}}%</span>
+				</div>
+				<div class="agent-metric-bar"><div class="agent-metric-fill {{pctBarClass .MemPct}}" style="width: {{pctWidth .MemPct}}%;"></div></div>
+				{{if .MemTotal}}<div class="metric-sub">最大 {{.MemTotal}}</div>{{end}}
+			</div>
+			<div class="agent-metric" style="grid-column: 1 / -1;">
+				<div class="agent-metric-head">
+					<span class="metric-label">ディスク</span>
+					<span class="metric-value {{if .DiskPct}}{{pctClassStr .DiskPct}}{{end}}">{{if .DiskPct}}{{.DiskPct}}{{else}}—{{end}}</span>
+				</div>
+				<div class="agent-metric-bar"><div class="agent-metric-fill {{if .DiskPct}}{{pctBarClassStr .DiskPct}}{{else}}bar-neutral{{end}}" style="width: {{if .DiskPct}}{{pctWidthStr .DiskPct}}{{else}}0{{end}}%;"></div></div>
+				{{if .DiskTotal}}<div class="metric-sub">最大 {{.DiskTotal}}</div>{{end}}
+			</div>
+			<span class="metric-label">BAN中</span>
+			<span class="metric-value{{if gt .BanActive 0}} warn{{end}}">{{.BanActive}} 件</span>
+		</div>
+		{{else}}
+		<p class="empty" style="padding:8px 0; font-size:0.82rem;">データ取得中...</p>
+		{{end}}
+		<div class="agent-card-footer">
+			<a href="{{$.MonitorBase}}/?view=server_detail&agent={{.AgentID}}">詳細を見る</a>
+		</div>
+	</div>
+	{{end}}
+	</div>
+	{{else}}
+	<p class="empty">Agent からの報告データがありません。sab-agent が起動しているか確認してください。</p>
+	{{end}}
+</section>
+{{end}}
+
+{{define "card-sec-r2"}}
+<section id="sec-r2" class="card"
+         data-card-id="sec-r2"
+         data-card-count-mode="none"
+         data-card-default-limit="0"
+         data-card-slot-id="sec-r2-count-btn">
+	<div class="card-header section-toggle" data-target="sec-r2">
+		<h2>{{cardLabel "sec-r2"}}</h2>
+		<div class="card-header-actions"></div>
+	</div>
+	<div class="card-body">
+		<div id="r2-content" class="async-content">
+			<p class="empty">右上の「更新」ボタンでCloudflare R2の最新データを表示します</p>
+		</div>
+	</div>
+</section>
+{{end}}
+
+{{define "card-vendor-dashboard"}}
+<section id="vendor-dashboard" class="card"
+         data-card-id="vendor-dashboard"
+         data-card-no-refresh="1">
+	<div class="card-header section-toggle" data-target="vendor-dashboard">
+		<h2>{{cardLabel "vendor-dashboard"}}</h2>
+	</div>
+	<div class="card-body">
+		<div id="vendor-dashboard-content" class="async-content"></div>
+	</div>
+</section>
+{{end}}
+
+{{define "card-vendor-tenants"}}
+<section id="vendor-tenants" class="card"
+         data-card-id="vendor-tenants"
+         data-card-no-refresh="1">
+	<div class="card-header section-toggle" data-target="vendor-tenants">
+		<h2>{{cardLabel "vendor-tenants"}}</h2>
+		<div class="card-header-actions">
+			<span id="vendor-tenants-count" class="card-count-badge"></span>
+		</div>
+	</div>
+	<div class="card-body">
+		<div id="vendor-tenants-content" class="async-content"></div>
+	</div>
+</section>
+{{end}}
+
+{{/* -------------------------------------------------------------------------
+   sec-ssl — SSL 証明書状態
+   データ型: SSLData
+   ------------------------------------------------------------------------- */}}
+{{define "card-sec-ssl"}}
+<section id="sec-ssl" class="card"
+         data-card-id="sec-ssl"
+         data-card-count-mode="none"
+         data-card-default-limit="0"
+         data-card-slot-id="sec-ssl-count-btn">
+	<div class="card-header section-toggle" data-target="sec-ssl">
+		<h2>{{cardLabel "sec-ssl"}}</h2>
+		<div class="card-header-actions"></div>
+	</div>
+	<div class="card-body">
+		<div id="sec-ssl-content" class="async-content"></div>
+	</div>
+</section>
+{{end}}
+
+{{define "card-vendor-agents"}}
+<section id="vendor-agents" class="card"
+         data-card-id="vendor-agents"
+         data-card-no-refresh="1">
+	<div class="card-header section-toggle" data-target="vendor-agents">
+		<h2>{{cardLabel "vendor-agents"}}</h2>
+		<div class="card-header-actions">
+			<span id="vendor-agents-count" class="card-count-badge"></span>
+		</div>
+	</div>
+	<div class="card-body">
+		<div id="vendor-agents-content" class="async-content"></div>
+	</div>
+</section>
+{{end}}
+
+{{define "card-vendor-license-audit"}}
+<section id="vendor-license-audit" class="card"
+         data-card-id="vendor-license-audit"
+         data-card-count-mode="total"
+         data-card-default-limit="0"
+         data-card-no-refresh="1">
+	<div class="card-header section-toggle" data-target="vendor-license-audit">
+		<h2>{{cardLabel "vendor-license-audit"}}</h2>
+		<div class="card-header-actions">
+			<span id="vendor-license-audit-total" class="card-count-badge"></span>
+		</div>
+	</div>
+	<div class="card-body">
+		<div id="vendor-license-audit-content" class="async-content"></div>
+	</div>
+</section>
+{{end}}
+
+{{define "card-vendor-licenses"}}
+<section id="vendor-licenses" class="card"
+         data-card-id="vendor-licenses"
+         data-card-no-refresh="1">
+	<div class="card-header section-toggle" data-target="vendor-licenses">
+		<h2>{{cardLabel "vendor-licenses"}}</h2>
+		<div class="card-header-actions">
+			<span id="vendor-licenses-count" class="card-count-badge"></span>
+		</div>
+	</div>
+	<div class="card-body">
+		<div id="vendor-licenses-content" class="async-content"></div>
+	</div>
+</section>
+{{end}}
+
+{{define "card-vendor-license-offline"}}
+<section id="vendor-license-offline" class="card"
+         data-card-id="vendor-license-offline"
+         data-card-no-refresh="1">
+	<div class="card-header section-toggle" data-target="vendor-license-offline">
+		<h2>{{cardLabel "vendor-license-offline"}}</h2>
+	</div>
+	<div class="card-body">
+		<div id="vendor-license-offline-content" class="async-content"></div>
+	</div>
+</section>
+{{end}}
+
+{{define "card-vendor-license-rotation"}}
+<section id="vendor-license-rotation" class="card"
+         data-card-id="vendor-license-rotation"
+         data-card-no-refresh="1">
+	<div class="card-header section-toggle" data-target="vendor-license-rotation">
+		<h2>{{cardLabel "vendor-license-rotation"}}</h2>
+	</div>
+	<div class="card-body">
+		<div id="vendor-license-rotation-content" class="async-content"></div>
+	</div>
+</section>
+{{end}}
+
+{{define "card-vendor-nc-overview"}}
+<section id="vendor-nc-overview" class="card"
+         data-card-id="vendor-nc-overview">
+	<div class="card-header section-toggle" data-target="vendor-nc-overview">
+		<h2>{{cardLabel "vendor-nc-overview"}}</h2>
+	</div>
+	<div class="card-body">
+		<div id="vendor-nc-overview-content" class="async-content"></div>
+	</div>
+</section>
+{{end}}
+
+{{define "card-vendor-audit-log"}}
+<section id="vendor-audit-log" class="card"
+         data-card-id="vendor-audit-log"
+         data-card-count-mode="total"
+         data-card-default-limit="0"
+         data-card-no-refresh="1">
+	<div class="card-header section-toggle" data-target="vendor-audit-log">
+		<h2>{{cardLabel "vendor-audit-log"}}</h2>
+		<div class="card-header-actions">
+			<span id="vendor-audit-log-total" class="card-count-badge"></span>
+		</div>
+	</div>
+	<div class="card-body">
+		<div id="vendor-audit-log-content" class="async-content"></div>
+	</div>
+</section>
+{{end}}
+
+{{define "card-vendor-server-health"}}
+<section id="vendor-server-health" class="card"
+         data-card-id="vendor-server-health"
+         data-card-no-refresh="1">
+	<div class="card-header section-toggle" data-target="vendor-server-health">
+		<h2>{{cardLabel "vendor-server-health"}}</h2>
+		<div class="card-header-actions">
+			<span id="vendor-server-health-count" class="card-count-badge"></span>
+		</div>
+	</div>
+	<div class="card-body">
+		<div id="vendor-server-health-content" class="async-content"></div>
+	</div>
+</section>
+{{end}}

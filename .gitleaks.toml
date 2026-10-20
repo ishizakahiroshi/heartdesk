@@ -1,0 +1,10 @@
+# gitleaks の設定。既定の規則はそのまま使い、見本の値だけを「ファイルと値の両方が合うとき」に限って許す。
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "署名の往復テストが使う固定の見本の鍵（本物ではない）"
+condition = "AND"
+paths = ['''(^|/)core/monitor/agent_report_wire_test\.go$''']
+regexes = ['''^0123456789abcdef$''']

@@ -1,0 +1,198 @@
+{{define "login"}}<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAB Login</title>
+<link rel="stylesheet" href="{{.StaticBase}}/css/shared.css?v={{.AssetVersion}}">
+<style>
+* { box-sizing: border-box; }
+body {
+	margin: 0;
+	min-height: 100vh;
+	display: grid;
+	place-items: center;
+	background: #0f1117;
+	color: #e8edf8;
+}
+.login-card {
+	width: min(460px, calc(100% - 32px));
+	background: rgba(18, 24, 38, 0.96);
+	border: 1px solid #2a3552;
+	border-radius: 14px;
+	padding: 26px 24px 22px;
+	box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+}
+.brand {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 18px;
+}
+.brand img {
+	width: 52px;
+	height: 52px;
+	flex: 0 0 52px;
+}
+.brand-title {
+	font-size: 1.12rem;
+	font-weight: 700;
+}
+.brand-sub {
+	display: block;
+	font-size: 0.76rem;
+	color: #9faecf;
+	margin-top: 2px;
+}
+.alert {
+	margin: 8px 0 14px;
+	padding: 10px 12px;
+	border-radius: 8px;
+	font-size: 0.88rem;
+}
+.alert.error {
+	border: 1px solid #6f2f3a;
+	background: #3b1e26;
+	color: #ffb8c3;
+}
+.alert.info {
+	border: 1px solid #33587a;
+	background: #1b2c42;
+	color: #b6d8ff;
+}
+.stage-title {
+	font-size: 0.86rem;
+	font-weight: 600;
+	color: #9fbbe8;
+	margin-bottom: 10px;
+}
+label {
+	display: block;
+	font-size: 0.82rem;
+	color: #a9b7d6;
+	margin-bottom: 6px;
+}
+input[type="text"],
+input[type="password"] {
+	width: 100%;
+	height: 40px;
+	padding: 0 12px;
+	border-radius: 8px;
+	border: 1px solid #324266;
+	background: #0f1524;
+	color: #e8edf8;
+	margin-bottom: 12px;
+}
+button {
+	width: 100%;
+	height: 42px;
+	border: none;
+	border-radius: 8px;
+	background: #2b82ff;
+	color: #ffffff;
+	font-size: 0.92rem;
+	font-weight: 600;
+	cursor: pointer;
+}
+button:hover { filter: brightness(1.08); }
+.muted {
+	color: #90a0c6;
+	font-size: 0.76rem;
+	margin: 10px 0 0;
+}
+.nc-session-link {
+	display: block;
+	text-align: center;
+	margin-top: 14px;
+	padding: 10px 12px;
+	border: 1px solid #324266;
+	border-radius: 8px;
+	color: #b6d8ff;
+	font-size: 0.84rem;
+	text-decoration: none;
+}
+.nc-session-link:hover {
+	border-color: #2b82ff;
+	background: #16233a;
+}
+.login-footer {
+	margin-top: 18px;
+	padding-top: 12px;
+	border-top: 1px solid #2a3552;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+	font-size: 0.72rem;
+	color: #90a0c6;
+}
+.login-footer .license-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	padding: 2px 8px;
+	background: #1a3a2a;
+	border: 1px solid #27ae60;
+	border-radius: 12px;
+	font-size: 0.65rem;
+	font-weight: 600;
+	color: #2ecc71;
+	line-height: 1;
+}
+.login-footer .meta-sep {
+	color: #445173;
+}
+</style>
+</head>
+<body>
+	<div class="login-card">
+		<div class="brand">
+			<img src="{{.SABIconPath}}" alt="">
+			<div>
+				<div class="brand-title">SAB Login</div>
+				<span class="brand-sub">Server Admin Bridge</span>
+			</div>
+		</div>
+		{{if .Error}}<div class="alert error">{{.Error}}</div>{{end}}
+		{{if .Info}}<div class="alert info">{{.Info}}</div>{{end}}
+
+		{{if eq .Stage "totp"}}
+		<div class="stage-title">2段階認証</div>
+		<form method="post" action="{{.LoginPath}}" autocomplete="off">
+			<input type="hidden" name="stage" value="totp">
+			<input type="hidden" name="next" value="{{.Next}}">
+			<input type="hidden" name="challenge_id" value="{{.ChallengeID}}">
+			<input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+			<label for="username">ユーザーID</label>
+			<input id="username" type="text" value="{{.Username}}" readonly>
+			<label for="totp_code">認証コード（6桁）</label>
+			<input id="totp_code" type="text" name="totp_code" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" required>
+			<button type="submit">認証してログイン</button>
+		</form>
+		<p class="muted">認証アプリの現在コードを入力してください。</p>
+		{{else}}
+		<div class="stage-title">ID / パスワード認証</div>
+		<form method="post" action="{{.LoginPath}}" autocomplete="off">
+			<input type="hidden" name="stage" value="password">
+			<input type="hidden" name="next" value="{{.Next}}">
+			<input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+			<label for="username">ユーザーID</label>
+			<input id="username" type="text" name="username" value="{{.Username}}" required>
+			<label for="password">パスワード</label>
+			<input id="password" type="password" name="password" required>
+			<button type="submit">ログイン</button>
+		</form>
+		<p class="muted">ログイン失敗が5回続くと15分ロックされます。</p>
+		{{if .NCSessionPath}}
+		<a class="nc-session-link" href="{{.NCSessionPath}}">Nextcloud のログインで入る</a>
+		{{end}}
+		{{end}}
+		<div class="login-footer">
+			{{if .SystemInfo.LicenseVerified}}<span class="license-badge"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Licensed</span>{{end}}
+			{{if .SystemInfo.VendorName}}<span>{{.SystemInfo.VendorName}}</span>{{end}}
+			{{if and .SystemInfo.VendorName .SystemInfo.TenantID}}<span class="meta-sep">/</span>{{end}}
+			{{if .SystemInfo.TenantID}}<span>{{.SystemInfo.TenantID}}</span>{{end}}
+		</div>
+	</div>
+</body>
+</html>{{end}}

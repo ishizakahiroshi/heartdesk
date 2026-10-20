@@ -1,0 +1,115 @@
+{{define "admin_audit_log"}}<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>監査ログ</title>
+<link rel="stylesheet" href="{{.StaticBase}}/css/shared.css?v={{.AssetVersion}}">
+<style>
+body { margin: 0; background: #0f1117; color: #e6edf3; }
+.wrap { max-width: 1200px; margin: 24px auto; padding: 0 16px; }
+.card { background: #151a23; border: 1px solid #293142; border-radius: 12px; padding: 18px; margin-bottom: 12px; }
+h1 { font-size: 1.2rem; margin: 0 0 14px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { border-bottom: 1px solid #233049; padding: 8px 6px; font-size: 0.8rem; text-align: left; vertical-align: top; }
+th { color: #9eb0d4; }
+input[type="text"], input[type="number"], select { width: 100%; height: 34px; border-radius: 8px; border: 1px solid #33425d; background: #0e1420; color: #e6edf3; padding: 0 8px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+button, .link-btn { border: none; border-radius: 8px; height: 34px; padding: 0 12px; background: #2b82ff; color: #fff; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; }
+.link-btn { background: #3b4556; }
+.msg { margin-bottom: 10px; padding: 8px 10px; border-radius: 7px; font-size: 0.88rem; }
+.msg.err { background: #3a1f26; border: 1px solid #8f3e4a; color: #ffbdc8; }
+.nav { margin-bottom: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+</style>
+</head>
+<body>
+<div class="wrap">
+	<div class="nav">
+		<a class="link-btn" href="{{.BackURL}}">Monitorへ戻る</a>
+		<a class="link-btn" href="{{.SettingsPasswordPath}}">パスワード変更</a>
+		<a class="link-btn" href="{{.Settings2FAPath}}">2FA設定</a>
+	</div>
+
+	<div class="card">
+		<h1>監査ログ（{{.CurrentUser}}）</h1>
+		{{if .Error}}<div class="msg err">{{.Error}}</div>{{end}}
+		<form method="get" action="{{.AdminAuditLogPath}}" autocomplete="off">
+			<div class="row">
+				<div style="flex:1 1 180px;">
+					<label>ユーザー</label>
+					<input type="text" name="user" value="{{.FilterUser}}" placeholder="admin" autocomplete="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true">
+				</div>
+				<div style="flex:1 1 180px;">
+					<label>イベント</label>
+					<input type="text" name="event" value="{{.FilterEvent}}" placeholder="ACTION_IP_ADD" autocomplete="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true">
+				</div>
+				<div style="flex:1 1 140px;">
+					<label>結果</label>
+					<select name="result">
+						<option value="" {{if eq .FilterResult ""}}selected{{end}}>すべて</option>
+						<option value="success" {{if eq .FilterResult "success"}}selected{{end}}>success</option>
+						<option value="fail" {{if eq .FilterResult "fail"}}selected{{end}}>fail</option>
+					</select>
+				</div>
+				<div style="flex:1 1 180px;">
+					<label>開始（RFC3339/JST）</label>
+					<input type="text" name="from" value="{{.FilterFrom}}" placeholder="2026-04-18T00:00:00+09:00" autocomplete="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true">
+				</div>
+				<div style="flex:1 1 180px;">
+					<label>終了（RFC3339/JST）</label>
+					<input type="text" name="to" value="{{.FilterTo}}" placeholder="2026-04-18T23:59:59+09:00" autocomplete="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true">
+				</div>
+				<div style="flex:1 1 120px;">
+					<label>表示件数</label>
+					<input type="number" min="1" max="5000" name="limit" value="{{.FilterLimit}}" autocomplete="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true">
+				</div>
+			</div>
+			<div class="row">
+				<div style="flex:1 1 420px;">
+					<label>検索（部分一致）</label>
+					<input type="text" name="q" value="{{.FilterQuery}}" placeholder="ip/add, login, 192.168..." autocomplete="off" autocapitalize="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true">
+				</div>
+				<div style="display:flex;align-items:flex-end;gap:8px;">
+					<button type="submit">絞り込み</button>
+					<button type="submit" name="export" value="csv">CSV出力</button>
+				</div>
+			</div>
+		</form>
+	</div>
+
+	<div class="card">
+		<table>
+			<thead>
+				<tr>
+					<th>時刻</th>
+					<th>イベント</th>
+					<th>ユーザー</th>
+					<th>IP</th>
+					<th>結果</th>
+					<th>メッセージ</th>
+					<th>パス</th>
+				</tr>
+			</thead>
+			<tbody>
+				{{if .Rows}}
+					{{range .Rows}}
+					<tr>
+						<td class="mono">{{.Time}}</td>
+						<td class="mono">{{.Event}}</td>
+						<td class="mono">{{.User}}</td>
+						<td class="mono">{{.IP}}</td>
+						<td class="mono">{{.Result}}</td>
+						<td>{{.Message}}</td>
+						<td class="mono">{{.Method}} {{.Path}}{{if .Query}}?{{.Query}}{{end}}</td>
+					</tr>
+					{{end}}
+				{{else}}
+					<tr><td colspan="7">該当する監査ログはありません。</td></tr>
+				{{end}}
+			</tbody>
+		</table>
+	</div>
+</div>
+</body>
+</html>{{end}}

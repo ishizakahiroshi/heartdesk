@@ -1,0 +1,655 @@
+{{define "layout"}}<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{if .PageTitle}}{{.PageTitle}}{{else}}{{.AppName}}{{end}}</title>
+<link rel="icon" type="image/svg+xml" href="{{.MonitorFaviconPath}}">
+<link rel="stylesheet" href="{{.StaticBase}}/css/shared.css?v={{.AssetVersion}}">
+<script>
+var IH_APP_BASE   = {{.AppBase | js}};
+var IH_COLLAPSE_KEY = "sab.monitor.collapsed.v1";
+var IH_COLLAPSE_LEGACY_KEY = "nab.monitor.collapsed.v1";
+var IH_SIDENAV_SERVER_TREE_KEY = "sab.monitor.sidenav.server_tree.v1";
+var IH_SIDENAV_SERVER_TREE_LEGACY_KEY = "nab.monitor.sidenav.server_tree.v1";
+var IH_SIDENAV_ORDER_KEY = "sab.monitor.sidenav.order.v1";
+var BAR_THRESHOLDS = {{if .ResourceBarThresholds}}{{.ResourceBarThresholds}}{{else}}{"warning":60,"danger":85}{{end}};
+var IH_CARD_OPTIONS = {{if .CardOptions}}{{.CardOptions}}{{else}}{}{{end}};
+var IH_CARD_IDS = {{if .CardIDs}}{{.CardIDs}}{{else}}{}{{end}};
+var IH_CARD_APIS = {{if .CardAPIs}}{{.CardAPIs}}{{else}}{}{{end}};
+var IH_CARD_VIEW_MODES = {{if .CardViewModes}}{{.CardViewModes}}{{else}}{}{{end}};
+var IH_CHILD_CARD_VIEW_MODES = {{if .ChildCardViewModes}}{{.ChildCardViewModes}}{{else}}{}{{end}};
+var IH_CARD_META = {{if .CardMeta}}{{.CardMeta}}{{else}}{}{{end}};
+var CSRF_TOKEN = {{.CSRFToken | js}};
+var SERVER_DOMAIN = {{.BaseHost | js}};
+var IH_REMOTE_USER = {{.CurrentUser | js}};
+var IH_CURRENT_ROLE = {{.CurrentRole | js}};
+var IH_AGENT_ID = {{.AgentID | js}};
+var IH_AGENT_TYPE = {{.AgentType | js}};
+{{.JSVars}}</script>
+<script src="{{.StaticBase}}/js/shared_utils.js?v={{.AssetVersion}}"></script>
+<script src="{{.StaticBase}}/js/shared.js?v={{.AssetVersion}}"></script>
+<script src="{{.StaticBase}}/js/card_runtime.js?v={{.AssetVersion}}"></script>
+<script src="{{.StaticBase}}/js/card_refresh.js?v={{.AssetVersion}}"></script>
+<script src="{{.StaticBase}}/js/card_jump.js?v={{.AssetVersion}}"></script>
+<!-- カード単位モジュール（Phase 3 / C5: navmeta.MonitorCardMeta.JSModule から自動出力） -->
+{{range .CardJSModules}}<script src="{{$.StaticBase}}/js/{{.}}?v={{$.AssetVersion}}"></script>
+{{end}}
+<script src="{{.StaticBase}}/js/monitor_page.js?v={{.AssetVersion}}"></script>
+<script>
+/* 折りたたみ状態の先行適用（チラつき防止） */
+(function() {
+	try {
+		var key = (typeof IH_COLLAPSE_KEY !== 'undefined') ? IH_COLLAPSE_KEY : "sab.monitor.collapsed.v1";
+		var legacyKey = (typeof IH_COLLAPSE_LEGACY_KEY !== 'undefined') ? IH_COLLAPSE_LEGACY_KEY : "nab.monitor.collapsed.v1";
+		var raw = localStorage.getItem(key);
+		if (!raw && legacyKey && legacyKey !== key) {
+			raw = localStorage.getItem(legacyKey);
+			if (raw) localStorage.setItem(key, raw);
+		}
+		if (!raw) return;
+		var ids = JSON.parse(raw);
+		if (!Array.isArray(ids) || !ids.length) return;
+		var style = document.createElement('style');
+		var sel = ids.map(function(id) { return '#' + id + '.collapsed'; }).join(',');
+		style.textContent = sel + ' > *:not(.card-header):not(.section-toggle):not(.btn-card-refresh-floating){display:none!important;}';
+		document.documentElement.appendChild(style);
+		window.__ihdashCollapsed = ids;
+	} catch(e) {}
+})();
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+	if (!CSRF_TOKEN) return;
+	document.querySelectorAll('input[name="csrf_token"]').forEach(function(el) {
+		if (!el.value) el.value = CSRF_TOKEN;
+	});
+});
+</script>
+</head>
+<body data-theme="dark">
+
+<!-- サイドナビ用ホバーゾーン（1200px未満時のみ機能。左端の細帯にホバーで sidenav を呼び出す） -->
+<div id="sidenav-hover-zone" aria-hidden="true"></div>
+<!-- サイドナビ（目次） -->
+<nav id="sidenav" aria-label="セクション目次">
+	<div class="sidenav-header">
+		<span class="sidenav-title">目次</span>
+		<div class="sidenav-actions">
+			<button type="button" class="btn-secondary btn-sm" id="sidenav-expand-all">全開</button>
+			<button type="button" class="btn-secondary btn-sm" id="sidenav-collapse-all">全閉</button>
+		</div>
+	</div>
+	<div class="sidenav-list">
+		<div class="sidenav-group-title">サーバー</div>
+		<a href="?view=agents_overview" class="sidenav-link" target="_self">🖥️ 全サーバー概要</a>
+		{{if eq .CurrentRole "vendor_staff"}}
+		<div class="sidenav-group-title">ベンダー</div>
+		<a href="?view=vendor_console" class="sidenav-link" target="_self">🏢 ベンダーコンソール</a>
+		{{end}}
+		{{if .ServerTree}}
+		<button type="button" class="sidenav-tree-toggle" id="sidenav-server-tree-toggle" aria-expanded="false" aria-controls="sidenav-server-tree">
+			<span class="sidenav-tree-toggle-icon">▶</span>
+			<span class="sidenav-tree-toggle-label">サーバー一覧</span>
+		</button>
+		<div class="sidenav-server-tree" id="sidenav-server-tree" hidden>
+			{{range .ServerTree}}
+			<a href="?view=server_detail&agent={{.AgentID}}" class="sidenav-server-link{{if eq $.CurrentAgentID .AgentID}} active{{end}}">
+				<span class="sidenav-server-main">
+					<span class="sidenav-server-name">{{if .AgentLabel}}{{.AgentLabel}}{{else}}{{.AgentID}}{{end}}</span>
+					<span class="sidenav-server-badge {{if .IsAlert}}is-alert{{else}}is-ok{{end}}">{{if .IsAlert}}異常{{else}}正常{{end}}</span>
+				</span>
+				<span class="sidenav-server-meta">{{if .IsPrimary}}<span class="sidenav-server-role-main">Main Server</span>{{else}}<span class="sidenav-server-role-agent">Agent</span>{{end}} · {{.AgentType}} · {{.MinutesAgo}}分前</span>
+			</a>
+			{{end}}
+		</div>
+		{{end}}
+		{{if .Nav}}
+		<div class="sidenav-search">
+			<input type="search" id="sidenav-search-input" class="sidenav-search-input" placeholder="カードを検索" aria-label="カードを検索"
+				autocomplete="off" autocapitalize="off" spellcheck="false"
+				data-form-type="other" data-lpignore="true" data-1p-ignore="true">
+			<div class="sidenav-search-empty" id="sidenav-search-empty" hidden>該当するカードがありません</div>
+		</div>
+		{{end}}
+		{{range .Nav}}
+			{{if .NavGroup}}
+				<div class="sidenav-group-title">{{.NavGroup}}</div>
+			{{else if .TwoCol}}
+				{{range .TwoCol}}
+					{{if .Href}}
+					<a href="{{.Href}}" class="sidenav-link" target="_self">{{.Label}}</a>
+					{{else}}
+					<a href="#{{.ID}}" class="sidenav-link" data-target="{{.ID}}">{{.Label}}</a>
+					{{end}}
+				{{end}}
+			{{else}}
+				{{if .Href}}
+				<a href="{{.Href}}" class="sidenav-link" target="_self">{{.Label}}</a>
+				{{else}}
+				<a href="#{{.ID}}" class="sidenav-link" data-target="{{.ID}}">{{.Label}}</a>
+				{{end}}
+			{{end}}
+		{{end}}
+	</div>
+</nav>
+<button type="button" id="sidenav-fab" class="btn-secondary" aria-label="目次を開く">目次</button>
+
+<div class="container">
+	<header>
+		<h1 class="dashboard-title">
+			<a href="" class="dashboard-title-link" data-page-reload>
+				<img src="{{.MonitorFaviconPath}}" class="dashboard-title-icon" alt="">{{.AppName}}<span class="dashboard-title-sub">Server Admin Bridge</span>
+			</a>
+			<div class="header-search-form">
+				<input type="search" id="header-ip-input" placeholder="IP検索 203.0.113.1 / IPv6"
+					pattern="[0-9A-Fa-f:.]+" aria-label="IPアドレスで検索"
+					autocomplete="off" autocapitalize="off" spellcheck="false"
+					data-form-type="other" data-lpignore="true" data-1p-ignore="true"
+					inputmode="text">
+				<button type="button" class="btn-search btn-sm" id="header-ip-search-btn">検索</button>
+			</div>
+			<div class="header-meta">
+				<div class="header-meta-item">
+					<span class="header-meta-label">最終更新</span>
+					<span class="header-meta-value" id="last-updated" data-updated-at="{{.Now}}">{{.Now}}</span>
+				</div>
+				{{block "header_links" .}}{{end}}
+			</div>
+			<div class="header-icons">
+				{{if .ShowOverviewRefreshButton}}
+				<button type="button" class="btn-card-refresh" data-page-reload title="画面を更新" aria-label="画面を更新">更新</button>
+				{{end}}
+				{{block "header_icons" .}}{{end}}
+				<button type="button" class="theme-toggle" id="themeToggle" title="テーマ切替">🌙</button>
+				{{if .CurrentUser}}
+				<div class="user-avatar-wrap" id="userAvatarWrap">
+					<button type="button" class="user-avatar" id="userAvatarBtn" title="{{if .CurrentUserName}}{{.CurrentUserName}}{{else}}{{.CurrentUser}}{{end}}" aria-haspopup="true" aria-expanded="false">
+						{{if .CurrentAvatarURL}}<img src="{{.CurrentAvatarURL}}" class="user-avatar-img" alt="">{{else}}{{if .CurrentUserInitial}}{{.CurrentUserInitial}}{{else}}?{{end}}{{end}}
+					</button>
+					<div class="user-dropdown" id="userDropdown" role="menu">
+						<div class="user-dropdown-header">
+							<div class="user-dropdown-avatar">{{if .CurrentAvatarURL}}<img src="{{.CurrentAvatarURL}}" class="user-avatar-img" alt="">{{else}}{{if .CurrentUserInitial}}{{.CurrentUserInitial}}{{else}}?{{end}}{{end}}</div>
+							<div class="user-dropdown-info">
+								<div class="user-dropdown-name">{{if .CurrentUserName}}{{.CurrentUserName}}{{else}}{{.CurrentUser}}{{end}}</div>
+								<div class="user-dropdown-id">@{{.CurrentUser}}</div>
+							</div>
+						</div>
+						<div class="user-dropdown-divider"></div>
+						<button type="button" class="user-dropdown-item" id="editProfileBtn" role="menuitem">
+							<span class="user-dropdown-icon">✏️</span>ユーザー情報編集
+						</button>
+						{{if .AdminAuditLogPath}}
+						<a class="user-dropdown-item" href="{{.MonitorBase}}/?view=audit_log" role="menuitem">
+							<span class="user-dropdown-icon">🧾</span>監査ログ
+						</a>
+						{{end}}
+						<button type="button" class="user-dropdown-item" id="systemInfoBtn" role="menuitem">
+							<span class="user-dropdown-icon">ℹ️</span>システム情報
+						</button>
+						<div class="user-dropdown-divider"></div>
+						<form method="post" action="{{.LogoutPath}}">
+							<input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+							<button type="submit" class="user-dropdown-item user-dropdown-logout" role="menuitem">
+								<span class="user-dropdown-icon">🚪</span>ログアウト
+							</button>
+						</form>
+					</div>
+				</div>
+				{{end}}
+			</div>
+		</h1>
+	</header>
+
+	{{if .ShowServerContext}}
+	<aside class="server-context-float" aria-label="現在のサーバー固定表示">
+		<div class="server-context-float-label">現在のサーバー</div>
+		<div class="server-context-float-title">{{.PageContextTitle}}</div>
+		<div class="server-context-float-meta">
+			<span class="server-context-pill server-context-pill-type">{{.PageContextType}}</span>
+			<span class="server-context-pill server-context-pill-id">{{.PageContextID}}</span>
+			{{if .PageContextIP}}<span class="server-context-pill server-context-pill-ip">IP {{.PageContextIP}}</span>{{end}}
+		</div>
+	</aside>
+	{{end}}
+
+	{{$root := .}}
+	{{if .Nav}}
+		{{range .Nav}}
+		{{if .NavGroup}}
+		{{- /* グループ区切り：カード出力なし */}}
+		{{else if .Href}}
+		{{- /* 外部リンク化している項目は本文カード化しない */}}
+		{{else if .TwoCol}}
+			<div class="two-col">
+			{{range .TwoCol}}
+			{{$html := index $root.Cards .ID}}
+			{{if $html}}
+				{{$html}}
+			{{else}}
+				{{template "card-item" .}}
+			{{end}}
+			{{end}}
+			</div>
+		{{else}}
+			{{$html := index $root.Cards .ID}}
+			{{if $html}}
+				{{$html}}
+			{{else}}
+				{{template "card-item" .}}
+			{{end}}
+		{{end}}
+		{{end}}
+	{{else}}
+		{{- /* agents_overview のように本文だけ出したい画面向けのフォールバック */}}
+		{{range .Cards}}
+			{{.}}
+		{{end}}
+	{{end}}
+
+</div>
+<script>
+/* 目次と本文カードの並び順の先行適用（チラつき防止）。操作の受付は initSidenav で始める */
+if (typeof applySidenavOrder === 'function') applySidenavOrder();
+</script>
+
+<!-- Flash Modal（共通） -->
+<div id="flash-modal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="flash-modal-title">
+	<div class="modal-content" id="flash-modal-content">
+		<div class="modal-header" id="flash-modal-header">
+			<h3 id="flash-modal-title">通知</h3>
+			<div class="modal-header-actions">
+				<button type="button" class="modal-close" id="flash-modal-close" aria-label="閉じる">&times;</button>
+			</div>
+		</div>
+		<div class="modal-body" id="flash-modal-body"></div>
+	</div>
+</div>
+
+{{block "modals" .}}{{end}}
+
+{{if .CurrentUser}}
+<!-- システム情報モーダル -->
+<div id="system-info-modal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="system-info-modal-title">
+	<div class="modal-content" style="max-width:480px;">
+		<div class="modal-header">
+			<h3 id="system-info-modal-title" style="display:flex;align-items:center;gap:8px;">システム情報{{if .SystemInfo.LicenseVerified}}<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;background:#1a3a2a;border:1px solid #27ae60;border-radius:12px;font-size:0.65rem;font-weight:600;color:#2ecc71;line-height:1;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Licensed</span>{{end}}</h3>
+			<div class="modal-header-actions">
+				<button type="button" class="modal-close" id="system-info-modal-close" aria-label="閉じる">&times;</button>
+			</div>
+		</div>
+		<div class="modal-body" style="padding:20px;overflow-y:visible;flex:none;">
+			{{if .SystemInfo.AppName}}
+			<table style="width:100%;border-collapse:collapse;font-size:0.85rem;margin-bottom:16px;">
+				<tr><td style="padding:4px 8px;color:var(--text-secondary);width:40%;">アプリ名</td><td style="padding:4px 8px;">{{.SystemInfo.AppName}}</td></tr>
+				{{if .SystemInfo.AppVersion}}<tr><td style="padding:4px 8px;color:var(--text-secondary);">バージョン</td><td style="padding:4px 8px;">{{.SystemInfo.AppVersion}}</td></tr>{{end}}
+				{{if .SystemInfo.VendorName}}<tr><td style="padding:4px 8px;color:var(--text-secondary);">ベンダー</td><td style="padding:4px 8px;">{{.SystemInfo.VendorName}}</td></tr>{{end}}
+				{{if .SystemInfo.TenantID}}<tr><td style="padding:4px 8px;color:var(--text-secondary);">テナントID</td><td style="padding:4px 8px;">{{.SystemInfo.TenantID}}</td></tr>{{end}}
+				{{if .SystemInfo.TenantSlug}}<tr><td style="padding:4px 8px;color:var(--text-secondary);">テナント</td><td style="padding:4px 8px;">{{.SystemInfo.TenantSlug}}</td></tr>{{end}}
+			</table>
+			{{end}}
+			{{if .SystemInfo.Licenses}}
+			<div style="font-size:0.8rem;font-weight:600;color:var(--text-secondary);margin-bottom:8px;">使用ライブラリ・データ</div>
+			{{range .SystemInfo.Licenses}}
+			<div style="background:var(--bg-secondary);border-radius:4px;padding:10px 12px;margin-bottom:8px;font-size:0.82rem;">
+				<div style="font-weight:600;margin-bottom:4px;">{{.Name}}</div>
+				<div style="color:var(--text-secondary);">ライセンス: {{.License}}</div>
+				{{if .Attribution}}<div style="color:var(--text-secondary);margin-top:2px;">{{.Attribution}}</div>{{end}}
+				{{if .URL}}<div style="margin-top:4px;"><a href="{{.URL}}" target="_blank" rel="noopener" style="color:var(--accent-blue);font-size:0.78rem;">{{.URL}}</a></div>{{end}}
+			</div>
+			{{end}}
+			{{end}}
+		</div>
+	</div>
+</div>
+
+<!-- ユーザー情報編集モーダル -->
+<div id="profile-modal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title">
+	<div class="modal-content" style="max-width:400px;">
+		<div class="modal-header">
+			<h3 id="profile-modal-title">ユーザー情報編集</h3>
+			<div class="modal-header-actions">
+				<button type="button" class="modal-close" id="profile-modal-close" aria-label="閉じる">&times;</button>
+			</div>
+		</div>
+		<div class="modal-body" style="padding:20px;">
+			<!-- アバター＋ユーザー情報 -->
+			<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+				<div class="avatar-upload-wrap" id="profileModalAvatar" title="クリックして画像を変更">
+					{{if .CurrentAvatarURL}}<img src="{{.CurrentAvatarURL}}" class="user-avatar-img" id="profileModalAvatarImg" alt="">{{else}}<span id="profileModalAvatarInitial" class="user-dropdown-avatar" style="width:52px;height:52px;font-size:1.4rem;">{{if .CurrentUserInitial}}{{.CurrentUserInitial}}{{else}}?{{end}}</span>{{end}}
+					<div class="avatar-upload-overlay">📷</div>
+					<input type="file" id="avatarFileInput" accept="image/jpeg,image/png,image/gif,image/webp" style="position:absolute;width:0;height:0;opacity:0;pointer-events:none;">
+				</div>
+				<div>
+					<div style="font-size:0.85rem;font-weight:600;color:var(--text-primary);" id="profileModalName">{{if .CurrentUserName}}{{.CurrentUserName}}{{else}}{{.CurrentUser}}{{end}}</div>
+					<div style="font-size:0.72rem;color:var(--text-muted);">@{{.CurrentUser}}</div>
+					<div style="margin-top:4px;">
+						{{if eq .CurrentRole "vendor_staff"}}<span class="authz-role-badge authz-role-vendor">Vendor Staff</span>
+						{{else if eq .CurrentRole "tenant_admin"}}<span class="authz-role-badge authz-role-admin">Tenant Admin</span>
+						{{else}}<span class="authz-role-badge authz-role-user">Tenant User</span>{{end}}
+					</div>
+				</div>
+			</div>
+			<!-- タブ -->
+			<div class="profile-tabs">
+				<button type="button" class="profile-tab active" data-tab="name">表示名</button>
+				<button type="button" class="profile-tab" data-tab="password">パスワード</button>
+				<button type="button" class="profile-tab" data-tab="totp">2FA設定</button>
+			</div>
+			<!-- タブ: 表示名 -->
+			<div class="profile-tab-panel" id="profile-panel-name">
+				<label class="profile-label">表示名</label>
+				<input type="text" id="profileNameInput" maxlength="50" placeholder="表示名を入力"
+					value="{{if .CurrentUserName}}{{.CurrentUserName}}{{else}}{{.CurrentUser}}{{end}}"
+					class="profile-input" autocomplete="off" autocapitalize="off" spellcheck="false"
+					data-form-type="other" data-lpignore="true" data-1p-ignore="true">
+				<div class="profile-actions">
+					<button type="button" class="btn-primary btn-sm" id="profileModalSave">保存</button>
+				</div>
+				<div class="profile-msg" id="profileNameMsg"></div>
+			</div>
+			<!-- タブ: パスワード -->
+			<div class="profile-tab-panel" id="profile-panel-password" style="display:none;">
+				<label class="profile-label">現在のパスワード</label>
+				<input type="password" id="profileCurrentPw" class="profile-input" autocomplete="current-password">
+				<label class="profile-label">新しいパスワード（8文字以上）</label>
+				<input type="password" id="profileNewPw" class="profile-input" autocomplete="new-password">
+				<label class="profile-label">新しいパスワード（確認）</label>
+				<input type="password" id="profileConfirmPw" class="profile-input" autocomplete="new-password">
+				<div class="profile-actions">
+					<button type="button" class="btn-primary btn-sm" id="profilePwSave">更新する</button>
+				</div>
+				<div class="profile-msg" id="profilePwMsg"></div>
+			</div>
+			<!-- タブ: 2FA -->
+			<div class="profile-tab-panel" id="profile-panel-totp" style="display:none;">
+				<div style="margin-bottom:10px;">
+					状態: <span id="totpStatusBadge">{{if .CurrentTOTPEnabled}}<span class="result-badge badge-2fa-enabled">有効</span>{{else}}<span class="result-badge badge-2fa-disabled">無効</span>{{end}}</span>
+				</div>
+				<div id="totpGenerateSection">
+					<button type="button" class="btn-primary btn-sm" id="totpGenerateBtn">秘密鍵を生成する</button>
+				</div>
+				<div id="totpSecretSection" style="display:none;margin-top:10px;">
+					<label class="profile-label">秘密鍵</label>
+					<div id="totpSecret" style="font-family:monospace;font-size:0.85rem;background:var(--bg-input);border:1px solid var(--border-color);border-radius:6px;padding:8px 10px;word-break:break-all;margin-bottom:8px;"></div>
+					<label class="profile-label">有効化コード（6桁）</label>
+					<input type="text" id="totpCode" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" class="profile-input" placeholder="123456"
+						autocomplete="off" autocapitalize="off" spellcheck="false"
+						data-form-type="other" data-lpignore="true" data-1p-ignore="true">
+					<div class="profile-actions">
+						<button type="button" class="btn-success btn-sm" id="totpEnableBtn">2FAを有効化</button>
+					</div>
+				</div>
+				<div id="totpDisableSection" style="margin-top:10px;{{if .CurrentTOTPEnabled}}{{else}}display:none;{{end}}">
+					<button type="button" class="btn-warning btn-sm" id="totpDisableBtn">2FAを無効化</button>
+				</div>
+				<div class="profile-msg" id="profileTotpMsg"></div>
+			</div>
+		</div>
+	</div>
+</div>
+<style>
+.profile-tabs { display:flex; gap:4px; margin-bottom:14px; border-bottom:1px solid var(--border-color); }
+.profile-tab { background:none; border:none; border-bottom:2px solid transparent; padding:6px 12px; font-size:0.82rem; color:var(--text-secondary); cursor:pointer; margin-bottom:-1px; }
+.profile-tab.active { color:var(--text-primary); border-bottom-color:#3498db; font-weight:600; }
+.profile-label { display:block; font-size:0.8rem; color:var(--text-secondary); margin:10px 0 4px; }
+.profile-input { width:100%; box-sizing:border-box; background:var(--bg-input); border:1px solid var(--border-color); border-radius:6px; padding:8px 10px; color:var(--text-primary); font-size:0.85rem; outline:none; }
+.profile-actions { margin-top:12px; display:flex; justify-content:flex-end; gap:8px; }
+.profile-msg { margin-top:8px; font-size:0.8rem; min-height:1.2em; }
+</style>
+<script>
+(function() {
+	var appBase = (typeof IH_APP_BASE !== 'undefined') ? IH_APP_BASE.replace(/\/?$/, '/') : '/';
+	var csrfToken = (typeof CSRF_TOKEN !== 'undefined') ? CSRF_TOKEN : '';
+
+	function openProfileModal() {
+		document.getElementById('profile-modal').style.display = 'flex';
+		clearMsgs();
+		// ヘッダーアバターと同期（アップロード後のページリロードなしでも反映）
+		var headerImg = document.querySelector('.user-avatar img.user-avatar-img, .user-dropdown-avatar img.user-avatar-img');
+		var modalImg = document.getElementById('profileModalAvatarImg');
+		var modalInitial = document.getElementById('profileModalAvatarInitial');
+		var avatarWrap = document.getElementById('profileModalAvatar');
+		if (headerImg && headerImg.src) {
+			if (modalImg) {
+				modalImg.src = headerImg.src;
+			} else if (avatarWrap) {
+				var newImg = document.createElement('img');
+				newImg.src = headerImg.src;
+				newImg.className = 'user-avatar-img';
+				newImg.id = 'profileModalAvatarImg';
+				if (modalInitial) { modalInitial.replaceWith(newImg); } else { avatarWrap.prepend(newImg); }
+			}
+		}
+	}
+	function closeProfileModal() {
+		document.getElementById('profile-modal').style.display = 'none';
+	}
+	function clearMsgs() {
+		['profileNameMsg','profilePwMsg','profileTotpMsg'].forEach(function(id) {
+			var el = document.getElementById(id);
+			if (el) el.textContent = '';
+		});
+	}
+	function showMsg(id, text, ok) {
+		var el = document.getElementById(id);
+		if (!el) return;
+		el.textContent = text;
+		el.style.color = ok ? '#7bd88f' : '#e05050';
+	}
+
+	function postApi(api, fd, cb) {
+		// headers は明示せず共通 CSRF ラッパー（shared.js の initCsrfFetchWrapper）に委譲する。
+		// 同一オリジン POST に X-CSRF-Token / X-Requested-With が自動付与される。
+		fetch(appBase + '?api=' + api, {
+			method: 'POST',
+			body: fd
+		}).then(function(r) { return r.json(); }).then(cb).catch(function() {
+			cb({ok: false, message: '通信エラーが発生しました'});
+		});
+	}
+
+	document.addEventListener('DOMContentLoaded', function() {
+		// ドロップダウン → モーダル開く
+		var editBtn = document.getElementById('editProfileBtn');
+		if (editBtn) editBtn.addEventListener('click', function() {
+			var dd = document.getElementById('userDropdown');
+			if (dd) dd.classList.remove('open');
+			openProfileModal();
+		});
+
+		// システム情報モーダル
+		var sysInfoBtn = document.getElementById('systemInfoBtn');
+		if (sysInfoBtn) sysInfoBtn.addEventListener('click', function() {
+			var dd = document.getElementById('userDropdown');
+			if (dd) dd.classList.remove('open');
+			document.getElementById('system-info-modal').style.display = 'flex';
+		});
+		var sysInfoClose = document.getElementById('system-info-modal-close');
+		if (sysInfoClose) sysInfoClose.addEventListener('click', function() {
+			document.getElementById('system-info-modal').style.display = 'none';
+		});
+		var sysInfoModal = document.getElementById('system-info-modal');
+		if (sysInfoModal) sysInfoModal.addEventListener('click', function(e) {
+			if (e.target === this) this.style.display = 'none';
+		});
+
+		// 閉じる
+		document.getElementById('profile-modal-close').addEventListener('click', closeProfileModal);
+		document.getElementById('profile-modal').addEventListener('click', function(e) {
+			if (e.target === this) closeProfileModal();
+		});
+
+		// ---- アバターアップロード ----
+		var avatarWrap = document.getElementById('profileModalAvatar');
+		var avatarFileInput = document.getElementById('avatarFileInput');
+		if (avatarWrap && avatarFileInput) {
+			avatarWrap.addEventListener('click', function() { avatarFileInput.click(); });
+			avatarFileInput.addEventListener('change', function() {
+				var file = avatarFileInput.files[0];
+				if (!file) return;
+				var fd = new FormData();
+				fd.append('avatar', file);
+				fetch(appBase + '?api=upload_avatar', {
+					method: 'POST',
+					body: fd
+				}).then(function(r) { return r.json(); }).then(function(data) {
+					if (data.ok && data.avatar_url) {
+						showMsg('profileNameMsg', '変更しました', true);
+						var url = data.avatar_url + '?t=' + Date.now();
+						// モーダルアバター更新
+						var img = document.getElementById('profileModalAvatarImg');
+						var initial = document.getElementById('profileModalAvatarInitial');
+						if (img) {
+							img.src = url;
+						} else {
+							var newImg = document.createElement('img');
+							newImg.src = url;
+							newImg.className = 'user-avatar-img';
+							newImg.id = 'profileModalAvatarImg';
+							if (initial) { initial.replaceWith(newImg); } else { avatarWrap.prepend(newImg); }
+						}
+						if (initial) initial.style.display = 'none';
+						// ヘッダーアバター・ドロップダウンアバター全更新
+						document.querySelectorAll('.user-avatar, .user-dropdown-avatar').forEach(function(el) {
+							var existing = el.querySelector('img.user-avatar-img');
+							if (existing) {
+								existing.src = url;
+							} else {
+								el.innerHTML = '<img src="' + url + '" class="user-avatar-img" alt="">';
+							}
+						});
+					} else {
+						showMsg('profileNameMsg', data.message || 'アップロードに失敗しました', false);
+					}
+				}).catch(function(e) {
+					showMsg('profileNameMsg', '通信エラー: ' + e, false);
+				});
+				avatarFileInput.value = '';
+			});
+		}
+
+		// タブ切替
+		document.querySelectorAll('.profile-tab').forEach(function(tab) {
+			tab.addEventListener('click', function() {
+				document.querySelectorAll('.profile-tab').forEach(function(t) { t.classList.remove('active'); });
+				document.querySelectorAll('.profile-tab-panel').forEach(function(p) { p.style.display = 'none'; });
+				tab.classList.add('active');
+				var panel = document.getElementById('profile-panel-' + tab.dataset.tab);
+				if (panel) panel.style.display = '';
+				clearMsgs();
+			});
+		});
+
+		// ---- 表示名保存 ----
+		var saveBtn = document.getElementById('profileModalSave');
+		if (saveBtn) saveBtn.addEventListener('click', function() {
+			var name = document.getElementById('profileNameInput').value.trim();
+			if (!name) { showMsg('profileNameMsg', '名前を入力してください', false); return; }
+			saveBtn.disabled = true;
+			var fd = new FormData();
+			fd.append('name', name);
+			fd.append('csrf_token', csrfToken);
+			postApi('update_profile_name', fd, function(data) {
+				saveBtn.disabled = false;
+				showMsg('profileNameMsg', data.message || (data.ok ? '保存しました' : 'エラー'), data.ok);
+				if (data.ok && data.name) {
+					var nameEl = document.getElementById('profileModalName');
+					if (nameEl) nameEl.textContent = data.name;
+					// アバター画像がない場合のみイニシャルを更新
+					if (data.initial && !document.getElementById('profileModalAvatarImg')) {
+						var avatarEl = document.getElementById('profileModalAvatar');
+						if (avatarEl) avatarEl.textContent = data.initial;
+					}
+					document.querySelectorAll('.user-avatar, .user-dropdown-avatar').forEach(function(el) {
+						if (data.initial && !el.querySelector('img.user-avatar-img')) el.textContent = data.initial;
+					});
+					document.querySelectorAll('.user-dropdown-name').forEach(function(el) { el.textContent = data.name; });
+				}
+			});
+		});
+
+		// ---- パスワード更新 ----
+		var pwSaveBtn = document.getElementById('profilePwSave');
+		if (pwSaveBtn) pwSaveBtn.addEventListener('click', function() {
+			var fd = new FormData();
+			fd.append('current_password', document.getElementById('profileCurrentPw').value);
+			fd.append('new_password', document.getElementById('profileNewPw').value);
+			fd.append('confirm_password', document.getElementById('profileConfirmPw').value);
+			fd.append('csrf_token', csrfToken);
+			pwSaveBtn.disabled = true;
+			postApi('update_password', fd, function(data) {
+				pwSaveBtn.disabled = false;
+				showMsg('profilePwMsg', data.message || (data.ok ? '更新しました' : 'エラー'), data.ok);
+				if (data.ok) {
+					document.getElementById('profileCurrentPw').value = '';
+					document.getElementById('profileNewPw').value = '';
+					document.getElementById('profileConfirmPw').value = '';
+				}
+			});
+		});
+
+		// ---- 2FA: 秘密鍵生成 ----
+		var totpGenerateBtn = document.getElementById('totpGenerateBtn');
+		if (totpGenerateBtn) totpGenerateBtn.addEventListener('click', function() {
+			totpGenerateBtn.disabled = true;
+			var fd = new FormData();
+			fd.append('csrf_token', csrfToken);
+			postApi('totp_generate', fd, function(data) {
+				totpGenerateBtn.disabled = false;
+				if (data.ok) {
+					document.getElementById('totpSecret').textContent = data.secret || '';
+					document.getElementById('totpSecretSection').style.display = '';
+				} else {
+					showMsg('profileTotpMsg', data.message || 'エラー', false);
+				}
+			});
+		});
+
+		// ---- 2FA: 有効化 ----
+		var totpEnableBtn = document.getElementById('totpEnableBtn');
+		if (totpEnableBtn) totpEnableBtn.addEventListener('click', function() {
+			var code = document.getElementById('totpCode').value.trim();
+			if (!code) { showMsg('profileTotpMsg', '6桁コードを入力してください', false); return; }
+			totpEnableBtn.disabled = true;
+			var fd = new FormData();
+			fd.append('totp_code', code);
+			fd.append('csrf_token', csrfToken);
+			postApi('totp_enable', fd, function(data) {
+				totpEnableBtn.disabled = false;
+				showMsg('profileTotpMsg', data.message || (data.ok ? '有効化しました' : 'エラー'), data.ok);
+				if (data.ok) {
+					document.getElementById('totpStatusBadge').innerHTML = '<span class="result-badge badge-2fa-enabled">有効</span>';
+					document.getElementById('totpSecretSection').style.display = 'none';
+					document.getElementById('totpDisableSection').style.display = '';
+				}
+			});
+		});
+
+		// ---- 2FA: 無効化 ----
+		var totpDisableBtn = document.getElementById('totpDisableBtn');
+		if (totpDisableBtn) totpDisableBtn.addEventListener('click', function() {
+			var proceed = (typeof window.confirmModal === 'function') ? window.confirmModal('2FAを無効化しますか？') : Promise.resolve(confirm('2FAを無効化しますか？'));
+			proceed.then(function(ok) {
+				if (!ok) return;
+				totpDisableBtn.disabled = true;
+				var fd = new FormData();
+				fd.append('csrf_token', csrfToken);
+				postApi('totp_disable', fd, function(data) {
+					totpDisableBtn.disabled = false;
+					showMsg('profileTotpMsg', data.message || (data.ok ? '無効化しました' : 'エラー'), data.ok);
+					if (data.ok) {
+						document.getElementById('totpStatusBadge').innerHTML = '<span class="result-badge badge-2fa-disabled">無効</span>';
+						document.getElementById('totpDisableSection').style.display = 'none';
+					}
+				});
+			});
+		});
+	});
+})();
+</script>
+{{end}}
+
+</body>
+</html>
+{{end}}

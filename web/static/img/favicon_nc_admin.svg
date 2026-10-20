@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="14" fill="#EA580C"/>
+  <!-- Cloud shape (upper portion) -->
+  <g fill="white">
+    <circle cx="22" cy="26" r="7"/>
+    <circle cx="32" cy="20" r="9"/>
+    <circle cx="42" cy="26" r="7"/>
+    <rect x="22" y="26" width="20" height="7"/>
+  </g>
+  <!-- Gear (lower right, with orange outline to separate from cloud) -->
+  <g transform="translate(42, 44)">
+    <!-- Gear teeth (8 total) -->
+    <g fill="white">
+      <rect x="-2" y="-11" width="4" height="4" rx="0.5"/>
+      <rect x="-2" y="7" width="4" height="4" rx="0.5"/>
+      <rect x="-11" y="-2" width="4" height="4" rx="0.5"/>
+      <rect x="7" y="-2" width="4" height="4" rx="0.5"/>
+      <g transform="rotate(45)">
+        <rect x="-2" y="-11" width="4" height="4" rx="0.5"/>
+        <rect x="-2" y="7" width="4" height="4" rx="0.5"/>
+        <rect x="-11" y="-2" width="4" height="4" rx="0.5"/>
+        <rect x="7" y="-2" width="4" height="4" rx="0.5"/>
+      </g>
+    </g>
+    <!-- Gear body -->
+    <circle r="8" fill="white" stroke="#EA580C" stroke-width="1.5"/>
+    <!-- Gear center hole -->
+    <circle r="3" fill="#EA580C"/>
+  </g>
+</svg>
