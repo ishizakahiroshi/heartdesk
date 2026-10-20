@@ -17,7 +17,7 @@ type ActionsTenantsFile struct {
 // ActionsTenantEntry はテナント単位の操作可否。
 type ActionsTenantEntry struct {
 	// Actions: action ID -> true(許可) / false(禁止)
-	// action ID は src/sab/internal/auth/roles.go の actionClasses キーと合わせる。
+	// action ID は internal/auth/roles.go の actionClasses キーと合わせる。
 	Actions map[string]bool `toml:"actions"`
 	// Agents: agent_id -> agent固有の操作可否
 	Agents map[string]ActionsAgentEntry `toml:"agents"`

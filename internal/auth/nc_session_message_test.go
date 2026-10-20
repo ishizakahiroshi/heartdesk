@@ -16,7 +16,7 @@ import (
 // ncMessageTestHandler は login テンプレートにエラー文言だけを出すハンドラを返す。
 func ncMessageTestHandler(t *testing.T) *HTTPHandler {
 	t.Helper()
-	t.Setenv("SAB_BASE_DIR", t.TempDir())
+	t.Setenv("HEARTDESK_BASE_DIR", t.TempDir())
 	tmpl := template.Must(template.New("").Parse(`{{define "login"}}{{.Error}}{{end}}`))
 	routes := routing.Config{MonitorBase: "/monitor", StaticBase: "/static", LoginPath: "/login"}
 	return NewHTTPHandler(tmpl, routes, config.CardsConfig{}, config.SystemInfoData{})
@@ -50,7 +50,7 @@ func ncMessageTestLogin(t *testing.T, h *HTTPHandler, uid string) string {
 	return w.Body.String()
 }
 
-// Nextcloud には入れているが SAB に登録の無い人へ「入力内容を確認してください」を出さない
+// Nextcloud には入れているが heartdesk に登録の無い人へ「入力内容を確認してください」を出さない
 // （何も入力していないのにその文言が出ると、壊れているように見えるため）。
 func TestLoginNCUnregisteredShowsDedicatedMessage(t *testing.T) {
 	h := ncMessageTestHandler(t)

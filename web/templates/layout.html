@@ -7,25 +7,23 @@
 <link rel="icon" type="image/svg+xml" href="{{.MonitorFaviconPath}}">
 <link rel="stylesheet" href="{{.StaticBase}}/css/shared.css?v={{.AssetVersion}}">
 <script>
-var IH_APP_BASE   = {{.AppBase | js}};
-var IH_COLLAPSE_KEY = "sab.monitor.collapsed.v1";
-var IH_COLLAPSE_LEGACY_KEY = "nab.monitor.collapsed.v1";
-var IH_SIDENAV_SERVER_TREE_KEY = "sab.monitor.sidenav.server_tree.v1";
-var IH_SIDENAV_SERVER_TREE_LEGACY_KEY = "nab.monitor.sidenav.server_tree.v1";
-var IH_SIDENAV_ORDER_KEY = "sab.monitor.sidenav.order.v1";
+var HD_APP_BASE   = {{.AppBase | js}};
+var HD_COLLAPSE_KEY = "heartdesk.monitor.collapsed.v1";
+var HD_SIDENAV_SERVER_TREE_KEY = "heartdesk.monitor.sidenav.server_tree.v1";
+var HD_SIDENAV_ORDER_KEY = "heartdesk.monitor.sidenav.order.v1";
 var BAR_THRESHOLDS = {{if .ResourceBarThresholds}}{{.ResourceBarThresholds}}{{else}}{"warning":60,"danger":85}{{end}};
-var IH_CARD_OPTIONS = {{if .CardOptions}}{{.CardOptions}}{{else}}{}{{end}};
-var IH_CARD_IDS = {{if .CardIDs}}{{.CardIDs}}{{else}}{}{{end}};
-var IH_CARD_APIS = {{if .CardAPIs}}{{.CardAPIs}}{{else}}{}{{end}};
-var IH_CARD_VIEW_MODES = {{if .CardViewModes}}{{.CardViewModes}}{{else}}{}{{end}};
-var IH_CHILD_CARD_VIEW_MODES = {{if .ChildCardViewModes}}{{.ChildCardViewModes}}{{else}}{}{{end}};
-var IH_CARD_META = {{if .CardMeta}}{{.CardMeta}}{{else}}{}{{end}};
+var HD_CARD_OPTIONS = {{if .CardOptions}}{{.CardOptions}}{{else}}{}{{end}};
+var HD_CARD_IDS = {{if .CardIDs}}{{.CardIDs}}{{else}}{}{{end}};
+var HD_CARD_APIS = {{if .CardAPIs}}{{.CardAPIs}}{{else}}{}{{end}};
+var HD_CARD_VIEW_MODES = {{if .CardViewModes}}{{.CardViewModes}}{{else}}{}{{end}};
+var HD_CHILD_CARD_VIEW_MODES = {{if .ChildCardViewModes}}{{.ChildCardViewModes}}{{else}}{}{{end}};
+var HD_CARD_META = {{if .CardMeta}}{{.CardMeta}}{{else}}{}{{end}};
 var CSRF_TOKEN = {{.CSRFToken | js}};
 var SERVER_DOMAIN = {{.BaseHost | js}};
-var IH_REMOTE_USER = {{.CurrentUser | js}};
-var IH_CURRENT_ROLE = {{.CurrentRole | js}};
-var IH_AGENT_ID = {{.AgentID | js}};
-var IH_AGENT_TYPE = {{.AgentType | js}};
+var HD_REMOTE_USER = {{.CurrentUser | js}};
+var HD_CURRENT_ROLE = {{.CurrentRole | js}};
+var HD_AGENT_ID = {{.AgentID | js}};
+var HD_AGENT_TYPE = {{.AgentType | js}};
 {{.JSVars}}</script>
 <script src="{{.StaticBase}}/js/shared_utils.js?v={{.AssetVersion}}"></script>
 <script src="{{.StaticBase}}/js/shared.js?v={{.AssetVersion}}"></script>
@@ -40,13 +38,8 @@ var IH_AGENT_TYPE = {{.AgentType | js}};
 /* 折りたたみ状態の先行適用（チラつき防止） */
 (function() {
 	try {
-		var key = (typeof IH_COLLAPSE_KEY !== 'undefined') ? IH_COLLAPSE_KEY : "sab.monitor.collapsed.v1";
-		var legacyKey = (typeof IH_COLLAPSE_LEGACY_KEY !== 'undefined') ? IH_COLLAPSE_LEGACY_KEY : "nab.monitor.collapsed.v1";
+		var key = (typeof HD_COLLAPSE_KEY !== 'undefined') ? HD_COLLAPSE_KEY : "heartdesk.monitor.collapsed.v1";
 		var raw = localStorage.getItem(key);
-		if (!raw && legacyKey && legacyKey !== key) {
-			raw = localStorage.getItem(legacyKey);
-			if (raw) localStorage.setItem(key, raw);
-		}
 		if (!raw) return;
 		var ids = JSON.parse(raw);
 		if (!Array.isArray(ids) || !ids.length) return;
@@ -54,7 +47,7 @@ var IH_AGENT_TYPE = {{.AgentType | js}};
 		var sel = ids.map(function(id) { return '#' + id + '.collapsed'; }).join(',');
 		style.textContent = sel + ' > *:not(.card-header):not(.section-toggle):not(.btn-card-refresh-floating){display:none!important;}';
 		document.documentElement.appendChild(style);
-		window.__ihdashCollapsed = ids;
+		window.__heartdeskCollapsed = ids;
 	} catch(e) {}
 })();
 </script>
@@ -139,7 +132,7 @@ document.addEventListener('DOMContentLoaded', function() {
 	<header>
 		<h1 class="dashboard-title">
 			<a href="" class="dashboard-title-link" data-page-reload>
-				<img src="{{.MonitorFaviconPath}}" class="dashboard-title-icon" alt="">{{.AppName}}<span class="dashboard-title-sub">Server Admin Bridge</span>
+				<img src="{{.MonitorFaviconPath}}" class="dashboard-title-icon" alt="">{{.AppName}}<span class="dashboard-title-sub">server dashboard</span>
 			</a>
 			<div class="header-search-form">
 				<input type="search" id="header-ip-input" placeholder="IP検索 203.0.113.1 / IPv6"
@@ -399,7 +392,7 @@ if (typeof applySidenavOrder === 'function') applySidenavOrder();
 </style>
 <script>
 (function() {
-	var appBase = (typeof IH_APP_BASE !== 'undefined') ? IH_APP_BASE.replace(/\/?$/, '/') : '/';
+	var appBase = (typeof HD_APP_BASE !== 'undefined') ? HD_APP_BASE.replace(/\/?$/, '/') : '/';
 	var csrfToken = (typeof CSRF_TOKEN !== 'undefined') ? CSRF_TOKEN : '';
 
 	function openProfileModal() {

@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
 type revokedEntry struct {
@@ -20,7 +20,7 @@ type revokedEntry struct {
 }
 
 func licenseRevokeStorePath() string {
-	return sab.SabPath("data/license/revoked_jti.json")
+	return heartdesk.Path("data/license/revoked_jti.json")
 }
 
 // RestoreLicenseRevokeStore は起動時に失効JTIストアをロードする。

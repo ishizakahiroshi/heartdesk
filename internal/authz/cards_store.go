@@ -9,7 +9,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
 // cardsCacheTTL は authz カードキャッシュの有効期限。
@@ -93,12 +93,12 @@ func LoadCardsUser() (CardsUserFile, error) {
 	return doc, nil
 }
 
-// configDir は SAB_CONFIG_DIR を返す。未設定時は /home/sab/config。 // secrets-scan: allow
+// configDir は HEARTDESK_CONFIG_DIR を返す。未設定時は /var/lib/heartdesk/config。
 func configDir() string {
-	if v := strings.TrimSpace(sab.Env("SAB_CONFIG_DIR")); v != "" {
+	if v := strings.TrimSpace(heartdesk.Env("HEARTDESK_CONFIG_DIR")); v != "" {
 		return v
 	}
-	return "/home/sab/config" // secrets-scan: allow
+	return "/var/lib/heartdesk/config"
 }
 
 // --- キャッシュ付き読み込み（session 生成時に使う想定。C5 で接続予定） ---

@@ -2,7 +2,6 @@
 // tenant > agent > user の継承順でマージするレイヤー。
 //
 // 背景:
-//   - docs/sab/plan_config_toml_unification.md C4
 //   - docs/plan_users_toml_split_and_card_action_policy_20260422.md
 //
 // 扱うファイル（いずれも config/ 配下）:

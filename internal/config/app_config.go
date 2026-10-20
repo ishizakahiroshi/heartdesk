@@ -57,7 +57,7 @@ type AppConfig struct {
 		AdminProtectNames []string `toml:"admin_protect_names"`
 		// TrustedProxies は X-Real-IP / X-Forwarded-For を信用してよい
 		// リバースプロキシ（nginx 等）の IP / CIDR 一覧（ヘッダ偽装による IP 詐称を防ぐ）。
-		// 未設定時はループバック（127.0.0.0/8, ::1）のみを信頼する。SAB は通常
+		// 未設定時はループバック（127.0.0.0/8, ::1）のみを信頼する。heartdesk は通常
 		// nginx から 127.0.0.1:8765 へプロキシされるため既定で十分。:8765 へ直結された
 		// 接続は信頼プロキシ外なので RemoteAddr が採用され、ヘッダ偽装が効かない。
 		TrustedProxies []string `toml:"trusted_proxies"`
@@ -86,7 +86,7 @@ type AppConfig struct {
 	UI struct {
 		SSHAttacksLimit    int                          `toml:"ssh_attacks_limit"`
 		CardDefaultLimit   int                          `toml:"card_default_limit"`
-		IconSab            string                       `toml:"icon_sab"`
+		Icon               string                       `toml:"icon"`
 		IconMonitorFavicon string                       `toml:"icon_monitor_favicon"`
 		HeaderLinks        map[string][]HeaderLinkEntry `toml:"header_links"`
 		DefaultAgent       string                       `toml:"default_agent"`
@@ -425,7 +425,7 @@ type AgentConfig struct {
 	AgentType    string   `toml:"agent_type"` // "vps" | "rental"
 	AgentLabel   string   `toml:"agent_label"`
 	AgentIP      string   `toml:"agent_ip"`
-	IsPrimary    bool     `toml:"is_primary"`   // true = SAB本体サーバー（Main Server）
+	IsPrimary    bool     `toml:"is_primary"`   // true = heartdesk本体サーバー（Main Server）
 	Capabilities []string `toml:"capabilities"` // C7: カード表示制御に使う能力キー
 }
 
@@ -529,11 +529,11 @@ func normalizeCapabilities(src []string) []string {
 }
 
 // LoadAppConfig は config.toml と secrets.toml を読み込む
-// SAB_CONFIG_DIR 環境変数で設定ディレクトリを指定可能（デフォルト: /home/sab/config） // secrets-scan: allow
+// HEARTDESK_CONFIG_DIR 環境変数で設定ディレクトリを指定可能（デフォルト: /var/lib/heartdesk/config）
 func LoadAppConfig() (*AppConfig, error) {
-	configDir := os.Getenv("SAB_CONFIG_DIR")
+	configDir := os.Getenv("HEARTDESK_CONFIG_DIR")
 	if configDir == "" {
-		configDir = "/home/sab/config" // secrets-scan: allow
+		configDir = "/var/lib/heartdesk/config"
 	}
 
 	cfg := &AppConfig{}
@@ -557,13 +557,13 @@ func LoadAppConfig() (*AppConfig, error) {
 
 // LoadAppConfigForTenant はインフラ共通設定にテナント固有設定をマージして返す
 // 優先度: テナント固有secrets > テナント固有config > インフラ共通secrets > インフラ共通config
-// SAB_CONFIG_DIR 環境変数で設定ディレクトリを指定可能（デフォルト: /home/sab/config） // secrets-scan: allow
+// HEARTDESK_CONFIG_DIR 環境変数で設定ディレクトリを指定可能（デフォルト: /var/lib/heartdesk/config）
 // tenantID が空の場合は DefaultTenantID をデフォルトとして使用する
 func LoadAppConfigForTenant(tenantID string) (*AppConfig, error) {
 	tenantID = ResolveTenantID(tenantID)
-	configDir := os.Getenv("SAB_CONFIG_DIR")
+	configDir := os.Getenv("HEARTDESK_CONFIG_DIR")
 	if configDir == "" {
-		configDir = "/home/sab/config" // secrets-scan: allow
+		configDir = "/var/lib/heartdesk/config"
 	}
 
 	cfg := &AppConfig{TenantID: tenantID}

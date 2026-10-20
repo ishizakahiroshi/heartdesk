@@ -61,7 +61,7 @@ const (
 var actionClasses = map[string]ActionClass{
 	// 破壊的アクション
 	"reboot":                ActionDestructive,
-	"restart_sab":           ActionDestructive,
+	"restart_heartdesk":     ActionDestructive,
 	"maintenance_on":        ActionDestructive,
 	"maintenance_off":       ActionDestructive,
 	"nc_repair":             ActionDestructive,

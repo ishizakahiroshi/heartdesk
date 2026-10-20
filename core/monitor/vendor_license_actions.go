@@ -163,7 +163,7 @@ func (h *Handler) actionVendorLicenseOfflineGenerate(w http.ResponseWriter, r *h
 		"ok":       true,
 		"message":  agentID + " のオフラインライセンスを発行しました",
 		"data":     base64.StdEncoding.EncodeToString(fileData),
-		"filename": "license_" + agentID + ".sablic",
+		"filename": "license_" + agentID + ".hdlic",
 	})
 }
 

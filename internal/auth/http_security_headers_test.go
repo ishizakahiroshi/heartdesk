@@ -12,7 +12,7 @@ import (
 
 func testHTTPHandler(t *testing.T) *HTTPHandler {
 	t.Helper()
-	t.Setenv("SAB_BASE_DIR", t.TempDir())
+	t.Setenv("HEARTDESK_BASE_DIR", t.TempDir())
 	tmpl := template.Must(template.New("").Parse(
 		`{{define "login"}}ok{{end}}` +
 			`{{define "settings_password"}}ok{{end}}` +

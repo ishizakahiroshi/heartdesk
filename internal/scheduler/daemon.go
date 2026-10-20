@@ -53,7 +53,7 @@ func NewScheduler(cfg *config.SchedulerConfig, logger *log.Logger) *Scheduler {
 		if job, ok := s.jobs["score_engine"]; ok && cfg.ScoreInterval > 0 {
 			job.Interval = cfg.ScoreInterval
 		}
-		if job, ok := s.jobs["sab_extract"]; ok && cfg.ExtractInterval > 0 {
+		if job, ok := s.jobs["heartdesk_extract"]; ok && cfg.ExtractInterval > 0 {
 			job.Interval = cfg.ExtractInterval
 		}
 		if job, ok := s.jobs["update_geoip_db"]; ok && cfg.UpdateGeoIPDBInterval > 0 {

@@ -12,7 +12,7 @@ import (
 	"github.com/ishizakahiroshi/heartpost/report"
 )
 
-// このファイルは heartpost（収集と送信の正本）と sab（受信側）のワイヤ仕様が
+// このファイルは heartpost（収集と送信の正本）と heartdesk（受信側）のワイヤ仕様が
 // 食い違っていないことを固定する。testdata/report_v1.json は heartpost の
 // report/testdata/report_v1.json をそのまま持ち込んだもの。
 //

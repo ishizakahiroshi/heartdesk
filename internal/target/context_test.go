@@ -107,7 +107,7 @@ func TestResolve_DefaultAgentFallback(t *testing.T) {
 	}
 }
 
-// テナント ID は最初のハイフンまで。アンダースコアを含む ID や sab 形式（t101）も同じ規則で読む。
+// テナント ID は最初のハイフンまで。アンダースコアを含む ID や heartdesk 形式（t101）も同じ規則で読む。
 func TestTenantIDFromAgentID(t *testing.T) {
 	cases := map[string]string{
 		"alpha-vps-host1":        "alpha",

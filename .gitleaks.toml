@@ -8,3 +8,10 @@ description = "署名の往復テストが使う固定の見本の鍵（本物�
 condition = "AND"
 paths = ['''(^|/)core/monitor/agent_report_wire_test\.go$''']
 regexes = ['''^0123456789abcdef$''']
+
+[[allowlists]]
+description = "画面の折りたたみ状態を保存する localStorage のキー名の既定値（変数名に KEY を含むため誤検出になる。秘密ではない）"
+condition = "AND"
+paths = ['''^web/static/js/(card_refresh|shared)\.js$''']
+regexTarget = "line"
+regexes = ['''HD_COLLAPSE_KEY''']

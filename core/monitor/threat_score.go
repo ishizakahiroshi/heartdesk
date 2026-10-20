@@ -12,21 +12,21 @@ import (
 	"strings"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 )
 
 func threatScoreCSVPath() string {
-	return sab.SabPath("data/csv/threat_score.csv")
+	return heartdesk.Path("data/csv/threat_score.csv")
 }
 func threatScoreHistoryCSVPath() string {
-	return sab.SabPath("data/csv/threat_score_history.csv")
+	return heartdesk.Path("data/csv/threat_score_history.csv")
 }
 func scoreConfigJSONPath() string {
-	return sab.SabPath("data/json/score_config.json")
+	return heartdesk.Path("data/json/score_config.json")
 }
 func dismissJSONPath() string {
-	return sab.SabPath("data/json/nc_high_score_dismiss.json")
+	return heartdesk.Path("data/json/nc_high_score_dismiss.json")
 }
 
 // ThreatScoreEntry は脅威スコアの1エントリ
@@ -53,7 +53,7 @@ type ThreatScoreConfig struct {
 	Weights map[string]int `json:"weights,omitempty"`
 }
 
-// ThreatScoreResponse は /nab/api/monitor/threat_score のレスポンス
+// ThreatScoreResponse は /api/monitor/threat_score のレスポンス
 type ThreatScoreResponse struct {
 	Scores []ThreatScoreEntry `json:"scores"`
 	Flags  map[string]string  `json:"flags"`
@@ -76,7 +76,7 @@ type threatCollectorResult struct {
 	} `json:"entries"`
 }
 
-// NCHighScoreResponse は /nab/api/monitor/nc_high_score のレスポンス
+// NCHighScoreResponse は /api/monitor/nc_high_score のレスポンス
 type NCHighScoreResponse struct {
 	Scores []ThreatScoreEntry `json:"scores"`
 	Flags  map[string]string  `json:"flags"`
@@ -385,7 +385,7 @@ func BanHighScore(ip string) error {
 		return fmt.Errorf("不正な IP: %s", ip)
 	}
 	// シェル文字列組立を避け、引数を配列で渡す（コマンドインジェクション余地を排除）。
-	out, _ := sab.RunArgsCombined(10*time.Second, "sudo", "/usr/bin/fail2ban-client", "set", "recidive", "banip", ip)
+	out, _ := heartdesk.RunArgsCombined(10*time.Second, "sudo", "/usr/bin/fail2ban-client", "set", "recidive", "banip", ip)
 	if strings.Contains(out, "1") || strings.Contains(out, "OK") {
 		appendManualBan(ip)
 		return nil

@@ -1,11 +1,11 @@
 // Package auditdb は Vendor Console 用の監査ログ集約 SQLite を管理する。
 //
 // 仕様:
-//   - DB ファイル: config.toml [audit_aggregated].db_path（既定 /home/sab/data/audit_aggregated.db） // secrets-scan: allow
+//   - DB ファイル: config.toml [audit_aggregated].db_path（既定 /var/lib/heartdesk/data/audit_aggregated.db）
 //   - スキーマ: audit_log_aggregated（agent_id / tenant_id / ts / event_type / user / ip_address / result / details / received_at）
 //   - 利用元:
-//   - sab Monitor (sab バイナリ): /api/agent/report で collector_id="audit_log" 受信時に Insert
-//   - sab Scheduler (sab-scheduler バイナリ): audit_aggregated_cleanup ジョブで retention_years 超過分を削除
+//   - heartdesk Monitor (heartdesk バイナリ): /api/agent/report で collector_id="audit_log" 受信時に Insert
+//   - heartdesk Scheduler (heartdesk-scheduler バイナリ): audit_aggregated_cleanup ジョブで retention_years 超過分を削除
 //
 // CGO 不要の modernc.org/sqlite を使うので Windows ローカルクロスビルドでも問題なし（A6）。
 package auditdb
@@ -23,7 +23,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/audit"
 )
 
@@ -70,7 +70,7 @@ func Init(c Config) error {
 	}
 	dbPath := strings.TrimSpace(c.DBPath)
 	if dbPath == "" {
-		dbPath = sab.SabPath("data/audit_aggregated.db")
+		dbPath = heartdesk.Path("data/audit_aggregated.db")
 	}
 	if err := os.MkdirAll(filepath.Dir(dbPath), 0o750); err != nil {
 		return fmt.Errorf("auditdb: mkdir: %w", err)
@@ -154,7 +154,7 @@ func InsertEvents(agentID string, events []audit.Event) (int, error) {
 	}
 	defer prep.Close()
 
-	receivedAt := time.Now().In(sab.JST()).Format(time.RFC3339)
+	receivedAt := time.Now().In(heartdesk.JST()).Format(time.RFC3339)
 	inserted := 0
 	for _, ev := range events {
 		ts := strings.TrimSpace(ev.Time)
@@ -199,7 +199,7 @@ func Cleanup() (int64, error) {
 	if years <= 0 {
 		return 0, nil
 	}
-	cutoff := time.Now().AddDate(-years, 0, 0).In(sab.JST()).Format(time.RFC3339)
+	cutoff := time.Now().AddDate(-years, 0, 0).In(heartdesk.JST()).Format(time.RFC3339)
 	// ts は agent ごとに異なる TZ オフセット（...Z / ...+09:00）で格納されるため、
 	// 文字列辞書比較では同一 instant でも順序が狂う（境界付近の誤削除/誤残存）。
 	// SQLite の datetime() は ISO8601 のオフセットを解釈して UTC に正規化するため、

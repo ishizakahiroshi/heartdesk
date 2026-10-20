@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/BurntSushi/toml"
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
 // TenantConfig は tenants.toml の各テナントエントリ。
@@ -62,9 +62,9 @@ func AllTenants() []TenantConfig {
 }
 
 func loadTenants() []TenantConfig {
-	dir := strings.TrimSpace(sab.Env("SAB_CONFIG_DIR"))
+	dir := strings.TrimSpace(heartdesk.Env("HEARTDESK_CONFIG_DIR"))
 	if dir == "" {
-		dir = "/home/sab/config" // secrets-scan: allow
+		dir = "/var/lib/heartdesk/config"
 	}
 	path := filepath.Join(dir, "tenants.toml")
 

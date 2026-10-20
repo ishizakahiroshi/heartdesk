@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
 // jailNames は監視対象 jail 一覧（PHP の JAIL_NAMES 定数相当）
@@ -36,7 +36,7 @@ func GetFail2ban(agentID ...string) Fail2banData {
 		return Fail2banData{Unavailable: true}
 	}
 	var d Fail2banData
-	d.UpdatedAt = sab.FormatDatetime(time.Now().In(sab.JST()))
+	d.UpdatedAt = heartdesk.FormatDatetime(time.Now().In(heartdesk.JST()))
 	d.JailTooltips = getJailTooltips()
 
 	for _, jail := range jailNames {
@@ -148,7 +148,7 @@ func getFail2banFromAgent(agentID string) (Fail2banData, bool) {
 	}
 
 	if d.UpdatedAt == "" {
-		d.UpdatedAt = sab.FormatDatetime(time.Now().In(sab.JST()))
+		d.UpdatedAt = heartdesk.FormatDatetime(time.Now().In(heartdesk.JST()))
 	}
 	if len(d.Jails) == 0 && len(events) == 0 {
 		return Fail2banData{}, false
@@ -279,7 +279,7 @@ func f2bDisplayTime(ts string) string {
 		return ""
 	}
 	if t, err := time.Parse(time.RFC3339, ts); err == nil {
-		return t.In(sab.JST()).Format("2006-01-02 15:04:05")
+		return t.In(heartdesk.JST()).Format("2006-01-02 15:04:05")
 	}
 	return strings.TrimSpace(ts)
 }
@@ -311,14 +311,14 @@ func supplementActiveHistoryFromStatus(history []BanHistEntry, bannedIPs []strin
 // appendManualBan は手動 BAN ログ（data/json/manual_bans_log.csv）に1行追記する。
 // jail モーダルの manual/auto バッジ判定で fail2ban イベントの BAN 日時と ±60秒 で照合される。
 func appendManualBan(ip string) {
-	path := sab.SabPath("data/json/manual_bans_log.csv")
+	path := heartdesk.Path("data/json/manual_bans_log.csv")
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Printf("ERROR: monitor: appendManualBan open failed: %v", err)
 		return
 	}
 	defer f.Close()
-	now := time.Now().In(sab.JST()).Format("2006-01-02 15:04:05")
+	now := time.Now().In(heartdesk.JST()).Format("2006-01-02 15:04:05")
 	if _, err := fmt.Fprintf(f, "%s,%s\n", now, ip); err != nil {
 		log.Printf("ERROR: monitor: appendManualBan write failed: %v", err)
 	}
@@ -326,7 +326,7 @@ func appendManualBan(ip string) {
 
 // loadManualBans は manual_bans_log.csv を読み込む
 func loadManualBans() []ManualBanEntry {
-	f, err := os.Open(sab.SabPath("data/json/manual_bans_log.csv"))
+	f, err := os.Open(heartdesk.Path("data/json/manual_bans_log.csv"))
 	if err != nil {
 		return []ManualBanEntry{}
 	}
@@ -352,7 +352,7 @@ func loadManualBans() []ManualBanEntry {
 
 // getJailStatus は fail2ban-client status で指定 jail の状態を取得する
 func getJailStatus(jail string) Fail2banJail {
-	out := sab.RunArgs(10*time.Second, "sudo", "/usr/bin/fail2ban-client", "status", jail)
+	out := heartdesk.RunArgs(10*time.Second, "sudo", "/usr/bin/fail2ban-client", "status", jail)
 	jd := Fail2banJail{Name: jail, BannedIPs: []string{}}
 
 	for _, line := range strings.Split(out, "\n") {
@@ -417,7 +417,7 @@ func computeBanTrends(events []F2BEvent) (
 		}
 	}
 
-	jst := sab.JST()
+	jst := heartdesk.JST()
 	today := time.Now().In(jst).Truncate(24 * time.Hour)
 
 	// buildDayTrend は指定日付リストからトレンドとトップIPを構築する
@@ -521,7 +521,7 @@ func BanIP(ip string) error {
 	if !isValidIP(ip) {
 		return fmt.Errorf("invalid IP: %s", ip)
 	}
-	out := sab.RunArgs(10*time.Second, "sudo", "/usr/bin/fail2ban-client", "set", "recidive", "banip", ip)
+	out := heartdesk.RunArgs(10*time.Second, "sudo", "/usr/bin/fail2ban-client", "set", "recidive", "banip", ip)
 	if strings.Contains(strings.ToLower(out), "error") || out == "" {
 		return fmt.Errorf("ban 失敗: %s", out)
 	}
@@ -549,7 +549,7 @@ func UnbanIP(ip, jail string) error {
 		targets = []string{jail}
 	}
 	for _, j := range targets {
-		sab.RunArgs(10*time.Second, "sudo", "/usr/bin/fail2ban-client", "set", j, "unbanip", ip)
+		heartdesk.RunArgs(10*time.Second, "sudo", "/usr/bin/fail2ban-client", "set", j, "unbanip", ip)
 	}
 	return nil
 }

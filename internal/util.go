@@ -1,4 +1,4 @@
-package sab
+package heartdesk
 
 import (
 	"context"
@@ -44,50 +44,25 @@ func DB() *sql.DB {
 	return db
 }
 
-const VendorName = "ishizakahiroshi"
+const VendorName = "heartdesk"
 
-// Env は SAB_* を優先し、未設定時は NAB_* を後方互換で参照する。
+// Env は HEARTDESK_* 環境変数の値を返す（未設定なら空文字）。
 func Env(key string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	if strings.HasPrefix(key, "SAB_") {
-		return os.Getenv("NAB_" + strings.TrimPrefix(key, "SAB_"))
-	}
-	return ""
+	return os.Getenv(key)
 }
 
-// BootstrapLegacyEnv は NAB_* のみ設定された環境でも SAB_* で参照できるよう補完する。
-func BootstrapLegacyEnv() {
-	const legacyPrefix = "NAB_"
-	const currentPrefix = "SAB_"
-	for _, kv := range os.Environ() {
-		if !strings.HasPrefix(kv, legacyPrefix) {
-			continue
-		}
-		parts := strings.SplitN(kv, "=", 2)
-		if len(parts) != 2 {
-			continue
-		}
-		currentKey := currentPrefix + strings.TrimPrefix(parts[0], legacyPrefix)
-		if os.Getenv(currentKey) == "" {
-			_ = os.Setenv(currentKey, parts[1])
-		}
-	}
-}
-
-// SabBaseDir は SAB_BASE_DIR 環境変数を返す。未設定時は起動を中止する（サイレント誤動作防止）。
-func SabBaseDir() string {
-	v := Env("SAB_BASE_DIR")
+// BaseDir は HEARTDESK_BASE_DIR 環境変数を返す。未設定時は起動を中止する（サイレント誤動作防止）。
+func BaseDir() string {
+	v := Env("HEARTDESK_BASE_DIR")
 	if v == "" {
-		log.Fatal("SAB_BASE_DIR is not set. Set it via systemd Environment= (e.g. Environment=\"SAB_BASE_DIR=/home/sab\")")
+		log.Fatal("HEARTDESK_BASE_DIR is not set. Set it via systemd Environment= (e.g. Environment=\"HEARTDESK_BASE_DIR=/var/lib/heartdesk\")")
 	}
 	return v
 }
 
-// SabPath は SAB_BASE_DIR を起点とした絶対パスを返す
-func SabPath(rel string) string {
-	return filepath.Join(SabBaseDir(), rel)
+// Path は HEARTDESK_BASE_DIR を起点とした絶対パスを返す
+func Path(rel string) string {
+	return filepath.Join(BaseDir(), rel)
 }
 
 var weekdays = []string{"日", "月", "火", "水", "木", "金", "土"}
@@ -101,7 +76,6 @@ func JST() *time.Location {
 }
 
 // FormatDatetime は time を "2006-01-02(曜) 15:04:05" 形式に整形する
-// nab_format_datetime_with_weekday() 相当
 func FormatDatetime(t time.Time) string {
 	return fmt.Sprintf("%s(%s) %s",
 		t.Format("2006-01-02"),

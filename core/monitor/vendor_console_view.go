@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/auth"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 	"github.com/ishizakahiroshi/heartdesk/internal/middleware"
@@ -48,7 +48,7 @@ func (h *Handler) renderVendorConsole(w http.ResponseWriter, r *http.Request) {
 		VendorBase:                h.routes.VendorBase,
 		StaticBase:                h.routes.StaticBase,
 		AssetVersion:              h.systemInfo.AssetVersion,
-		SABIconPath:               h.routes.SABIconPath(),
+		IconPath:                  h.routes.IconPath(),
 		MonitorFaviconPath:        h.routes.MonitorFaviconPath(),
 		LogoutPath:                h.routes.LogoutPath,
 		SettingsPasswordPath:      h.routes.SettingsPasswordPath,
@@ -63,7 +63,7 @@ func (h *Handler) renderVendorConsole(w http.ResponseWriter, r *http.Request) {
 		CurrentTOTPEnabled:        auth.DefaultTOTPManager().IsEnabled(user),
 		CurrentAvatarURL:          AvatarURL(h.routes.MonitorBase, user),
 		CSRFToken:                 csrfToken,
-		Now:                       sab.FormatDatetime(time.Now().In(sab.JST())),
+		Now:                       heartdesk.FormatDatetime(time.Now().In(heartdesk.JST())),
 		IsMaint:                   GetMaintenanceMode(),
 		CurrentAgentID:            "",
 		ServerTree:                GetAgentOverview(),

@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
 // GetResources はサーバーリソース情報を取得する。
@@ -29,16 +29,16 @@ func GetResources(agentID ...string) ResourcesData {
 		if d, ok := resourcesFromReport(id); ok {
 			return d
 		}
-		return ResourcesData{Unavailable: true, UpdatedAt: sab.FormatDatetime(time.Now().In(sab.JST()))}
+		return ResourcesData{Unavailable: true, UpdatedAt: heartdesk.FormatDatetime(time.Now().In(heartdesk.JST()))}
 	}
 
 	var d ResourcesData
-	d.UpdatedAt = sab.FormatDatetime(time.Now().In(sab.JST()))
+	d.UpdatedAt = heartdesk.FormatDatetime(time.Now().In(heartdesk.JST()))
 	s := getResourceSample()
 
 	// ---- 稼働時間 ----
-	d.Uptime = strings.TrimSpace(sab.Run("uptime -p 2>/dev/null"))
-	d.UptimeSince = strings.TrimSpace(sab.Run("uptime -s 2>/dev/null"))
+	d.Uptime = strings.TrimSpace(heartdesk.Run("uptime -p 2>/dev/null"))
+	d.UptimeSince = strings.TrimSpace(heartdesk.Run("uptime -s 2>/dev/null"))
 
 	// ---- CPU/メモリ/負荷/ネットワーク（5秒周期の共通サンプラー値を使用）----
 	d.Load1 = s.Load.Min1
@@ -56,7 +56,7 @@ func GetResources(agentID ...string) ResourcesData {
 	d.SwapFree = s.SwapFree
 
 	// ---- ディスク (df -h /) ----
-	dfOut := strings.TrimSpace(sab.Run("df -h / 2>/dev/null"))
+	dfOut := strings.TrimSpace(heartdesk.Run("df -h / 2>/dev/null"))
 	lines := strings.Split(dfOut, "\n")
 	if len(lines) >= 2 {
 		parts := strings.Fields(lines[1])
@@ -77,10 +77,10 @@ func GetResources(agentID ...string) ResourcesData {
 	d.CPUCores = readCPUCores()
 	d.RAMTotal = humanGiB(d.MemTotal)
 	d.OSLabel = readOSPrettyName()
-	d.Kernel = strings.TrimSpace(sab.Run("uname -r 2>/dev/null"))
+	d.Kernel = strings.TrimSpace(heartdesk.Run("uname -r 2>/dev/null"))
 
 	// ---- NC メンテナンスモード ----
-	raw := sab.Run(`grep "'maintenance'" /var/www/nextcloud/config/config.php 2>/dev/null`)
+	raw := heartdesk.Run(`grep "'maintenance'" /var/www/nextcloud/config/config.php 2>/dev/null`)
 	d.IsMaint = strings.Contains(raw, "true")
 
 	return d
@@ -158,7 +158,7 @@ func readResourcePoints(agentID string) []resourcePoint {
 				}
 			}
 			points = append(points, resourcePoint{
-				ts:   ts.In(sab.JST()),
+				ts:   ts.In(heartdesk.JST()),
 				cpu:  sys.CPU.UsagePercent,
 				mem:  sys.Memory.UsagePercent,
 				disk: diskPct,
@@ -173,7 +173,7 @@ func readResourcePoints(agentID string) []resourcePoint {
 func GetResourceGraph(agentID string) ResourceGraphData {
 	points := readResourcePoints(agentID)
 
-	now := time.Now().In(sab.JST())
+	now := time.Now().In(heartdesk.JST())
 	cutoff24h := now.Add(-24 * time.Hour)
 
 	type acc struct {
@@ -342,7 +342,7 @@ func StatusLabelClass(status string) (label, class string) {
 func GetStorageForecast(agentID string) StorageForecastData {
 	points := readResourcePoints(agentID)
 
-	now := time.Now().In(sab.JST())
+	now := time.Now().In(heartdesk.JST())
 	cutoff := now.Add(-7 * 24 * time.Hour)
 
 	type pt struct {
@@ -489,7 +489,7 @@ type graphReport struct {
 // GetResourceMetricsGraph は agentID と range から時系列グラフデータを返す。
 // 範囲不明時は "1d" にフォールバック。
 func GetResourceMetricsGraph(agentID, rangeStr string) ResourceMetricsGraph {
-	now := time.Now().In(sab.JST())
+	now := time.Now().In(heartdesk.JST())
 	rcfg, ok := graphRanges[rangeStr]
 	if !ok {
 		rangeStr = "1d"
@@ -559,7 +559,7 @@ func loadGraphReports(agentID string, from, to time.Time, limit int) []graphRepo
 					if !ok {
 						continue
 					}
-					out = append(out, graphReport{ts: r.ReceivedAt.In(sab.JST()), sys: sys})
+					out = append(out, graphReport{ts: r.ReceivedAt.In(heartdesk.JST()), sys: sys})
 				}
 				if len(out) > 0 {
 					return out
@@ -609,7 +609,7 @@ func loadGraphReportsJSONL(agentID string, from, to time.Time) []graphReport {
 			if !ok {
 				continue
 			}
-			out = append(out, graphReport{ts: ts.In(sab.JST()), sys: sys})
+			out = append(out, graphReport{ts: ts.In(heartdesk.JST()), sys: sys})
 		}
 		_ = f.Close()
 	}
@@ -628,7 +628,7 @@ func buildMetricSeries(reports []graphReport, bucketSec int) []MetricSeries {
 			return ts.Format(time.RFC3339)
 		}
 		t := (ts.Unix() / int64(bucketSec)) * int64(bucketSec)
-		return time.Unix(t, 0).In(sab.JST()).Format(time.RFC3339)
+		return time.Unix(t, 0).In(heartdesk.JST()).Format(time.RFC3339)
 	}
 
 	// 累積カウンタの差分レートを各レポートに付与

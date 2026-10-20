@@ -1,4 +1,4 @@
-// SAB カード: Agent 死活監視 (sec-agent-status)
+// heartdesk カード: Agent 死活監視 (sec-agent-status)
 // メモ列のロード・インライン編集を担当。
 // Goテンプレートで静的描画されるカードのため、CardRegistry.wrap は使わず
 // DOMContentLoaded で直接初期化する。
@@ -9,12 +9,12 @@
 
 	// -------------------------------------------------------------------------
 	// MonitorAPIBase の構築
-	// IH_APP_BASE = MonitorBase (/monitor or /sab/monitor 等)
-	// MonitorAPIBase = /api/monitor or /sab/api/monitor
+	// HD_APP_BASE = MonitorBase (/monitor 等)
+	// MonitorAPIBase = /api/monitor
 	// -------------------------------------------------------------------------
 
 	function agentMemoApiBase() {
-		var base = (typeof IH_APP_BASE !== 'undefined' && IH_APP_BASE) ? IH_APP_BASE : '';
+		var base = (typeof HD_APP_BASE !== 'undefined' && HD_APP_BASE) ? HD_APP_BASE : '';
 		return base.replace(/\/monitor$/, '/api/monitor');
 	}
 

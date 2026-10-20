@@ -1,4 +1,4 @@
-// SAB カード: 脅威スコア (sec-threat-score)
+// heartdesk カード: 脅威スコア (sec-threat-score)
 // Phase 2b (C3): monitor_page.js から切り出したカード単位モジュール。
 // 依存: shared.js の escHtml / isWhitelisted / ipBadges / openIpModal /
 //       getCsrfToken / createFilterHeaderRow / buildIpFilterCell /
@@ -184,7 +184,7 @@
 		if (typeof setupCardFilter === 'function') setupCardFilter(el.querySelector('.thead-filter-row'), el);
 		addRowNumbers(el);
 
-		var appBase = (typeof IH_APP_BASE !== 'undefined') ? IH_APP_BASE : '/monitor';
+		var appBase = (typeof HD_APP_BASE !== 'undefined') ? HD_APP_BASE : '/monitor';
 
 		// td の stopPropagation が委譲をブロックするため各ボタンに直接バインド
 		el.querySelectorAll('.ts-dismiss-btn').forEach(function(dismissBtn) {
@@ -269,7 +269,7 @@
 		if (!filterIp) { renderThreatSummary(el); return; }
 		var config = d.config || { thresholds: { warning: 50, danger: 100 } };
 		var flags = d.flags || {};
-		var appBase = (typeof IH_APP_BASE !== 'undefined') ? IH_APP_BASE : '/monitor';
+		var appBase = (typeof HD_APP_BASE !== 'undefined') ? HD_APP_BASE : '/monitor';
 		var ipEsc = escHtml(filterIp);
 		var wl = (typeof isWhitelisted === 'function') ? isWhitelisted(filterIp) : false;
 		var bannedJail = (typeof BANNED_IPS !== 'undefined' && BANNED_IPS) ? (BANNED_IPS[filterIp] || '') : '';
@@ -339,7 +339,7 @@
 	}
 
 	function setupThreatDetailBanEvents(el, ip) {
-		var appBase = (typeof IH_APP_BASE !== 'undefined') ? IH_APP_BASE : '/monitor';
+		var appBase = (typeof HD_APP_BASE !== 'undefined') ? HD_APP_BASE : '/monitor';
 		var banBtn = el.querySelector('.ts-detail-ban-btn');
 		var unbanBtn = el.querySelector('.ts-detail-unban-btn');
 		var msg = el.querySelector('.ts-detail-msg');

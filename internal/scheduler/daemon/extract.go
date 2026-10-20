@@ -20,7 +20,7 @@ import (
 
 const (
 	extractSourceLog      = "/var/www/nextcloud/data/nextcloud.log"
-	extractBaseDir        = "/home/sab/data/nc_extract" // secrets-scan: allow
+	extractBaseDir        = "/var/lib/heartdesk/data/nc_extract"
 	extractStateFile      = extractBaseDir + "/extract_state.json"
 	extractLoginFile      = extractBaseDir + "/login_events.jsonl"
 	extractContextFile    = extractBaseDir + "/login_context.jsonl"
@@ -29,7 +29,7 @@ const (
 	extractHeartbeatFile  = extractBaseDir + "/extract_last.csv"
 	extractMaxLinesPerRun = 200000
 	extractAccessLog      = "/var/log/nginx/access.log"
-	extractNC4xxDir       = "/home/ubuntu/data/json/nc4xx" // secrets-scan: allow
+	extractNC4xxDir       = "/var/lib/heartdesk/data/json/nc4xx"
 	extractNC4xxMaxLines  = 200000
 )
 

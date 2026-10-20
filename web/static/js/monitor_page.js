@@ -1,10 +1,10 @@
 // heartdesk / Server Detail 共通画面スクリプト
 // Phase 1 (C1): monitor.html 内の <script> をそのまま移設した版。
-// 両画面で利用するため、server_detail.html 固有の IH_AGENT_ID / IH_AGENT_TYPE
+// 両画面で利用するため、server_detail.html 固有の HD_AGENT_ID / HD_AGENT_TYPE
 // はインラインスクリプトで先行定義されている前提。monitor.html 側では未定義なので
 // 以下でガードしておく。
-if (typeof window.IH_AGENT_ID === 'undefined') window.IH_AGENT_ID = '';
-if (typeof window.IH_AGENT_TYPE === 'undefined') window.IH_AGENT_TYPE = '';
+if (typeof window.HD_AGENT_ID === 'undefined') window.HD_AGENT_ID = '';
+if (typeof window.HD_AGENT_TYPE === 'undefined') window.HD_AGENT_TYPE = '';
 
 // リソースグラフタブ切り替え（カード更新後も動作するようグローバル関数で定義）
 function rgTabClick(btn) {

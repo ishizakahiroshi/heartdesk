@@ -1,5 +1,5 @@
-// SAB カード: リソースメトリクスグラフ (sec-resource-graph)
-// 依存: shared.js の escHtml / getAppBase / IH_AGENT_ID、card_runtime.js の CardRegistry
+// heartdesk カード: リソースメトリクスグラフ (sec-resource-graph)
+// 依存: shared.js の escHtml / getAppBase / HD_AGENT_ID、card_runtime.js の CardRegistry
 
 (function() {
 	'use strict';

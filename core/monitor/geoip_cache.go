@@ -3,7 +3,6 @@ package monitor
 import (
 	"encoding/json"
 	"os"
-	"path/filepath"
 )
 
 // =============================================================================
@@ -17,7 +16,7 @@ type GeoIPCacheIP struct {
 	TS      *int64 `json:"ts"` // UnixTimestamp or nil
 }
 
-// GeoIPCacheResponse は /nab/api/monitor/geoip_cache のレスポンス
+// GeoIPCacheResponse は /api/monitor/geoip_cache のレスポンス
 type GeoIPCacheResponse struct {
 	Count      int            `json:"count"`
 	FileSize   int64          `json:"file_size"`
@@ -33,27 +32,8 @@ type GeoIPCacheResponse struct {
 func GetGeoIPCache() GeoIPCacheResponse {
 	empty := GeoIPCacheResponse{IPs: []GeoIPCacheIP{}}
 
-	// Go サービスのキャッシュファイルを優先して探す。
-	// 旧 PHP 版 /tmp/nab_geoip_cache_*.json は移行期間の読み取りフォールバック。
-	goCacheFile := geoCacheFilePath()
-	candidates := []string{goCacheFile}
-	if extra, err2 := filepath.Glob("/tmp/nab_geoip_cache_*.json"); err2 == nil {
-		for _, f := range extra {
-			if f != goCacheFile {
-				candidates = append(candidates, f)
-			}
-		}
-	}
-
-	var cacheFile string
-	for _, f := range candidates {
-		if b, err2 := os.ReadFile(f); err2 == nil && len(b) > 0 {
-			cacheFile = f
-			_ = b
-			break
-		}
-	}
-	if cacheFile == "" {
+	cacheFile := geoCacheFilePath()
+	if b, err2 := os.ReadFile(cacheFile); err2 != nil || len(b) == 0 {
 		return empty
 	}
 

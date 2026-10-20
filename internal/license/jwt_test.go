@@ -33,9 +33,9 @@ func TestSignVerifyJWT(t *testing.T) {
 	pub, priv := testJWTKey(t)
 	now := time.Now()
 	claims := Claims{
-		Issuer:    "sab-vendor",
+		Issuer:    "heartdesk-vendor",
 		Subject:   "tenant-b-vps-sakura",
-		Audience:  "sab-agent",
+		Audience:  "heartdesk-agent",
 		TenantID:  "tenant-b",
 		IssuedAt:  now.Unix(),
 		ExpiresAt: now.Add(time.Hour).Unix(),

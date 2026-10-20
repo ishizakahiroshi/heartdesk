@@ -14,7 +14,7 @@ import (
 var expectedJobIDs = []string{
 	"collect_resources",
 	"score_engine",
-	"sab_extract",
+	"heartdesk_extract",
 	"backup_mariadb",
 	"update_geoip_db",
 	"collect_r2_metrics",

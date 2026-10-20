@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
 type legacyTokenStoreEntry struct {
@@ -20,7 +20,7 @@ type legacyTokenStoreEntry struct {
 }
 
 func legacyTokenStorePath() string {
-	return sab.SabPath("data/license/legacy_tokens.json")
+	return heartdesk.Path("data/license/legacy_tokens.json")
 }
 
 // RestoreLegacyTokenStore は起動時に legacy トークンストアをロードする。

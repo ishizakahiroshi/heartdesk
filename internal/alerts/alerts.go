@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 )
 
@@ -77,16 +77,16 @@ func rulesPath(cfg *config.AppConfig) string {
 	if cfg != nil && cfg.Alerts.RulesFile != "" {
 		return cfg.Alerts.RulesFile
 	}
-	return sab.SabPath("data/json/alert_rules.json")
+	return heartdesk.Path("data/json/alert_rules.json")
 }
 
 // statePath は alert state ファイルのパスを config 駆動で解決する。
-// 旧 /tmp/nab_alert_state.json をやめ、data/json 配下（reboot で消えない）に置く。
+// 旧 /tmp/heartdesk_alert_state.json をやめ、data/json 配下（reboot で消えない）に置く。
 func statePath(cfg *config.AppConfig) string {
 	if cfg != nil && cfg.Alerts.StateFile != "" {
 		return cfg.Alerts.StateFile
 	}
-	return sab.SabPath("data/json/alert_state.json")
+	return heartdesk.Path("data/json/alert_state.json")
 }
 
 // resourceLogPath は resource CSV のパスを config 駆動で解決する。
@@ -96,26 +96,26 @@ func resourceLogPath(cfg *config.AppConfig) string {
 	if cfg != nil && cfg.Scheduler.ResourceLogPath != "" {
 		return cfg.Scheduler.ResourceLogPath
 	}
-	return sab.SabPath("data/csv/resource_log.csv")
+	return heartdesk.Path("data/csv/resource_log.csv")
 }
 
 // scoreCSVPath は脅威スコア CSV のパスを config 駆動で解決する。
 // cfg.Scheduler.ScoreCSVPath（score_engine daemon ジョブが書く実ファイルと同一）
-// → SabPath の順でフォールバックする。
+// → Path の順でフォールバックする。
 func scoreCSVPath(cfg *config.AppConfig) string {
 	if cfg != nil && cfg.Scheduler.ScoreCSVPath != "" {
 		return cfg.Scheduler.ScoreCSVPath
 	}
-	return sab.SabPath("data/csv/threat_score.csv")
+	return heartdesk.Path("data/csv/threat_score.csv")
 }
 
 // sshIPListPath は managed_ips.toml のパスを config 駆動で解決する。
-// cfg.Scheduler.SSHIPListPath（score_engine と共有）→ SabPath の順でフォールバックする。
+// cfg.Scheduler.SSHIPListPath（score_engine と共有）→ Path の順でフォールバックする。
 func sshIPListPath(cfg *config.AppConfig) string {
 	if cfg != nil && cfg.Scheduler.SSHIPListPath != "" {
 		return cfg.Scheduler.SSHIPListPath
 	}
-	return sab.SabPath("config/managed_ips.toml")
+	return heartdesk.Path("config/managed_ips.toml")
 }
 
 // Run はアラート評価を 1 回実行し、発報したアラート文言を返す。

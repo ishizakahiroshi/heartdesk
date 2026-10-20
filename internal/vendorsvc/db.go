@@ -12,10 +12,10 @@ import (
 )
 
 // OpenDB は SQLite DB を開き WAL モード・PRAGMA 設定・マイグレーションを実施して返す。
-// dbPath はファイルパス（例: "/home/sab/data/vendor/vendor.db"）。 // secrets-scan: allow
+// dbPath はファイルパス（例: "/var/lib/heartdesk/data/vendor/vendor.db"）。
 // 呼び出し元は返った *sql.DB を Close する責任を持つ。
 func OpenDB(dbPath string) (*sql.DB, error) {
-	// 親ディレクトリを作成（権限 0750 = sab:sab）
+	// 親ディレクトリを作成（権限 0750 = heartdesk:heartdesk）
 	if err := os.MkdirAll(filepath.Dir(dbPath), 0750); err != nil {
 		return nil, fmt.Errorf("vendorsvc.OpenDB: mkdir %s: %w", filepath.Dir(dbPath), err)
 	}

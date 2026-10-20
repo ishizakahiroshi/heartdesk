@@ -15,7 +15,7 @@ import (
 //	allowlist entry は除外対象外で残ること。
 func TestRejectOrphanAgentSecrets_RemovesSameTenantOrphans(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("SAB_CONFIG_DIR", dir)
+	t.Setenv("HEARTDESK_CONFIG_DIR", dir)
 
 	// インフラ共通 config.toml に alpha-vps-host1 のみを定義（alpha-vps-host2 は意図的に未登録）。
 	writeTestFile(t, filepath.Join(dir, "config.toml"), `

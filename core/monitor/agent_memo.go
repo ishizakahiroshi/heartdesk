@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/auth"
 )
 
@@ -51,7 +51,7 @@ func NewAgentMemoStore(dataDir string) *AgentMemoStore {
 
 // InitAgentMemoStore はグローバルストアを初期化する。起動時に呼び出す。
 func InitAgentMemoStore() {
-	dataDir := sab.SabPath("data/json")
+	dataDir := heartdesk.Path("data/json")
 	globalMemoStore = NewAgentMemoStore(dataDir)
 }
 

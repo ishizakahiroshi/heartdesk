@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/audit"
 	"github.com/ishizakahiroshi/heartdesk/internal/auth"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
@@ -44,7 +44,7 @@ var monitorInfraDocs = map[string]infraDocMeta{
 // renderMarkdownHTML は infra-doc ビュー専用の Markdown レンダラ。
 // docs/infra/*.md は
 // 信頼境界の内側で書かれている前提だが、ファイル経由のインジェクション
-// (Git コミット権限の悪用 / sab ユーザー権限でのファイル書き換え) を
+// (Git コミット権限の悪用 / heartdesk ユーザー権限でのファイル書き換え) を
 // 一段防ぐため html.WithUnsafe() を外し、生 <script>/<iframe> 等は
 // goldmark のデフォルト sanitizer でエスケープする。
 func renderMarkdownHTML(src []byte) template.HTML {
@@ -79,7 +79,7 @@ func parseMonitorAuditTime(raw string) *time.Time {
 	if s == "" {
 		return nil
 	}
-	t, err := sab.ParseTimestamp(s)
+	t, err := heartdesk.ParseTimestamp(s)
 	if err != nil {
 		return nil
 	}
@@ -161,7 +161,7 @@ func (h *Handler) renderAuditLog(w http.ResponseWriter, r *http.Request) {
 	} else {
 		for _, rec := range rows {
 			rowsHTML.WriteString("<tr>")
-			rowsHTML.WriteString(`<td class="mono">` + template.HTMLEscapeString(sab.FormatRawDatetime(rec.Time)) + `</td>`)
+			rowsHTML.WriteString(`<td class="mono">` + template.HTMLEscapeString(heartdesk.FormatRawDatetime(rec.Time)) + `</td>`)
 			rowsHTML.WriteString(`<td class="mono">` + template.HTMLEscapeString(rec.Event) + `</td>`)
 			rowsHTML.WriteString(`<td class="mono">` + template.HTMLEscapeString(rec.User) + `</td>`)
 			rowsHTML.WriteString(`<td class="mono">` + template.HTMLEscapeString(rec.IP) + `</td>`)
@@ -286,7 +286,7 @@ func (h *Handler) renderAuditLog(w http.ResponseWriter, r *http.Request) {
 		VendorBase:           h.routes.VendorBase,
 		StaticBase:           h.routes.StaticBase,
 		AssetVersion:         h.systemInfo.AssetVersion,
-		SABIconPath:          h.routes.SABIconPath(),
+		IconPath:             h.routes.IconPath(),
 		MonitorFaviconPath:   h.routes.MonitorFaviconPath(),
 		LogoutPath:           h.routes.LogoutPath,
 		SettingsPasswordPath: h.routes.SettingsPasswordPath,
@@ -303,7 +303,7 @@ func (h *Handler) renderAuditLog(w http.ResponseWriter, r *http.Request) {
 		AgentID:              "",
 		AgentType:            "",
 		CSRFToken:            csrfToken,
-		Now:                  sab.FormatDatetime(time.Now().In(sab.JST())),
+		Now:                  heartdesk.FormatDatetime(time.Now().In(heartdesk.JST())),
 		IsMaint:              GetMaintenanceMode(),
 		CurrentAgentID:       "",
 		ServerTree:           agentOverviewForRequest(r),
@@ -353,7 +353,7 @@ func (h *Handler) renderInfraDoc(w http.ResponseWriter, r *http.Request, view st
 		return
 	}
 
-	mdPath := sab.SabPath("docs/infra/" + doc.File)
+	mdPath := heartdesk.Path("docs/infra/" + doc.File)
 	mdRaw, err := os.ReadFile(mdPath)
 	if err != nil {
 		http.Error(w, "ファイルが見つかりません: "+doc.File, http.StatusNotFound)
@@ -454,7 +454,7 @@ func (h *Handler) renderInfraDoc(w http.ResponseWriter, r *http.Request, view st
 		VendorBase:                h.routes.VendorBase,
 		StaticBase:                h.routes.StaticBase,
 		AssetVersion:              h.systemInfo.AssetVersion,
-		SABIconPath:               h.routes.SABIconPath(),
+		IconPath:                  h.routes.IconPath(),
 		MonitorFaviconPath:        h.routes.MonitorFaviconPath(),
 		LogoutPath:                h.routes.LogoutPath,
 		SettingsPasswordPath:      h.routes.SettingsPasswordPath,
@@ -472,7 +472,7 @@ func (h *Handler) renderInfraDoc(w http.ResponseWriter, r *http.Request, view st
 		AgentID:                   "",
 		AgentType:                 "",
 		CSRFToken:                 csrfToken,
-		Now:                       sab.FormatDatetime(time.Now().In(sab.JST())),
+		Now:                       heartdesk.FormatDatetime(time.Now().In(heartdesk.JST())),
 		IsMaint:                   GetMaintenanceMode(),
 		CurrentAgentID:            "",
 		ServerTree:                agentOverviewForRequest(r),
@@ -529,7 +529,7 @@ func (h *Handler) renderAgentsOverview(w http.ResponseWriter, r *http.Request) {
 		VendorBase:                h.routes.VendorBase,
 		StaticBase:                h.routes.StaticBase,
 		AssetVersion:              h.systemInfo.AssetVersion,
-		SABIconPath:               h.routes.SABIconPath(),
+		IconPath:                  h.routes.IconPath(),
 		MonitorFaviconPath:        h.routes.MonitorFaviconPath(),
 		LogoutPath:                h.routes.LogoutPath,
 		SettingsPasswordPath:      h.routes.SettingsPasswordPath,
@@ -547,7 +547,7 @@ func (h *Handler) renderAgentsOverview(w http.ResponseWriter, r *http.Request) {
 		AgentID:                   "",
 		AgentType:                 "",
 		CSRFToken:                 csrfToken,
-		Now:                       sab.FormatDatetime(time.Now().In(sab.JST())),
+		Now:                       heartdesk.FormatDatetime(time.Now().In(heartdesk.JST())),
 		IsMaint:                   GetMaintenanceMode(),
 		CurrentAgentID:            "",
 		ServerTree:                items,
@@ -635,7 +635,7 @@ func (h *Handler) renderServerDetail(w http.ResponseWriter, r *http.Request) {
 		VendorBase:                h.routes.VendorBase,
 		StaticBase:                h.routes.StaticBase,
 		AssetVersion:              h.systemInfo.AssetVersion,
-		SABIconPath:               h.routes.SABIconPath(),
+		IconPath:                  h.routes.IconPath(),
 		MonitorFaviconPath:        h.routes.MonitorFaviconPath(),
 		LogoutPath:                h.routes.LogoutPath,
 		SettingsPasswordPath:      h.routes.SettingsPasswordPath,
@@ -652,7 +652,7 @@ func (h *Handler) renderServerDetail(w http.ResponseWriter, r *http.Request) {
 		CurrentAvatarURL:          AvatarURL(h.routes.MonitorBase, middleware.GetUser(r.Context())),
 		ShowOverviewRefreshButton: false,
 		CSRFToken:                 csrfToken,
-		Now:                       sab.FormatDatetime(time.Now().In(sab.JST())),
+		Now:                       heartdesk.FormatDatetime(time.Now().In(heartdesk.JST())),
 		IsMaint:                   GetMaintenanceMode(),
 		CurrentAgentID:            seen.AgentID,
 		ServerTree:                agentOverviewForRequest(r),

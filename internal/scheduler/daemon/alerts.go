@@ -16,7 +16,7 @@ import (
 // 評価ロジックの正本は internal/alerts。AppConfig はテナント設定込みで読み直す
 // （SchedulerConfig には Alerts.RulesFile / StateFile が含まれないため）。
 func RunAlerts(ctx context.Context, _ *config.SchedulerConfig) error {
-	appCfg, err := config.LoadAppConfigForTenant(os.Getenv("SAB_TENANT_ID"))
+	appCfg, err := config.LoadAppConfigForTenant(os.Getenv("HEARTDESK_TENANT_ID"))
 	if err != nil {
 		return err
 	}

@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 	"github.com/ishizakahiroshi/heartdesk/internal/navmeta"
 	"github.com/ishizakahiroshi/heartdesk/internal/routing"
@@ -75,7 +75,7 @@ type cardClientOption struct {
 	IPFilter *ipFilterOption `json:"ip_filter,omitempty"`
 }
 
-func cardOptionsFile() string { return sab.SabPath("data/json/card_options.json") }
+func cardOptionsFile() string { return heartdesk.Path("data/json/card_options.json") }
 
 // デフォルト設定（card_options.json が存在しない場合に使用）
 var defaultCardOptions = map[string]cardClientOption{
@@ -133,7 +133,7 @@ var monitorNavDefaultsByID = map[string]monitorNavDefault{
 	navmeta.CardSecNcHighScore:     {Exports: []string{exportKeyNCHighScore}, CountMode: CountModeRatio},
 	navmeta.CardSecThreatScore:     {Exports: []string{exportKeyThreatScore}, CountMode: CountModeRatio},
 	navmeta.CardSecSSHLoginHistory: {Exports: []string{exportKeySSHLogin}, CountMode: CountModeRatio},
-	navmeta.CardSecNabLoginHistory: {Exports: []string{exportKeyNabLogin}, CountMode: CountModeRatio},
+	navmeta.CardSecLoginHistory:    {Exports: []string{exportKeyLoginHistory}, CountMode: CountModeRatio},
 	navmeta.CardSecPhpmyadminLogin: {Exports: []string{exportKeyPhpMyAdmin}, CountMode: CountModeRatio},
 	navmeta.CardSecNcLogin:         {Exports: []string{exportKeyNextcloud}, CountMode: CountModeRatio},
 	navmeta.CardSecAuditAnomaly:    {Exports: []string{exportKeyAuditAnomaly}, CountMode: CountModeRatio},

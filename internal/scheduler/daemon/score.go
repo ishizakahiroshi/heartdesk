@@ -22,7 +22,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 )
 
@@ -35,7 +35,7 @@ const (
 	defaultHoneypotDir        = "data/json/honeypot"
 	defaultNC4xxDir           = "data/json/nc4xx"
 	defaultSSHIPListPath      = "config/managed_ips.toml"
-	defaultLoginEventsPath    = "/home/sab/data/nc_extract/login_events.jsonl" // secrets-scan: allow
+	defaultLoginEventsPath    = "/var/lib/heartdesk/data/nc_extract/login_events.jsonl"
 	defaultNextcloudLogPath   = "/var/www/nextcloud/data/nextcloud.log"
 	defaultNginxAccessLogPath = "/var/log/nginx/access.log"
 	defaultScoreLogPath       = "data/logs/score_engine.log"
@@ -282,18 +282,18 @@ type scorePaths struct {
 
 func resolveScorePaths(cfg *config.SchedulerConfig) scorePaths {
 	p := scorePaths{
-		ScoreConfigPath:    sab.SabPath(defaultScoreConfigPath),
-		ScoreOutputPath:    sab.SabPath(defaultScoreOutputPath),
-		ScoreHistoryPath:   sab.SabPath(defaultScoreHistoryPath),
-		AutobanLogPath:     sab.SabPath(defaultAutobanLogPath),
-		BanHistoryPath:     sab.SabPath(defaultBanHistoryPath),
-		HoneypotDir:        sab.SabPath(defaultHoneypotDir),
-		NC4xxDir:           sab.SabPath(defaultNC4xxDir),
-		SSHIPListPath:      sab.SabPath(defaultSSHIPListPath),
+		ScoreConfigPath:    heartdesk.Path(defaultScoreConfigPath),
+		ScoreOutputPath:    heartdesk.Path(defaultScoreOutputPath),
+		ScoreHistoryPath:   heartdesk.Path(defaultScoreHistoryPath),
+		AutobanLogPath:     heartdesk.Path(defaultAutobanLogPath),
+		BanHistoryPath:     heartdesk.Path(defaultBanHistoryPath),
+		HoneypotDir:        heartdesk.Path(defaultHoneypotDir),
+		NC4xxDir:           heartdesk.Path(defaultNC4xxDir),
+		SSHIPListPath:      heartdesk.Path(defaultSSHIPListPath),
 		LoginEventsPath:    defaultLoginEventsPath,
 		NextcloudLogPath:   defaultNextcloudLogPath,
 		NginxAccessLogPath: defaultNginxAccessLogPath,
-		ScoreLogPath:       sab.SabPath(defaultScoreLogPath),
+		ScoreLogPath:       heartdesk.Path(defaultScoreLogPath),
 	}
 	if cfg == nil {
 		return p
@@ -340,7 +340,7 @@ func resolveScorePaths(cfg *config.SchedulerConfig) scorePaths {
 	if cfg.AgentEventDir != "" {
 		p.AgentEventDir = cfg.AgentEventDir
 	} else if cfg.AgentID != "" {
-		p.AgentEventDir = sab.SabPath(filepath.Join("data/logs/agents", cfg.AgentID))
+		p.AgentEventDir = heartdesk.Path(filepath.Join("data/logs/agents", cfg.AgentID))
 	}
 	return p
 }
@@ -1102,7 +1102,7 @@ func parseFlexTimestamp(s string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("invalid ts")
 }
 
-// grepOutputLines は root/www-data 所有のログ（nextcloud.log 等）を sab ユーザーから読むため
+// grepOutputLines は root/www-data 所有のログ（nextcloud.log 等）を heartdesk ユーザーから読むため
 // sudo grep を使う。直読み（bufio.Scanner）化は権限の都合で本番のスコアリングを壊しうるため
 // 採用しない。pattern は呼び出し元でハードコードされており注入余地はないが、将来の動的化に備え
 // "--" でオプションとパターンを分離する。

@@ -19,7 +19,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
 const (
@@ -93,7 +93,7 @@ func hotpCode(key []byte, counter int64) string {
 func TOTPProvisioningURI(issuer, username, secret string) string {
 	issuer = strings.TrimSpace(issuer)
 	if issuer == "" {
-		issuer = "SAB"
+		issuer = "heartdesk"
 	}
 	label := url.PathEscape(issuer + ":" + username)
 	q := url.Values{}
@@ -130,7 +130,7 @@ func DefaultTOTPManager() *TOTPManager {
 	totpOnce.Do(func() {
 		totpMgr = &TOTPManager{
 			users: map[string]totpEntry{},
-			path:  sab.SabPath("config/totp.toml"),
+			path:  heartdesk.Path("config/totp.toml"),
 		}
 		totpMgr.mu.Lock()
 		totpMgr.loadLocked()

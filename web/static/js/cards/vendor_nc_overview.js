@@ -1,4 +1,4 @@
-// SAB カード: Nextcloud 運用監視 (vendor-nc-overview)
+// heartdesk カード: Nextcloud 運用監視 (vendor-nc-overview)
 // 依存: shared.js の escHtml / getAppBase、card_runtime.js の CardRegistry
 
 (function() {

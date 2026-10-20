@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
 const agentEventMaxPerCollector = 1000
@@ -30,7 +30,7 @@ type agentEventRecord map[string]interface{}
 // base 配下の "_invalid" サブディレクトリへ隔離する（パストラバーサルで base 外へ抜けることを防ぐ）。
 // 正規経路では agent_id はハンドラ側で検証済みのため通常は到達しない。
 func agentEventDirPath(agentID string) string {
-	base := sab.SabPath("data/logs/agents")
+	base := heartdesk.Path("data/logs/agents")
 	if !isValidAgentID(agentID) {
 		log.Printf("WARN: agent_events: invalid agent_id for event dir, quarantining: %q", agentID)
 		return filepath.Join(base, "_invalid")
@@ -187,7 +187,7 @@ func appendAgentEvents(agentID, kind string, records []agentEventRecord) error {
 	path := filepath.Join(dir, kind+".jsonl")
 	seen := loadAgentEventDedupeKeys(path)
 
-	// イベント JSONL は sab プロセス専用のため 0600。
+	// イベント JSONL は heartdesk プロセス専用のため 0600。
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		return fmt.Errorf("open agent events: %w", err)

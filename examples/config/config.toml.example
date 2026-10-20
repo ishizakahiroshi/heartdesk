@@ -1,0 +1,28 @@
+# Minimal config.toml for heartdesk (non-secret settings).
+# Copy to $HEARTDESK_CONFIG_DIR/config.toml. All values below are samples; change them.
+
+[server]
+# Address the HTTP server listens on. Keep it on loopback and put a reverse proxy in front.
+# If this key is empty, the server listens on ":8765" (all interfaces).
+listen_addr = "127.0.0.1:8765"
+# Display name of this server.
+name = "heartdesk-example"
+
+[agent_report]
+# Default is true: a report is rejected unless it carries a Bearer (JWT) token as well as
+# the HMAC signature. false accepts reports that have only the HMAC signature.
+strict_license = false
+
+# One table per monitored server. The table name must equal agent_id, and agent_id must be
+# "<tenant_id>-<name>": the part before the first "-" is the tenant ID (lowercase letters,
+# digits and "_" only). The default tenant ID is "default".
+[agent."default-web-01"]
+agent_id = "default-web-01"
+# "vps" or "rental"
+agent_type = "vps"
+# Label shown in the UI.
+agent_label = "example web server"
+
+[ui]
+# Agent shown first. Must be one of the [agent."..."] tables above.
+default_agent = "default-web-01"

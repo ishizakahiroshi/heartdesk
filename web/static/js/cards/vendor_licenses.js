@@ -1,4 +1,4 @@
-// SAB カード: ライセンス管理 (vendor-licenses)
+// heartdesk カード: ライセンス管理 (vendor-licenses)
 // 依存: shared.js の escHtml / getAppBase / getCsrfToken、card_runtime.js の CardRegistry
 
 (function() {

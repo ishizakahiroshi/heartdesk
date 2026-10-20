@@ -10,7 +10,7 @@ import (
 
 func TestSaveAgentEventStreamsNormalizesAndDedupes(t *testing.T) {
 	base := t.TempDir()
-	t.Setenv("SAB_BASE_DIR", base)
+	t.Setenv("HEARTDESK_BASE_DIR", base)
 
 	raw := json.RawMessage(`{
 		"new_events": 2,

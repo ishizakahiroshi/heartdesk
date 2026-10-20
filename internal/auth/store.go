@@ -17,7 +17,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"golang.org/x/crypto/bcrypt"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
 const usersCacheTTL = 30 * time.Second
@@ -49,7 +49,7 @@ var (
 // CompareHashAndPassword を実行し、存在ユーザーと計算時間を揃える。
 // パッケージ初期化時に 1 度だけ生成して使い回す。
 var dummyBcryptHash = func() []byte {
-	h, err := bcrypt.GenerateFromPassword([]byte("sab-username-enum-timing-dummy"), bcryptCost)
+	h, err := bcrypt.GenerateFromPassword([]byte("heartdesk-username-enum-timing-dummy"), bcryptCost)
 	if err != nil {
 		// 生成失敗は致命ではない（タイミング均一化の最善努力）。空なら compare がすぐ失敗する。
 		return nil
@@ -68,12 +68,12 @@ func runDummyPasswordCompare(password string) {
 // DefaultStore は共有ユーザーストアを返す。
 func DefaultStore() *UserStore {
 	defaultStoreOnce.Do(func() {
-		path := sab.Env("SAB_USERS_TOML")
+		path := heartdesk.Env("HEARTDESK_USERS_TOML")
 		if path == "" {
-			path = sab.Env("SAB_USERS_JSON")
+			path = heartdesk.Env("HEARTDESK_USERS_JSON")
 		}
 		if path == "" {
-			path = sab.SabPath("config/users.toml")
+			path = heartdesk.Path("config/users.toml")
 		}
 		defaultStore = &UserStore{
 			path:  path,

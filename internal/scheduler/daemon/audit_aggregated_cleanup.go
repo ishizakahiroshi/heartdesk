@@ -15,12 +15,12 @@ import (
 //   - 他テナントでは Init が no-op になるので Cleanup も 0 件で正常終了する。
 //   - 24h 間隔で実行（registry.go の Interval 設定。Plan 上の "毎日 03:00" は時刻指定ではなく日次の意。）
 func AuditAggregatedCleanup(ctx context.Context, _ *config.SchedulerConfig) error {
-	appCfg, err := config.LoadAppConfigForTenant(os.Getenv("SAB_TENANT_ID"))
+	appCfg, err := config.LoadAppConfigForTenant(os.Getenv("HEARTDESK_TENANT_ID"))
 	if err != nil {
 		return err
 	}
 	if !appCfg.AuditAggregated.Enabled {
-		log.Printf("audit_aggregated_cleanup: disabled (tenant=%s)", os.Getenv("SAB_TENANT_ID"))
+		log.Printf("audit_aggregated_cleanup: disabled (tenant=%s)", os.Getenv("HEARTDESK_TENANT_ID"))
 		return nil
 	}
 

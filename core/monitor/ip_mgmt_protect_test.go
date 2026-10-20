@@ -46,8 +46,8 @@ type = "wla"
 	if err := os.WriteFile(filepath.Join(base, managedIPsTOMLPath), []byte(ledger), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("SAB_BASE_DIR", base)
-	t.Setenv("SAB_CONFIG_DIR", cfgDir)
+	t.Setenv("HEARTDESK_BASE_DIR", base)
+	t.Setenv("HEARTDESK_CONFIG_DIR", cfgDir)
 	config.ReloadConfigCache()
 	t.Cleanup(config.ReloadConfigCache)
 	return base

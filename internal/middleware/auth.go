@@ -1,4 +1,4 @@
-// Package middleware provides HTTP middleware for sab.
+// Package middleware provides HTTP middleware for heartdesk.
 package middleware
 
 import (
@@ -14,10 +14,10 @@ import (
 type contextKey string
 
 const (
-	ScreenKey contextKey = "sab_screen"
-	UserKey   contextKey = "sab_user"
-	IPKey     contextKey = "sab_ip"
-	RoleKey   contextKey = "sab_role"
+	ScreenKey contextKey = "heartdesk_screen"
+	UserKey   contextKey = "heartdesk_user"
+	IPKey     contextKey = "heartdesk_ip"
+	RoleKey   contextKey = "heartdesk_role"
 )
 
 // RequireScreen はセッションを検証し、指定画面へのアクセス権を制御する。

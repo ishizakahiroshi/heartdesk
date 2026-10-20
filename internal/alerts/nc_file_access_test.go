@@ -35,8 +35,8 @@ type ncFATestEnv struct {
 	cfg       *config.AppConfig
 }
 
-// newNCFATestEnv は SAB_BASE_DIR を一時ディレクトリへ向け、任意設定ファイルで
-// audit.log の場所を一時ディレクトリの中へ差し替える（/var/www や /home/sab は触らない）。
+// newNCFATestEnv は HEARTDESK_BASE_DIR を一時ディレクトリへ向け、任意設定ファイルで
+// audit.log の場所を一時ディレクトリの中へ差し替える（/var/www や /var/lib/heartdesk は触らない）。
 func newNCFATestEnv(t *testing.T) *ncFATestEnv {
 	t.Helper()
 	dir := ncTestEnv(t)
@@ -1029,7 +1029,7 @@ func TestNCAuditLogPathPriority(t *testing.T) {
 func TestNCFAStateIgnoresAlertStateFileDir(t *testing.T) {
 	env := newNCFATestEnv(t)
 	tmpDir := t.TempDir()
-	env.cfg.Alerts.StateFile = filepath.Join(tmpDir, "sab_alert_state.json")
+	env.cfg.Alerts.StateFile = filepath.Join(tmpDir, "heartdesk_alert_state.json")
 	writeFile(t, env.auditPath, "")
 	env.run(ncFARules(ruleNCMassAccess), newAlertState(), time.Date(2026, 10, 16, 5, 0, 0, 0, time.UTC))
 

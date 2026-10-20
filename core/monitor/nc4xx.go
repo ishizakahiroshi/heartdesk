@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
-func nc4xxLogDirPath() string { return sab.SabPath("data/json/nc4xx") }
+func nc4xxLogDirPath() string { return heartdesk.Path("data/json/nc4xx") }
 
 // NC4xxRecord は NC 4xx アクセスログの1件
 type NC4xxRecord struct {
@@ -25,7 +25,7 @@ type NC4xxRecord struct {
 	Method string `json:"method"`
 }
 
-// NC4xxResponse は /nab/api/monitor/nc4xx_access のレスポンス
+// NC4xxResponse は /api/monitor/nc4xx_access のレスポンス
 type NC4xxResponse struct {
 	Records  []NC4xxRecord     `json:"records"`
 	Total    int               `json:"total"`
@@ -48,7 +48,7 @@ func GetNC4xxAccess(days, limit int, agentID ...string) NC4xxResponse {
 		limit = 3000
 	}
 
-	since := time.Now().In(sab.JST()).Add(-time.Duration(days) * 24 * time.Hour).Unix()
+	since := time.Now().In(heartdesk.JST()).Add(-time.Duration(days) * 24 * time.Hour).Unix()
 	id := normalizeAgentID(agentID)
 	if id != "" {
 		return getAgentNC4xxAccess(id, since, days, limit)
@@ -89,7 +89,7 @@ func GetNC4xxAccess(days, limit int, agentID ...string) NC4xxResponse {
 			if tsStr == "" {
 				continue
 			}
-			ts, err := sab.ParseTimestamp(tsStr)
+			ts, err := heartdesk.ParseTimestamp(tsStr)
 			if err != nil || ts.Unix() < since {
 				continue
 			}
@@ -106,7 +106,7 @@ func GetNC4xxAccess(days, limit int, agentID ...string) NC4xxResponse {
 			query, _ := raw["query"].(string)
 			method, _ := raw["method"].(string)
 			// タイムスタンプを JST 表示形式に変換
-			tsDisplay := sab.FormatDatetime(ts.In(sab.JST()))
+			tsDisplay := heartdesk.FormatDatetime(ts.In(heartdesk.JST()))
 			records = append(records, NC4xxRecord{
 				Ts:     tsDisplay,
 				IP:     ip,
@@ -184,7 +184,7 @@ func getAgentNC4xxAccess(agentID string, since int64, days, limit int) NC4xxResp
 			query = q[1]
 		}
 		records = append(records, NC4xxRecord{
-			Ts:     sab.FormatDatetime(ts.In(sab.JST())),
+			Ts:     heartdesk.FormatDatetime(ts.In(heartdesk.JST())),
 			IP:     ev.IP,
 			Status: strconv.Itoa(ev.Status),
 			Path:   pathOnly,

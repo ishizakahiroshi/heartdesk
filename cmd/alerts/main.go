@@ -21,12 +21,12 @@ import (
 )
 
 const (
-	resourceLogPath = "/home/ubuntu/data/csv/resource_log.csv"  // secrets-scan: allow
-	scoreLogPath    = "/home/ubuntu/data/csv/threat_score.csv"  // secrets-scan: allow
-	alertRulesPath  = "/home/ubuntu/data/json/alert_rules.json" // secrets-scan: allow
-	alertStatePath  = "/tmp/nab_alert_state.json"
-	lastCheckPath   = "/home/ubuntu/data/json/alert_check_last.csv" // secrets-scan: allow
-	sshIPListPath   = "/home/sab/config/managed_ips.toml"           // secrets-scan: allow
+	resourceLogPath = "/var/lib/heartdesk/data/csv/resource_log.csv"
+	scoreLogPath    = "/var/lib/heartdesk/data/csv/threat_score.csv"
+	alertRulesPath  = "/var/lib/heartdesk/data/json/alert_rules.json"
+	alertStatePath  = "/tmp/heartdesk_alert_state.json"
+	lastCheckPath   = "/var/lib/heartdesk/data/json/alert_check_last.csv"
+	sshIPListPath   = "/var/lib/heartdesk/config/managed_ips.toml"
 )
 
 type AlertRules struct {
@@ -94,7 +94,7 @@ func main() {
 	}
 
 	// 4. アカウントロックアウト
-	checkAccountLockoutAlert(rules, state, "/home/sab/data/nc_extract/lockout_events.jsonl") // secrets-scan: allow
+	checkAccountLockoutAlert(rules, state, "/var/lib/heartdesk/data/nc_extract/lockout_events.jsonl")
 
 	// 5. 実行スタンプ
 	os.MkdirAll(filepath.Dir(lastCheckPath), 0770)
@@ -573,7 +573,7 @@ func sendTestMail(rules AlertRules) {
 		return
 	}
 	for _, recipient := range rules.Recipients {
-		err := sendMail(rules.SMTP, recipient.Email, "【テスト】SAB アラート通知テスト", "このメールはアラート通知テストです。\n\nシステムは正常に機能しています。")
+		err := sendMail(rules.SMTP, recipient.Email, "【テスト】heartdesk アラート通知テスト", "このメールはアラート通知テストです。\n\nシステムは正常に機能しています。")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to send test mail to %s: %v\n", recipient.Email, err)
 		} else {

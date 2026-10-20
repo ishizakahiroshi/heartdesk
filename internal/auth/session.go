@@ -9,15 +9,15 @@ import (
 	"sync"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/authz"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 	"github.com/ishizakahiroshi/heartdesk/internal/navmeta"
 )
 
 const (
-	// sab_session_v2: AuthZ スキーマ切替（旧 sab_session は無効化）
-	defaultSessionCookieName = "sab_session_v2"
+	// セッション cookie 名（AuthZ スキーマ v2）
+	defaultSessionCookieName = "heartdesk_session_v2"
 	defaultSessionTTL        = 8 * time.Hour
 )
 
@@ -74,7 +74,7 @@ var (
 func DefaultSessionManager() *SessionManager {
 	defaultSessionOnce.Do(func() {
 		ttl := defaultSessionTTL
-		if v := strings.TrimSpace(sab.Env("SAB_SESSION_TTL_HOURS")); v != "" {
+		if v := strings.TrimSpace(heartdesk.Env("HEARTDESK_SESSION_TTL_HOURS")); v != "" {
 			if n, err := strconv.Atoi(v); err == nil && n > 0 {
 				ttl = time.Duration(n) * time.Hour
 			}

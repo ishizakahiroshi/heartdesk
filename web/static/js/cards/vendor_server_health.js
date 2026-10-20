@@ -1,4 +1,4 @@
-// SAB カード: サーバー健全性 (vendor-server-health)
+// heartdesk カード: サーバー健全性 (vendor-server-health)
 // 依存: shared.js の escHtml / getAppBase、card_runtime.js の CardRegistry
 
 (function() {

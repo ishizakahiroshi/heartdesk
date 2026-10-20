@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/scheduler"
 )
 
@@ -30,10 +30,10 @@ type cronJobSpec struct {
 func cronJobSpecsList() []cronJobSpec {
 	return []cronJobSpec{
 		{
-			key: "check_alerts", label: "sab-alerts",
+			key: "check_alerts", label: "heartdesk-alerts",
 			summary: "アラート判定・メール通知",
 			script:  scriptCheckAlerts,
-			kind:    "csv", csvFile: sab.SabPath("data/json/alert_check_last.csv"),
+			kind:    "csv", csvFile: heartdesk.Path("data/json/alert_check_last.csv"),
 		},
 	}
 }
@@ -42,18 +42,18 @@ type cronEntry struct {
 	schedule string
 	command  string
 	source   string
-	label    string // SAB_LABEL メタデータ
-	summary  string // SAB_SUMMARY メタデータ
+	label    string // HEARTDESK_LABEL メタデータ
+	summary  string // HEARTDESK_SUMMARY メタデータ
 }
 
 var reCronWhitespace = regexp.MustCompile(`\s+`)
 var reCronRedirect = regexp.MustCompile(`\s+>>?\s+\S+(\s+2>&1)?$`)
-var reSabMeta = regexp.MustCompile(`^\s*#\s*SAB_(\w+)=(.+)$`)
+var reScriptMeta = regexp.MustCompile(`^\s*#\s*HEARTDESK_(\w+)=(.+)$`)
 
-func extractSabMeta(lines []string) map[string]string {
+func extractScriptMeta(lines []string) map[string]string {
 	meta := make(map[string]string)
 	for _, line := range lines {
-		if m := reSabMeta.FindStringSubmatch(line); m != nil {
+		if m := reScriptMeta.FindStringSubmatch(line); m != nil {
 			meta[m[1]] = strings.TrimSpace(m[2])
 		}
 	}
@@ -79,7 +79,7 @@ func parseCronLines(raw, source string) []cronEntry {
 }
 
 func parseCrontabEntries() []cronEntry {
-	raw := sab.Run("crontab -l 2>/dev/null")
+	raw := heartdesk.Run("crontab -l 2>/dev/null")
 	if raw == "" {
 		return nil
 	}
@@ -103,7 +103,7 @@ func parseSystemCronEntries() []cronEntry {
 		}
 		lines := strings.Split(strings.TrimSpace(string(raw)), "\n")
 		// メタデータを抽出（コメント行から）
-		metadata := extractSabMeta(lines)
+		metadata := extractScriptMeta(lines)
 		for _, line := range lines {
 			line = strings.TrimSpace(line)
 			if line == "" || strings.HasPrefix(line, "#") {
@@ -195,7 +195,7 @@ func detectAppendLogStatus(logFile string) (status, lastTime string) {
 	return "success", lastTime
 }
 
-func detectSabLogStatus(logFile string) (status, lastTime string) {
+func detectLogStatus(logFile string) (status, lastTime string) {
 	raw, err := os.ReadFile(logFile)
 	if err != nil {
 		return "unknown", "未取得"
@@ -246,7 +246,7 @@ func lastCSVTimestamp(csvPath string) (ts int64, label string) {
 			}
 		}
 		if err == nil && !t.IsZero() {
-			return t.Unix(), sab.FormatRawDatetime(t.Local().Format("2006-01-02 15:04:05"))
+			return t.Unix(), heartdesk.FormatRawDatetime(t.Local().Format("2006-01-02 15:04:05"))
 		}
 	}
 	return 0, "取得失敗"
@@ -355,12 +355,12 @@ func GetCronStatus(agentID ...string) CronStatusData {
 			var status, lastTime string
 			if strings.Contains(logFileOrCSV, "mariadb-backup") {
 				status, lastTime = detectBackupLogStatus(logFileOrCSV)
-			} else if strings.Contains(logFileOrCSV, "sab-") {
-				status, lastTime = detectSabLogStatus(logFileOrCSV)
+			} else if strings.Contains(logFileOrCSV, "heartdesk-") {
+				status, lastTime = detectLogStatus(logFileOrCSV)
 			} else {
 				status, lastTime = detectAppendLogStatus(logFileOrCSV)
 			}
-			job.LastTime = sab.FormatRawDatetime(lastTime)
+			job.LastTime = heartdesk.FormatRawDatetime(lastTime)
 			job.Result = status
 		} else if kind == "csv" && logFileOrCSV != "" {
 			ts, label := lastCSVTimestamp(logFileOrCSV)
@@ -401,7 +401,7 @@ func GetCronStatus(agentID ...string) CronStatusData {
 				result = "running"
 				lastTime = "実行中"
 			} else if !st.LastFinished.IsZero() {
-				lastTime = sab.FormatDatetime(st.LastFinished)
+				lastTime = heartdesk.FormatDatetime(st.LastFinished)
 				if st.LastError == "" {
 					result = "success"
 				} else {
@@ -414,7 +414,7 @@ func GetCronStatus(agentID ...string) CronStatusData {
 			Summary:       def.Summary,
 			Schedule:      def.DefaultCronSchedule,
 			ScheduleHuman: cronScheduleHuman(def.DefaultCronSchedule),
-			Command:       "managed by sab-scheduler",
+			Command:       "managed by heartdesk-scheduler",
 			Registered:    true,
 			LastTime:      lastTime,
 			Result:        result,

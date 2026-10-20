@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 )
 
@@ -20,10 +20,10 @@ type lockoutEvent struct {
 }
 
 // lockoutLogPath は account_lockout JSONL のパスを返す。
-// 旧 cmd/alerts のハードコード "/home/sab/data/nc_extract/lockout_events.jsonl" を // secrets-scan: allow
-// SabPath（SAB_BASE_DIR 起点）に置き換える。
+// 旧 cmd/alerts のハードコード "/var/lib/heartdesk/data/nc_extract/lockout_events.jsonl" を
+// Path（HEARTDESK_BASE_DIR 起点）に置き換える。
 func lockoutLogPath(_ *config.AppConfig) string {
-	return sab.SabPath("data/nc_extract/lockout_events.jsonl")
+	return heartdesk.Path("data/nc_extract/lockout_events.jsonl")
 }
 
 // evaluateAccountLockout は account_lockout JSONL を offset 方式で読み、

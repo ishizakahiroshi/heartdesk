@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/audit"
 	"github.com/ishizakahiroshi/heartdesk/internal/routing"
 )
@@ -18,12 +18,12 @@ import (
 const ncSessionTimeout = 5 * time.Second
 
 // ncSessionEntryPath は「Nextcloud のログインで入る」の入口。nginx がこの 1 本だけを
-// SAB の <LoginPath>/nc へ渡す（src/sab/deploy/nginx/templates/conf.d.sab/nc_sso.conf.tmpl）。
+// heartdesk の <LoginPath>/nc へ渡す（デプロイ側の nginx テンプレート nc_sso.conf.tmpl）。
 // Nextcloud は Cookie の Path を自分の置き場所（/nextcloud）に固定して発行する
 // （lib/base.php。変える設定は無い）ので、/login の下ではブラウザが Nextcloud の Cookie を送らない。
-const ncSessionEntryPath = "/nextcloud/sab-login"
+const ncSessionEntryPath = "/nextcloud/heartdesk-login"
 
-// ncNotRegisteredError は Nextcloud には入れているが SAB に登録の無い人へ出す文言。
+// ncNotRegisteredError は Nextcloud には入れているが heartdesk に登録の無い人へ出す文言。
 // 本人が Nextcloud にログイン済みで、分かるのは本人自身の登録状況だけなので、
 // パスワード入力の共通文言（ユーザー列挙対策）に揃える必要はない。
 // 入力していない人に「入力内容を確認してください」と出すと、壊れているように見える。
@@ -32,7 +32,7 @@ const ncNotRegisteredError = "この Nextcloud アカウントは heartdesk に�
 // ncSessionBaseURL は自ホストの Nextcloud ベース URL を tenants.toml から導く。
 // 転送先は設定値（tenants.toml）で固定し、リクエスト由来の値は使わない（SSRF 対策）。
 func ncSessionBaseURL() string {
-	tenantID := strings.TrimSpace(sab.Env("SAB_TENANT_ID"))
+	tenantID := strings.TrimSpace(heartdesk.Env("HEARTDESK_TENANT_ID"))
 	if tenantID == "" {
 		return ""
 	}
@@ -74,7 +74,7 @@ type ocsUserResponse struct {
 
 // LoginNC は Nextcloud のログイン状態を使ったログインを処理する。
 // 受け取った Cookie をそのまま Nextcloud の OCS API へ転送し、返ってきた uid を
-// SAB の登録ユーザーと突き合わせる。未登録・無効ユーザーは拒否し、自動作成しない（C3）。
+// heartdesk の登録ユーザーと突き合わせる。未登録・無効ユーザーは拒否し、自動作成しない（C3）。
 func (h *HTTPHandler) LoginNC(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)

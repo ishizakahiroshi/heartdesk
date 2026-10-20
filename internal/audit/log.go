@@ -14,17 +14,17 @@ import (
 	"sync"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
-// plan_sab_vendor_console_c3_audit_log_tail.md C1:
+// 監査ログの保存形式:
 //   - 旧: 単一ファイル data/json/audit_log.jsonl
 //   - 新: 日付別ファイル <logDir>/audit_log.jsonl.YYYY-MM-DD（A1 / A2）
 //   - Agent 側 audit_log_tail collector は同ディレクトリを glob して tail する
 //
 // 環境変数:
-//   - SAB_AUDIT_LOG_DIR: 書き込み先ディレクトリ（既定: data/audit）
-//   - SAB_AUDIT_LOG_PATH: 旧仕様。設定されていれば後方互換でそのファイルに書く（既存テスト用）。
+//   - HEARTDESK_AUDIT_LOG_DIR: 書き込み先ディレクトリ（既定: data/audit）
+//   - HEARTDESK_AUDIT_LOG_PATH: 旧仕様。設定されていれば後方互換でそのファイルに書く（既存テスト用）。
 const (
 	defaultLogDir    = "data/audit"
 	legacyLogPath    = "data/json/audit_log.jsonl"
@@ -134,27 +134,27 @@ func Append(rec Event) {
 }
 
 // writeTargetPath は現在書き込むべき audit_log.jsonl.YYYY-MM-DD 絶対パスを返す。
-// SAB_AUDIT_LOG_PATH が設定されていれば（既存テスト等の後方互換用）それを優先する。
+// HEARTDESK_AUDIT_LOG_PATH が設定されていれば（既存テスト等の後方互換用）それを優先する。
 func writeTargetPath() string {
-	if p := strings.TrimSpace(sab.Env("SAB_AUDIT_LOG_PATH")); p != "" {
+	if p := strings.TrimSpace(heartdesk.Env("HEARTDESK_AUDIT_LOG_PATH")); p != "" {
 		return p
 	}
-	today := time.Now().In(sab.JST()).Format("2006-01-02")
+	today := time.Now().In(heartdesk.JST()).Format("2006-01-02")
 	return filepath.Join(LogDir(), logFilePrefix+today)
 }
 
 // LogDir は audit_log.jsonl.* を書き込む / 読む共通ディレクトリを返す。
 func LogDir() string {
-	if p := strings.TrimSpace(sab.Env("SAB_AUDIT_LOG_DIR")); p != "" {
+	if p := strings.TrimSpace(heartdesk.Env("HEARTDESK_AUDIT_LOG_DIR")); p != "" {
 		return p
 	}
-	return sab.SabPath(defaultLogDir)
+	return heartdesk.Path(defaultLogDir)
 }
 
 // ListLogFiles は LogDir() 配下の audit_log.jsonl.YYYY-MM-DD ファイル群を日付昇順で返す。
-// SAB_AUDIT_LOG_PATH が設定されているテスト用ケースでは、その単一ファイルを返す。
+// HEARTDESK_AUDIT_LOG_PATH が設定されているテスト用ケースでは、その単一ファイルを返す。
 func ListLogFiles() ([]string, error) {
-	if p := strings.TrimSpace(sab.Env("SAB_AUDIT_LOG_PATH")); p != "" {
+	if p := strings.TrimSpace(heartdesk.Env("HEARTDESK_AUDIT_LOG_PATH")); p != "" {
 		if _, err := os.Stat(p); err == nil {
 			return []string{p}, nil
 		} else if errors.Is(err, os.ErrNotExist) {
@@ -186,12 +186,12 @@ func LatestLogFile() (string, error) {
 
 func migrateLegacyLogOnce() {
 	migrationOnce.Do(func() {
-		oldPath := sab.SabPath(legacyLogPath)
+		oldPath := heartdesk.Path(legacyLogPath)
 		info, err := os.Stat(oldPath)
 		if err != nil || info.IsDir() {
 			return
 		}
-		d := info.ModTime().In(sab.JST()).Format("2006-01-02")
+		d := info.ModTime().In(heartdesk.JST()).Format("2006-01-02")
 		newPath := filepath.Join(LogDir(), logFilePrefix+d)
 		if err := os.MkdirAll(filepath.Dir(newPath), 0o750); err != nil {
 			log.Printf("audit: legacy migrate mkdir failed: %v", err)
@@ -339,7 +339,7 @@ func match(rec Event, user, event, result, query string, from, to *time.Time) bo
 		return false
 	}
 	if from != nil || to != nil {
-		t, err := sab.ParseTimestamp(rec.Time)
+		t, err := heartdesk.ParseTimestamp(rec.Time)
 		if err != nil {
 			return false
 		}

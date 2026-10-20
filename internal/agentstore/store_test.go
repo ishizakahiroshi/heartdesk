@@ -7,7 +7,7 @@ import (
 )
 
 func TestEventJSONL_AcceptsTenantAgentIDs(t *testing.T) {
-	t.Setenv("SAB_BASE_DIR", t.TempDir())
+	t.Setenv("HEARTDESK_BASE_DIR", t.TempDir())
 	for _, id := range []string{"alpha-vps-host1", "t101-vps-host1", "tenant_b-rental-host-2", "alpha-host1"} {
 		got := EventJSONL(id)
 		if filepath.Base(got) != "events_"+id+".jsonl" {
@@ -17,7 +17,7 @@ func TestEventJSONL_AcceptsTenantAgentIDs(t *testing.T) {
 }
 
 func TestEventJSONL_RejectsInvalidAgentIDs(t *testing.T) {
-	t.Setenv("SAB_BASE_DIR", t.TempDir())
+	t.Setenv("HEARTDESK_BASE_DIR", t.TempDir())
 	cases := []string{
 		"",
 		"alpha",

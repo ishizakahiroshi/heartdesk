@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/auth"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 	"github.com/ishizakahiroshi/heartdesk/internal/middleware"
@@ -81,7 +81,7 @@ func GetVendorLicenseAudit(r *http.Request, _ *config.AppConfig) interface{} {
 			continue
 		}
 		filtered = append(filtered, vendorLicenseAuditEntry{
-			Ts:        e.Timestamp.In(sab.JST()).Format(time.RFC3339),
+			Ts:        e.Timestamp.In(heartdesk.JST()).Format(time.RFC3339),
 			Action:    e.Action,
 			TenantID:  e.TenantID,
 			AgentID:   e.AgentID,

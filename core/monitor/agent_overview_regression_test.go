@@ -11,8 +11,8 @@ import (
 )
 
 func TestGetAgentOverviewForSession_TenantFilter(t *testing.T) {
-	// SabBaseDir() は未設定だと log.Fatal でプロセスごと落ちる（パッケージ内の後続テストも道連れになる）。
-	t.Setenv("SAB_BASE_DIR", t.TempDir())
+	// BaseDir() は未設定だと log.Fatal でプロセスごと落ちる（パッケージ内の後続テストも道連れになる）。
+	t.Setenv("HEARTDESK_BASE_DIR", t.TempDir())
 
 	agentLastSeenMu.Lock()
 	origSeen := agentLastSeen

@@ -29,7 +29,7 @@ const (
 	CardSecNcHighScore       = "sec-nc-high-score"
 	CardSecThreatScore       = "sec-threat-score"
 	CardSecSSHLoginHistory   = "sec-ssh-login-history"
-	CardSecNabLoginHistory   = "sec-nab-login-history"
+	CardSecLoginHistory      = "sec-login-history"
 	CardSecPhpmyadminLogin   = "sec-phpmyadmin-login-history"
 	CardSecNcLogin           = "sec-nc-login"
 	CardSecAuditAnomaly      = "sec-audit-anomaly"
@@ -90,7 +90,7 @@ var monitorCardRegistry = []MonitorCardMeta{
 	{Key: "NC_HIGH_SCORE", ID: CardSecNcHighScore, API: "nc_high_score", JSModule: "cards/nc_high_score.js", Renderer: "NcHighScore"},
 	{Key: "THREAT_SCORE", ID: CardSecThreatScore, API: "threat_score", JSModule: "cards/threat_score.js", Renderer: "ThreatScore"},
 	{Key: "SSH_LOGIN_HISTORY", ID: CardSecSSHLoginHistory, API: "ssh_login_history", JSModule: "cards/ssh_login_history.js", Renderer: "SSHLoginHistory"},
-	{Key: "NAB_LOGIN_HISTORY", ID: CardSecNabLoginHistory, API: "nginx_login_histories", JSModule: "cards/nab_login_history.js", Renderer: "NabLoginHistory"},
+	{Key: "HEARTDESK_LOGIN_HISTORY", ID: CardSecLoginHistory, API: "nginx_login_histories", JSModule: "cards/login_history.js", Renderer: "LoginHistory"},
 	{Key: "PHPMYADMIN_LOGIN_HISTORY", ID: CardSecPhpmyadminLogin, API: "nginx_login_histories", JSModule: "cards/phpmyadmin_login_history.js", Renderer: "PmaLoginHistory"},
 	{Key: "NC_LOGIN", ID: CardSecNcLogin, API: "nc_login", JSModule: "cards/nc_login.js", Renderer: "NcLogin"},
 	{Key: "AUDIT_ANOMALY", ID: CardSecAuditAnomaly, API: "audit_anomaly", JSModule: "cards/audit_anomaly.js", Renderer: "AuditAnomaly"},
@@ -151,7 +151,7 @@ var defaultCardNav = map[string]cardNav{
 	CardSecThreatScore:     {Group: "攻撃分析・検知", Order: 470},
 
 	CardSecSSHLoginHistory: {Group: "ログ・監査", Order: 510},
-	CardSecNabLoginHistory: {Group: "ログ・監査", Order: 520},
+	CardSecLoginHistory:    {Group: "ログ・監査", Order: 520},
 	CardSecPhpmyadminLogin: {Group: "ログ・監査", Order: 530},
 	CardSecNcLogin:         {Group: "ログ・監査", Order: 540},
 	CardSecAuditAnomaly:    {Group: "ログ・監査", Order: 550},
@@ -235,7 +235,7 @@ var sharedLabelByID = map[string]string{
 	CardSecNcHighScore:        "⚠️ 要確認IP（高スコア・手動BAN候補）",
 	CardSecThreatScore:        "🎯 脅威スコア",
 	CardSecSSHLoginHistory:    "🔑 SSH / SFTP履歴",
-	CardSecNabLoginHistory:    "✅ SABログイン履歴",
+	CardSecLoginHistory:       "✅ heartdeskログイン履歴",
 	CardSecPhpmyadminLogin:    "🗄️ phpMyAdminログイン履歴",
 	CardSecNcLogin:            "📋 Nextcloudログイン履歴",
 	CardSecAuditAnomaly:       "🧪 監査ログ異常検知",
@@ -299,7 +299,7 @@ var cardScreens = map[string][]string{
 	CardSecBanHeatmap:         {"monitor"},
 	CardSecSSHChart:           {"monitor"},
 	CardSecSSHLoginHistory:    {"monitor"},
-	CardSecNabLoginHistory:    {"monitor"},
+	CardSecLoginHistory:       {"monitor"},
 	CardSecPhpmyadminLogin:    {"monitor"},
 	CardSecThreatScore:        {"monitor"},
 	CardSecNcHighScore:        {"monitor"},

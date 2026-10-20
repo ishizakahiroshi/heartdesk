@@ -14,7 +14,7 @@ import (
 // 直結された場合はヘッダを信用せず RemoteAddr を使うため、ヘッダ偽装による
 // ロックアウト回避・IP allowlist 突破・PIN ロック回避が成立しない。
 //
-// 信頼プロキシは既定でループバック（127.0.0.0/8, ::1）のみ。SAB は通常 nginx から
+// 信頼プロキシは既定でループバック（127.0.0.0/8, ::1）のみ。heartdesk は通常 nginx から
 // 127.0.0.1:8765 へプロキシされるため既定で十分。追加のプロキシ IP / CIDR は
 // [security].trusted_proxies で指定し、起動時に SetTrustedProxies で登録する。
 

@@ -2,6 +2,7 @@
 //
 // 既定ではポート :8765 で起動し、以下のパスをルーティングする:
 //
+//	/healthz                      → 死活確認（認証なし）
 //	/monitor/                     → Monitor
 //	/api/monitor/...              → Monitor API
 //	/api/agent/report             → Agent レポート受信（HMAC 認証）
@@ -34,7 +35,7 @@ import (
 	"time"
 
 	"github.com/ishizakahiroshi/heartdesk/core/monitor"
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/auth"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 	"github.com/ishizakahiroshi/heartdesk/internal/license"
@@ -81,11 +82,11 @@ func assetVersionString() string {
 }
 
 func main() {
-	// TOML 設定読み込み（SAB_TENANT_ID 未設定時は config.DefaultTenantID を使用）
+	// TOML 設定読み込み（HEARTDESK_TENANT_ID 未設定時は config.DefaultTenantID を使用）
 	// 既定値は config.DefaultTenantID に集約。
-	envTenantID := strings.TrimSpace(os.Getenv("SAB_TENANT_ID"))
+	envTenantID := strings.TrimSpace(os.Getenv("HEARTDESK_TENANT_ID"))
 	if envTenantID == "" {
-		log.Printf("INFO: SAB_TENANT_ID 未設定 → tenant=%s (defaulted)", config.DefaultTenantID)
+		log.Printf("INFO: HEARTDESK_TENANT_ID 未設定 → tenant=%s (defaulted)", config.DefaultTenantID)
 	}
 	cfg, err := config.LoadAppConfigForTenant(envTenantID)
 	if err != nil {
@@ -99,6 +100,12 @@ func main() {
 	); err != nil {
 		log.Fatalf("license verification failed: %v", err)
 	}
+
+	// users.toml の起動時検証（fail-fast）。旧スキーマのフィールドや無効な role を
+	// 1 件でも検出したら、ここで分かりやすいエラーを出して起動を止める。
+	// 実行時（ログイン等）は不正な行を黙ってスキップするだけなので、起動時に一度だけ呼ぶ。
+	// users.toml が無い構成は警告のみで継続する。
+	auth.DefaultStore().ValidateAllOrFatal()
 
 	// 起動アドレス
 	//
@@ -115,13 +122,13 @@ func main() {
 	// 未設定時はループバックのみ信頼。
 	auth.SetTrustedProxies(cfg.Security.TrustedProxies)
 
-	// GeoIP 設定は env ブリッジ（os.Setenv）を使わず、AppConfig を geo.go へ直接渡す。SAB_IPINFO_TOKEN を process env に書き込まないことで
+	// GeoIP 設定は env ブリッジ（os.Setenv）を使わず、AppConfig を geo.go へ直接渡す。HEARTDESK_IPINFO_TOKEN を process env に書き込まないことで
 	// util.Run の子プロセス（bash -c 等）へのトークン露出を断つ。
 	monitor.SetGeoConfig(cfg)
 
 	// DB 初期化
 	if dsn := cfg.Database.DSN; dsn != "" {
-		if err := sab.InitDB(dsn); err != nil {
+		if err := heartdesk.InitDB(dsn); err != nil {
 			log.Fatalf("DB 初期化失敗: %v", err)
 		}
 	}
@@ -237,33 +244,33 @@ func main() {
 		tenantID = config.DefaultTenantID
 	}
 
-	// env スラッグ（SAB_TENANT_SLUG）と tenants.toml の整合性を起動時に検証し fail-fast にする。slug が tenants.toml のいずれかに一致するのに
-	// その tenant_id が起動テナント（SAB_TENANT_ID）と食い違う場合、「URL は自テナント・認可は
+	// env スラッグ（HEARTDESK_TENANT_SLUG）と tenants.toml の整合性を起動時に検証し fail-fast にする。slug が tenants.toml のいずれかに一致するのに
+	// その tenant_id が起動テナント（HEARTDESK_TENANT_ID）と食い違う場合、「URL は自テナント・認可は
 	// 別テナント ACL」という認可境界の取り違えを招くため起動を止める。
 	if slug := routingCfg.TenantSlug; slug != "" {
 		if t := routing.GetTenantBySlug(slug); t != nil && strings.TrimSpace(t.TenantID) != "" && t.TenantID != tenantID {
-			log.Fatalf("tenant 整合性エラー: SAB_TENANT_SLUG=%q は tenants.toml で tenant_id=%q に対応するが、起動テナント(SAB_TENANT_ID)=%q と不一致。認可境界の取り違えを防ぐため起動を中止します",
+			log.Fatalf("tenant 整合性エラー: HEARTDESK_TENANT_SLUG=%q は tenants.toml で tenant_id=%q に対応するが、起動テナント(HEARTDESK_TENANT_ID)=%q と不一致。認可境界の取り違えを防ぐため起動を中止します",
 				slug, t.TenantID, tenantID)
 		}
 	}
 
-	// tenants.toml が自テナントに routing_mode="path" を宣言しているのに SAB_ROUTING_MODE /
-	// SAB_TENANT_SLUG が未設定（= 実際は prefix 無しの subdomain モード）だと、入口 URL が
+	// tenants.toml が自テナントに routing_mode="path" を宣言しているのに HEARTDESK_ROUTING_MODE /
+	// HEARTDESK_TENANT_SLUG が未設定（= 実際は prefix 無しの subdomain モード）だと、入口 URL が
 	// tenants.toml 上の想定パスから静かに外れて 404 になる。
 	// 認可境界には関わらないため fail-fast にはせず、起動時ログで気づけるようにする。
 	if tc := routing.GetTenantByID(tenantID); tc != nil && strings.EqualFold(tc.RoutingMode, "path") {
 		switch {
 		case routingCfg.RoutingMode != "path":
 			log.Printf("WARN: tenants.toml は tenant_id=%q に routing_mode=\"path\"（tenant_slug=%q）を宣言していますが、"+
-				"SAB_ROUTING_MODE が未設定または path 以外です。systemd unit の Environment を確認してください",
+				"HEARTDESK_ROUTING_MODE が未設定または path 以外です。systemd unit の Environment を確認してください",
 				tenantID, tc.TenantSlug)
 		case !strings.EqualFold(tc.TenantSlug, routingCfg.TenantSlug):
-			log.Printf("WARN: tenants.toml の tenant_slug=%q（tenant_id=%q）と SAB_TENANT_SLUG=%q が一致しません。"+
+			log.Printf("WARN: tenants.toml の tenant_slug=%q（tenant_id=%q）と HEARTDESK_TENANT_SLUG=%q が一致しません。"+
 				"systemd unit の Environment を確認してください",
 				tc.TenantSlug, tenantID, routingCfg.TenantSlug)
 		}
 	}
-	sysInfo := config.BuildSystemInfo(cfg, buildVersionString(), assetVersionString(), sab.VendorName, tenantID, routingCfg.TenantSlug)
+	sysInfo := config.BuildSystemInfo(cfg, buildVersionString(), assetVersionString(), heartdesk.VendorName, tenantID, routingCfg.TenantSlug)
 	monitorH := monitor.NewHandler(tmpl, routingCfg, sysInfo, cfg)
 	authH := auth.NewHTTPHandler(tmpl, routingCfg, cfg.Cards, sysInfo)
 
@@ -325,7 +332,7 @@ func main() {
 	// SQLite（agent_reports_raw / agents）へ書き込む。注入されない場合のみ JSONL に
 	// フォールバックする（読み取り互換・移行用）。DB を開けない場合は致命的にせず
 	// JSONL フォールバックのまま起動を継続する（検証フェーズの可用性優先）。
-	reportDBPath := sab.SabPath("data/vendor/vendor.db")
+	reportDBPath := heartdesk.Path("data/vendor/vendor.db")
 	if db, err := vendorsvc.OpenDB(reportDBPath); err != nil {
 		log.Printf("WARN: agent report SQLite open failed (path=%s): %v — JSONL フォールバックで起動します", reportDBPath, err)
 	} else {
@@ -338,9 +345,9 @@ func main() {
 
 		// 旧 JSON ライセンス台帳（vendor_license_ledger.json）を license_ledger へ一度だけ取り込む。
 		// license_ledger に既存行があれば no-op（冪等）。元 JSON はバックアップとして残す。
-		dataDir := os.Getenv("SAB_DATA_DIR")
+		dataDir := os.Getenv("HEARTDESK_DATA_DIR")
 		if dataDir == "" {
-			dataDir = "/home/sab/data" // secrets-scan: allow
+			dataDir = "/var/lib/heartdesk/data"
 		}
 		legacyLedgerPath := filepath.Join(dataDir, "vendor_license_ledger.json")
 		if n, mErr := store.MigrateLedgerFromJSONFile(context.Background(), db, legacyLedgerPath); mErr != nil {
@@ -349,6 +356,10 @@ func main() {
 			log.Printf("INFO: migrated %d license ledger entries from JSON to SQLite", n)
 		}
 	}
+
+	// 死活確認（認証なし・最小の JSON のみ）。セッション認証のミドルウェアを通さず、
+	// ルート直下に置く（/api/ や /monitor/ の配下にしない）。
+	mux.HandleFunc("/healthz", monitor.HealthzHandler)
 
 	mux.HandleFunc("/api/agent/report", monitor.AgentReportHandler)
 
@@ -387,29 +398,6 @@ func main() {
 		})
 	}
 
-	// --- 旧 /sab/*, /nab/* 互換リダイレクト ---
-	// PathPrefix が "/sab" or "/nab" の path モードでは、上のテナントルート登録と
-	// パターンが重複するため、該当 prefix だけスキップする（Go 1.22+ の ServeMux は
-	// 同一パターンの再登録で panic する）。
-	legacyRedirect := func(w http.ResponseWriter, r *http.Request) {
-		target := routingCfg.LegacyToCanonical(r.URL.Path)
-		if target == r.URL.Path || target == "/sab" || target == "/nab" {
-			target = routingCfg.MonitorHome()
-		}
-		if r.URL.RawQuery != "" {
-			target += "?" + r.URL.RawQuery
-		}
-		http.Redirect(w, r, target, http.StatusFound)
-	}
-	if routingCfg.PathPrefix != "/sab" {
-		mux.HandleFunc("/sab/", legacyRedirect)
-		mux.HandleFunc("/sab", legacyRedirect)
-	}
-	if routingCfg.PathPrefix != "/nab" {
-		mux.HandleFunc("/nab/", legacyRedirect)
-		mux.HandleFunc("/nab", legacyRedirect)
-	}
-
 	// http.Server（ReadHeaderTimeout / IdleTimeout 付き）で待ち受け、SIGINT/SIGTERM で
 	// graceful shutdown する。WriteTimeout は SSE / 長時間処理（realtime / on-demand job）が
 	// あるため設定しない（必要なら per-handler timeout で個別に絞る）。
@@ -435,7 +423,7 @@ func main() {
 	}()
 
 	go func() {
-		log.Printf("SAB 起動: %s", addr)
+		log.Printf("heartdesk 起動: %s", addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("ListenAndServe failed: %v", err)
 		}
@@ -448,5 +436,5 @@ func main() {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Printf("WARN: graceful shutdown 失敗: %v", err)
 	}
-	log.Printf("INFO: SAB 停止")
+	log.Printf("INFO: heartdesk 停止")
 }

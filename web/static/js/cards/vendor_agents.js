@@ -1,4 +1,4 @@
-// SAB カード: Agent 一覧 (vendor-agents)
+// heartdesk カード: Agent 一覧 (vendor-agents)
 // 依存: shared.js の escHtml / getAppBase / formatCount、card_runtime.js の CardRegistry
 
 (function() {

@@ -245,7 +245,7 @@ func TestLoginNCRejectsDisabledUser(t *testing.T) {
 	}
 }
 
-func TestLoginNCRoleComesOnlyFromSABUser(t *testing.T) {
+func TestLoginNCRoleComesOnlyFromHeartdeskUser(t *testing.T) {
 	h := testHTTPHandler(t)
 	_, sessionMgr := useNCSessionTestDefaults(t, map[string]User{
 		"tenant-user": {
@@ -258,7 +258,7 @@ func TestLoginNCRoleComesOnlyFromSABUser(t *testing.T) {
 	})
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		// Nextcloud 側が管理者相当の groups を返しても、SAB の role へ反映しない。
+		// Nextcloud 側が管理者相当の groups を返しても、heartdesk の role へ反映しない。
 		w.Write([]byte(`{"ocs":{"meta":{"statuscode":100},"data":{"id":"tenant-user","groups":["admin","vendor_staff"]}}}`))
 	}))
 	defer srv.Close()
@@ -281,7 +281,7 @@ func TestLoginNCRoleComesOnlyFromSABUser(t *testing.T) {
 		t.Fatal("created session was not stored")
 	}
 	if s.Role != string(RoleTenantUser) {
-		t.Fatalf("session role = %q, want SAB role %q", s.Role, RoleTenantUser)
+		t.Fatalf("session role = %q, want heartdesk role %q", s.Role, RoleTenantUser)
 	}
 	if ActionAllowed(s.ActionPermissions, s.Role, "reboot") {
 		t.Fatal("tenant_user gained destructive permission from Nextcloud groups")

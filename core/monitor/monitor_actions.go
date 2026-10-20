@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/auth"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 	"github.com/ishizakahiroshi/heartdesk/internal/middleware"
@@ -153,7 +153,7 @@ func (h *Handler) actionIPRename(w http.ResponseWriter, r *http.Request) {
 		writeActionError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	now := time.Now().In(sab.JST())
+	now := time.Now().In(heartdesk.JST())
 	nowRaw := now.Format("2006-01-02 15:04:05")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(ActionResponse{
@@ -161,7 +161,7 @@ func (h *Handler) actionIPRename(w http.ResponseWriter, r *http.Request) {
 		Message:          ip + " の名称を変更しました",
 		UpdatedBy:        user,
 		UpdatedAt:        nowRaw,
-		UpdatedAtDisplay: sab.FormatDatetime(now),
+		UpdatedAtDisplay: heartdesk.FormatDatetime(now),
 	})
 }
 
@@ -181,7 +181,7 @@ func (h *Handler) actionIPChangeType(w http.ResponseWriter, r *http.Request) {
 		writeActionError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	now := time.Now().In(sab.JST())
+	now := time.Now().In(heartdesk.JST())
 	nowRaw := now.Format("2006-01-02 15:04:05")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(ActionResponse{
@@ -189,7 +189,7 @@ func (h *Handler) actionIPChangeType(w http.ResponseWriter, r *http.Request) {
 		Message:          ip + " の種別を変更しました",
 		UpdatedBy:        user,
 		UpdatedAt:        nowRaw,
-		UpdatedAtDisplay: sab.FormatDatetime(now),
+		UpdatedAtDisplay: heartdesk.FormatDatetime(now),
 	})
 }
 
@@ -349,7 +349,7 @@ func (h *Handler) actionRunSchedulerJob(w http.ResponseWriter, r *http.Request, 
 
 // ---- APIServices は旧エンドポイント（main.go 経由）との互換用 ----
 
-// APIServices は GET /nab/api/monitor/services のハンドラ
+// APIServices は GET /api/monitor/services のハンドラ
 func (h *Handler) APIServices(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	if err := json.NewEncoder(w).Encode(GetServices(h.appCfg)); err != nil {
@@ -429,7 +429,7 @@ func (h *Handler) actionTOTPGenerate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	auth.DefaultTOTPManager().SetSecret(username, secret, false)
-	uri := auth.TOTPProvisioningURI("SAB", username, secret)
+	uri := auth.TOTPProvisioningURI("heartdesk", username, secret)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"ok":     true,
@@ -505,9 +505,9 @@ func (h *Handler) actionNCRepair(w http.ResponseWriter, r *http.Request) {
 	writeActionOK(w, "Nextcloud修復が完了しました\n"+out)
 }
 
-func (h *Handler) actionRestartSab(w http.ResponseWriter, r *http.Request) {
-	RestartSab()
-	writeActionOK(w, "sabサービスの再起動を開始しました")
+func (h *Handler) actionRestartHeartdesk(w http.ResponseWriter, r *http.Request) {
+	RestartHeartdesk()
+	writeActionOK(w, "heartdeskサービスの再起動を開始しました")
 }
 
 func (h *Handler) actionReboot(w http.ResponseWriter, r *http.Request) {

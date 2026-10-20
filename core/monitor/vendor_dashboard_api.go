@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/auditdb"
 	"github.com/ishizakahiroshi/heartdesk/internal/auth"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
@@ -65,7 +65,7 @@ func GetVendorDashboard(r *http.Request, appCfg *config.AppConfig) interface{} {
 	recentOut := make([]vendorDashboardRecentEntry, 0, len(recent))
 	for _, e := range recent {
 		recentOut = append(recentOut, vendorDashboardRecentEntry{
-			Ts:       e.Timestamp.In(sab.JST()).Format(time.RFC3339),
+			Ts:       e.Timestamp.In(heartdesk.JST()).Format(time.RFC3339),
 			Action:   e.Action,
 			TenantID: e.TenantID,
 			AgentID:  e.AgentID,
@@ -76,7 +76,7 @@ func GetVendorDashboard(r *http.Request, appCfg *config.AppConfig) interface{} {
 
 	var audit24h int64
 	if auditdb.Enabled() {
-		from24h := time.Now().Add(-24 * time.Hour).In(sab.JST()).Format(time.RFC3339)
+		from24h := time.Now().Add(-24 * time.Hour).In(heartdesk.JST()).Format(time.RFC3339)
 		res, _ := auditdb.Query(auditdb.QueryParams{From: from24h, Limit: 1})
 		audit24h = res.Total
 	}

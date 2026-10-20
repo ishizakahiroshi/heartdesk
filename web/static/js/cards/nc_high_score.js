@@ -1,4 +1,4 @@
-// SAB カード: 要確認IP（高スコア・手動BAN候補） (sec-nc-high-score)
+// heartdesk カード: 要確認IP（高スコア・手動BAN候補） (sec-nc-high-score)
 // 依存: shared.js の escHtml / formatDisplayDateTime / ipBadges / isWhitelisted /
 //       createFilterHeaderRow / buildIpFilterCell / setupCardFilter /
 //       initBulkBan / autoInitCardFromDataset / addRowNumbers / monitorApiURL、

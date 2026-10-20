@@ -1,4 +1,4 @@
-// SAB カード: ライセンス台帳監査 (vendor-license-audit)
+// heartdesk カード: ライセンス台帳監査 (vendor-license-audit)
 // 依存: shared.js の escHtml / getAppBase / formatCount、card_runtime.js の CardRegistry
 
 (function() {

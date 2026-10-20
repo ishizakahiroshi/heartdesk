@@ -1,4 +1,4 @@
-// SAB カード: テナント × Agent ビュー (vendor-tenants)
+// heartdesk カード: テナント × Agent ビュー (vendor-tenants)
 // 依存: shared.js の escHtml / getAppBase、card_runtime.js の CardRegistry
 
 (function() {

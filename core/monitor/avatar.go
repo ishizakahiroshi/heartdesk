@@ -25,9 +25,9 @@ var avatarAllowedExts = map[string]string{
 }
 
 func avatarDir() string {
-	// sab ユーザーが書き込める /home/sab/data/avatars/ を使用 // secrets-scan: allow
-	// SabPath は /home/ubuntu を起点にするため直接パスを指定
-	return "/home/sab/data/avatars" // secrets-scan: allow
+	// heartdesk ユーザーが書き込める /var/lib/heartdesk/data/avatars/ を使用
+	// BASE_DIR とは別に固定パスを指定する
+	return "/var/lib/heartdesk/data/avatars"
 }
 
 func avatarSafeName(username string) (string, bool) {

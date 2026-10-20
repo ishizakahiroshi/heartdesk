@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
 // agentIDPattern は agent_id 全体の厳格バリデータ（C7: agentid-path-no-sanitize）。
@@ -22,7 +22,7 @@ var agentIDPattern = regexp.MustCompile(`^[a-z0-9_]+-[a-z0-9_][a-z0-9_-]*$`)
 // base 配下の "events__invalid.jsonl" へ隔離する（パストラバーサルで base 外へ抜けることを防ぐ）。
 // さらに filepath.Clean + base 接頭辞チェックで base 配下に収まることを保証する。
 func EventJSONL(agentID string) string {
-	base := sab.SabPath("data/logs/agents")
+	base := heartdesk.Path("data/logs/agents")
 	name := "events_" + agentID + ".jsonl"
 	if !agentIDPattern.MatchString(strings.TrimSpace(agentID)) {
 		name = "events__invalid.jsonl"

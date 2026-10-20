@@ -9,12 +9,12 @@ import (
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 )
 
-// ncTestEnv は SAB_BASE_DIR を一時ディレクトリへ向け、ncSources() が読む
+// ncTestEnv は HEARTDESK_BASE_DIR を一時ディレクトリへ向け、ncSources() が読む
 // パス構造（data/logs/nextcloud.jsonl / data/logs/agents/<id>/*.jsonl）を再現する。
 func ncTestEnv(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	t.Setenv("SAB_BASE_DIR", dir)
+	t.Setenv("HEARTDESK_BASE_DIR", dir)
 	return dir
 }
 

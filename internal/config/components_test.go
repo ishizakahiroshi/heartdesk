@@ -59,7 +59,7 @@ func TestComponentEnabledDefaults(t *testing.T) {
 // example_module だけを false にしても、グローバル層で有効な他コンポーネントは残る。
 func TestComponentsMergePerKeyAcrossLayers(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("SAB_CONFIG_DIR", dir)
+	t.Setenv("HEARTDESK_CONFIG_DIR", dir)
 
 	writeTestFile(t, filepath.Join(dir, "config.toml"), `
 [components]

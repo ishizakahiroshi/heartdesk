@@ -1,0 +1,18 @@
+# Minimal users.toml for heartdesk (web UI accounts).
+# Default location: $HEARTDESK_BASE_DIR/config/users.toml. HEARTDESK_USERS_TOML can point to another path.
+# Keep this file out of git.
+
+[[users]]
+id = "admin"
+# Login name. It is compared in lowercase.
+username = "admin"
+# Display name.
+name = "Administrator"
+# "bcrypt$" followed by the bcrypt hash of the password, so the stored string
+# starts with "bcrypt$$2a$" or similar. See README, "Run (minimal setup)".
+password_hash = "bcrypt$<bcrypt-hash-of-your-password>"
+# One of: vendor_staff, tenant_admin, tenant_user.
+role = "vendor_staff"
+# Screens this user may open: "monitor" and/or "vendor". If this key is omitted or empty,
+# the user cannot open any screen, so always set it.
+access_screens = ["monitor", "vendor"]

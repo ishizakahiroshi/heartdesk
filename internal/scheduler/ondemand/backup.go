@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 	"github.com/ishizakahiroshi/heartdesk/internal/r2"
 )
@@ -39,7 +39,7 @@ func BackupMariaDB(ctx context.Context, cfg *config.SchedulerConfig) error {
 	stamp := now.Format("20060102_1504")
 	backupDir := defaultBackupDir
 	logPath := "/var/log/mariadb-backup.log"
-	heartbeatPath := sab.SabPath(defaultHeartbeatPath)
+	heartbeatPath := heartdesk.Path(defaultHeartbeatPath)
 	if cfg != nil && strings.TrimSpace(cfg.BackupOutputDir) != "" {
 		backupDir = strings.TrimSpace(cfg.BackupOutputDir)
 	}

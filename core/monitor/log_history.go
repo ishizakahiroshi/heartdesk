@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/auth"
 )
 
@@ -53,7 +53,7 @@ type SSHLoginEntry struct {
 	DstPort string `json:"dst_port"` // 攻撃先ポート（syslog の SSH BLOCKED DPT）
 }
 
-// SSHLoginResponse は /nab/api/monitor/ssh_login_history のレスポンス
+// SSHLoginResponse は /api/monitor/ssh_login_history のレスポンス
 type SSHLoginResponse struct {
 	Entries []SSHLoginEntry   `json:"entries"`
 	Rate    LoginRate         `json:"rate"`
@@ -116,7 +116,7 @@ func GetSSHLoginHistory(agentID ...string) SSHLoginResponse {
 			} else if t.After(cutPrev) {
 				ratePrev++
 			}
-			timeStr = t.In(sab.JST()).Format("02/Jan/2006:15:04:05 +0900")
+			timeStr = t.In(heartdesk.JST()).Format("02/Jan/2006:15:04:05 +0900")
 		}
 
 		entries = append(entries, SSHLoginEntry{
@@ -153,7 +153,7 @@ func GetSSHLoginHistory(agentID ...string) SSHLoginResponse {
 }
 
 // =============================================================================
-// NAB / phpMyAdmin Nginx ログイン履歴
+// heartdesk / phpMyAdmin ログイン履歴
 // =============================================================================
 
 // NginxLoginEntry は1件のNginxログイン記録
@@ -170,16 +170,16 @@ type NginxLoginEntry struct {
 	Reason   string `json:"reason,omitempty"`   // "totp_fail" / "lockout" / "bad_credential"
 }
 
-// NginxLoginResponse は NAB / phpMyAdmin ログイン履歴のレスポンス
+// NginxLoginResponse は heartdesk / phpMyAdmin ログイン履歴のレスポンス
 type NginxLoginResponse struct {
 	Entries []NginxLoginEntry `json:"entries"`
 	Rate    LoginRate         `json:"rate"`
 	Flags   map[string]string `json:"flags"`
 }
 
-// NginxLoginHistoriesResponse は /nab/api/monitor/nginx_login_histories のレスポンス（統合版）
+// NginxLoginHistoriesResponse は /api/monitor/nginx_login_histories のレスポンス（統合版）
 type NginxLoginHistoriesResponse struct {
-	NAB        NginxLoginResponse `json:"nab"`
+	Heartdesk  NginxLoginResponse `json:"heartdesk"`
 	PhpMyAdmin NginxLoginResponse `json:"phpmyadmin"`
 }
 
@@ -190,7 +190,7 @@ type nginxLogTarget struct {
 	Path  string
 }
 
-// getNginxLoginHistories は SAB（自前JSONL）+ phpMyAdmin（nginx.jsonl解析）の履歴を返す
+// getNginxLoginHistories は heartdesk（自前JSONL）+ phpMyAdmin（nginx.jsonl解析）の履歴を返す
 func getNginxLoginHistories(agentID ...string) NginxLoginHistoriesResponse {
 	const windowMin = 30
 	now := time.Now()
@@ -303,17 +303,17 @@ func getNginxLoginHistories(agentID ...string) NginxLoginHistoriesResponse {
 	}
 	pmaFlags := GetCountryFlags(ipList)
 
-	// NAB（heartdesk）側は自前の JSONL を読み込む
-	nab := GetNABLoginHistory()
+	// heartdesk 側は自前の JSONL を読み込む
+	own := GetLoginHistory()
 
 	return NginxLoginHistoriesResponse{
-		NAB:        nab,
+		Heartdesk:  own,
 		PhpMyAdmin: NginxLoginResponse{Entries: pmaEntries, Rate: pmaRate, Flags: pmaFlags},
 	}
 }
 
-// GetNABLoginHistory は heartdesk のログインイベントJSONLを読んで返す
-func GetNABLoginHistory() NginxLoginResponse {
+// GetLoginHistory は heartdesk のログインイベントJSONLを読んで返す
+func GetLoginHistory() NginxLoginResponse {
 	const windowMin = 30
 	now := time.Now()
 	cutRecent := now.Add(-time.Duration(windowMin) * time.Minute)
@@ -352,7 +352,7 @@ func GetNABLoginHistory() NginxLoginResponse {
 		entries = append(entries, NginxLoginEntry{
 			Time:     t.Format("02/Jan/2006:15:04:05 +0900"),
 			Result:   e.Result,
-			App:      "sab_monitor",
+			App:      "heartdesk_monitor",
 			AppLabel: "heartdesk",
 			User:     e.User,
 			IP:       e.IP,
@@ -387,7 +387,7 @@ func GetPhpMyAdminLoginHistory(agentID ...string) NginxLoginResponse {
 	return h.PhpMyAdmin
 }
 
-// GetNginxLoginHistories は NAB + phpMyAdmin 両方を返す統合API
+// GetNginxLoginHistories は heartdesk + phpMyAdmin 両方を返す統合API
 func GetNginxLoginHistories(agentID ...string) NginxLoginHistoriesResponse {
 	return getNginxLoginHistories(agentID...)
 }

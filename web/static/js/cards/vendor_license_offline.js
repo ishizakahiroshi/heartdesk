@@ -1,4 +1,4 @@
-// SAB カード: オフラインライセンス発行 (vendor-license-offline)
+// heartdesk カード: オフラインライセンス発行 (vendor-license-offline)
 // 依存: shared.js の escHtml / getAppBase、card_runtime.js の CardRegistry
 
 (function() {
@@ -117,7 +117,7 @@
 		var url  = URL.createObjectURL(blob);
 		var a    = document.createElement('a');
 		a.href = url;
-		a.download = res.filename || 'license.sablic';
+		a.download = res.filename || 'license.hdlic';
 		document.body.appendChild(a);
 		a.click();
 		document.body.removeChild(a);

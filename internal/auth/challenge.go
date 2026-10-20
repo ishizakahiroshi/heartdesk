@@ -10,7 +10,7 @@ import (
 
 const (
 	loginChallengeTTL       = 5 * time.Minute
-	loginChallengeCookie    = "sab_login_challenge"
+	loginChallengeCookie    = "heartdesk_login_challenge"
 	loginChallengeCookieAge = 300
 
 	// loginChallengeSweepInterval は expired entry を一括 delete する周期。

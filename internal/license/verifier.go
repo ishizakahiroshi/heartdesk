@@ -15,8 +15,16 @@ import (
 	"time"
 )
 
-// vendorSecret はVendorが管理する共有秘密。
-// ビルド時に -ldflags "-X sab/internal/license.vendorSecret=xxx" で注入する。
+// vendorSecret は license_key の署名（HMAC-SHA256）に使う鍵で、ライセンスを発行する側が管理する秘密。
+// ビルド時に次のように注入する（モジュールパスまで含めて指定する）:
+//
+//	go build -ldflags "-X github.com/ishizakahiroshi/heartdesk/internal/license.vendorSecret=<secret>" .
+//
+// ソースに既定値を持たせず、注入しないと起動できない作りにしている。理由は、この値を知る者は
+// 誰でも有効な license_key を作れるため、ソースに書くと公開された時点で署名が意味を失うから。
+// 値は自分で決めた任意の秘密でよいが、license_key を計算する側（Monitor 自身の
+// [vendor_license] と /api/license/verify で検証する各 Agent のキー）も同じ値で署名すること。
+// 値はバイナリに埋め込まれるので、バイナリも秘密として扱う。
 var vendorSecret = ""
 
 type verifierImpl struct {
@@ -46,7 +54,8 @@ func (v *verifierImpl) SetCurrentToken(token string) {
 // license_key の形式: "<tenant_id>.<agent_id>.<hmac_signature>"
 func (v *verifierImpl) Verify(agentID, licenseKey string) error {
 	if vendorSecret == "" {
-		return fmt.Errorf("license: vendorSecret not injected at build time")
+		return fmt.Errorf("license: vendorSecret not injected at build time; " +
+			"rebuild with -ldflags \"-X github.com/ishizakahiroshi/heartdesk/internal/license.vendorSecret=<secret>\"")
 	}
 	if licenseKey == "" {
 		return fmt.Errorf("license: license_key is not set in agent_secrets.toml")

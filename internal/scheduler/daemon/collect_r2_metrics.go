@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	defaultR2MetricsOutputPath = "/home/sab/data/json/r2_metrics.json" // secrets-scan: allow
+	defaultR2MetricsOutputPath = "/var/lib/heartdesk/data/json/r2_metrics.json"
 	r2MetricsMonthlyKeep       = 3
 )
 

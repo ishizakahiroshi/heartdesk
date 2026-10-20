@@ -21,7 +21,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"golang.org/x/crypto/bcrypt"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 )
 
@@ -119,12 +119,12 @@ func GetIPMgmtJSVars(cfg *config.AppConfig, agentID string) string {
 		}
 	}
 	if whitelistIPs == nil {
-		whitelistIPs = strings.Fields(sab.Env("SAB_WHITELIST_IPS"))
+		whitelistIPs = strings.Fields(heartdesk.Env("HEARTDESK_WHITELIST_IPS"))
 	}
 
 	serverIPs := []string{}
 	serverIPSeen := map[string]bool{}
-	for _, p := range strings.Split(sab.Env("SAB_SERVER_IPS"), ",") {
+	for _, p := range strings.Split(heartdesk.Env("HEARTDESK_SERVER_IPS"), ",") {
 		p = strings.TrimSpace(p)
 		if p == "" || serverIPSeen[p] {
 			continue
@@ -132,11 +132,11 @@ func GetIPMgmtJSVars(cfg *config.AppConfig, agentID string) string {
 		serverIPSeen[p] = true
 		serverIPs = append(serverIPs, p)
 	}
-	if hostIP := strings.TrimSpace(sab.Env("SAB_SERVER_HOST")); hostIP != "" && !serverIPSeen[hostIP] {
+	if hostIP := strings.TrimSpace(heartdesk.Env("HEARTDESK_SERVER_HOST")); hostIP != "" && !serverIPSeen[hostIP] {
 		serverIPs = append(serverIPs, hostIP)
 	}
 
-	sshPort := sab.Env("SAB_SSH_PORT")
+	sshPort := heartdesk.Env("HEARTDESK_SSH_PORT")
 	if sshPort == "" {
 		sshPort = "22"
 	}
@@ -182,7 +182,7 @@ func GetIPMgmtJSVars(cfg *config.AppConfig, agentID string) string {
 		"var WHITELIST_IPS_PHP = " + marshal(whitelistIPs) + ";\n" +
 		"var SERVER_IPS = " + marshal(serverIPs) + ";\n" +
 		"var IP_TYPE_LABELS = " + marshal(ipTypeLabels) + ";\n" +
-		"var NAB_SSH_PORT = " + marshal(sshPort) + ";\n" +
+		"var SSH_PORT = " + marshal(sshPort) + ";\n" +
 		"var BANNED_IPS = " + marshal(GetActiveBannedIPsWithJail(agentID)) + ";\n"
 }
 
@@ -194,7 +194,7 @@ func GetIPMgmt(agentID ...string) IPMgmtData {
 		return IPMgmtData{IPs: []SSHAllowedIP{}, Unavailable: true}
 	}
 	var d IPMgmtData
-	d.UpdatedAt = sab.FormatDatetime(time.Now().In(sab.JST()))
+	d.UpdatedAt = heartdesk.FormatDatetime(time.Now().In(heartdesk.JST()))
 
 	loaded, err := loadManagedIPs()
 	if err != nil {
@@ -207,7 +207,7 @@ func GetIPMgmt(agentID ...string) IPMgmtData {
 
 	// updated_at のフォーマット変換
 	for i := range d.IPs {
-		d.IPs[i].UpdatedAtDisplay = sab.FormatRawDatetime(d.IPs[i].UpdatedAt)
+		d.IPs[i].UpdatedAtDisplay = heartdesk.FormatRawDatetime(d.IPs[i].UpdatedAt)
 		// 削除・名称変更・種別変更が拒否される行かを画面へ伝える（判定は isAdminProtected と同じ）。
 		d.IPs[i].AdminProtected = matchAdminProtected(protectedNames, d.IPs[i].Name)
 		switch d.IPs[i].Type {
@@ -270,7 +270,7 @@ func GetIPMgmt(agentID ...string) IPMgmtData {
 // fetchNCBruteforceSlotMap は Nextcloud の bruteforce ホワイトリスト登録 CIDR を返す
 // キー: "1.2.3.4/32" → 値: true（登録済み）
 func fetchNCBruteforceSlotMap() map[string]bool {
-	raw := sab.RunArgs(30*time.Second, "php", "/var/www/nextcloud/occ", "config:list", "bruteForce", "--private")
+	raw := heartdesk.RunArgs(30*time.Second, "php", "/var/www/nextcloud/occ", "config:list", "bruteForce", "--private")
 	if raw == "" {
 		return nil
 	}
@@ -293,7 +293,7 @@ func fetchNCBruteforceSlotMap() map[string]bool {
 
 // fetchBFAttempts は occ security:bruteforce:attempts で BF 試行数を返す
 func fetchBFAttempts(ip string) int {
-	out := sab.RunArgs(10*time.Second, "php", "/var/www/nextcloud/occ", "security:bruteforce:attempts", ip)
+	out := heartdesk.RunArgs(10*time.Second, "php", "/var/www/nextcloud/occ", "security:bruteforce:attempts", ip)
 	if m := bfAttemptsRe.FindStringSubmatch(out); m != nil {
 		n := 0
 		fmt.Sscanf(m[1], "%d", &n)
@@ -327,7 +327,7 @@ func fetchLastAccessMap(ips []SSHAllowedIP) map[string]string {
 			return true
 		}
 		// 常に最新のタイムスタンプで上書き（JSONL は時刻順なので最後が最新）
-		result[ev.IP] = sab.FormatDatetime(t.In(sab.JST()))
+		result[ev.IP] = heartdesk.FormatDatetime(t.In(heartdesk.JST()))
 		return true
 	})
 	return result
@@ -370,7 +370,7 @@ func AddIP(ip, name, ipType, user string) error {
 		return fmt.Errorf("追加失敗: %s は最大%d件まで登録可能です", strings.ToUpper(ipType), limits[ipType])
 	}
 
-	now := time.Now().In(sab.JST()).Format("2006-01-02 15:04:05")
+	now := time.Now().In(heartdesk.JST()).Format("2006-01-02 15:04:05")
 	entry := SSHAllowedIP{IP: ip, Name: name, Type: ipType, Added: now, UpdatedAt: now}
 	if user != "" {
 		entry.UpdatedBy = user
@@ -455,7 +455,7 @@ func RenameIP(ip, name, user string) error {
 			return fmt.Errorf("名称変更失敗: この管理者の名前は変更できません")
 		}
 		data[i].Name = name
-		data[i].UpdatedAt = time.Now().In(sab.JST()).Format("2006-01-02 15:04:05")
+		data[i].UpdatedAt = time.Now().In(heartdesk.JST()).Format("2006-01-02 15:04:05")
 		if user != "" {
 			data[i].UpdatedBy = user
 		}
@@ -516,7 +516,7 @@ func ChangeTypeIP(ip, ipType, user string) error {
 			return fmt.Errorf("種別変更失敗: %s は最大%d件まで登録可能です", strings.ToUpper(ipType), limits[ipType])
 		}
 		data[i].Type = ipType
-		data[i].UpdatedAt = time.Now().In(sab.JST()).Format("2006-01-02 15:04:05")
+		data[i].UpdatedAt = time.Now().In(heartdesk.JST()).Format("2006-01-02 15:04:05")
 		if user != "" {
 			data[i].UpdatedBy = user
 		}
@@ -535,7 +535,7 @@ func ChangeTypeIP(ip, ipType, user string) error {
 // ---- managed_ips TOML ヘルパー ----
 
 func loadManagedIPs() ([]SSHAllowedIP, error) {
-	tomlPath := sab.SabPath(managedIPsTOMLPath)
+	tomlPath := heartdesk.Path(managedIPsTOMLPath)
 	if _, err := os.Stat(tomlPath); err == nil {
 		var file managedIPFile
 		if _, err := toml.DecodeFile(tomlPath, &file); err != nil {
@@ -549,7 +549,7 @@ func loadManagedIPs() ([]SSHAllowedIP, error) {
 		return nil, err
 	}
 
-	raw, err := os.ReadFile(sab.SabPath(legacyManagedIPsJSONPath))
+	raw, err := os.ReadFile(heartdesk.Path(legacyManagedIPsJSONPath))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return []SSHAllowedIP{}, nil
@@ -579,7 +579,7 @@ func filterValidManagedIPs(in []SSHAllowedIP) []SSHAllowedIP {
 }
 
 func writeManagedIPs(data []SSHAllowedIP) error {
-	path := sab.SabPath(managedIPsTOMLPath)
+	path := heartdesk.Path(managedIPsTOMLPath)
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
@@ -624,10 +624,10 @@ func writeManagedIPs(data []SSHAllowedIP) error {
 //
 // SSH の IP 制限は VPS 提供元のパケットフィルタへ一元化しており、
 // iptables SSH_ALLOW チェーンの構築は行わない。
-// nginx allowlist の生成も行わない（実体は deploy ツール生成の sab_allowed_ips_*.conf）。
+// nginx allowlist の生成も行わない（実体は deploy ツール生成の heartdesk_allowed_ips_*.conf）。
 // 本 sync の役割は fail2ban ignoreip / NC bruteforce whitelist の同期のみ。
 
-// SyncIPManage は SAB 起動時など外部から呼ぶための公開ラッパー。
+// SyncIPManage は heartdesk 起動時など外部から呼ぶための公開ラッパー。
 // skipNC=true のとき Nextcloud ブルートフォースホワイトリスト同期をスキップする。
 func SyncIPManage(skipNC bool) error {
 	return syncIPManage(skipNC)
@@ -690,7 +690,7 @@ func syncFail2banIgnoreIP(data []SSHAllowedIP) {
 	if err := writeFileViaTee(f2bLocalConf, updated); err != nil {
 		return
 	}
-	sab.RunArgsCombined(10*time.Second, "sudo", "/bin/systemctl", "reload", "fail2ban")
+	heartdesk.RunArgsCombined(10*time.Second, "sudo", "/bin/systemctl", "reload", "fail2ban")
 }
 
 // syncNCBruteforceWhitelist は Nextcloud bruteforce ホワイトリストを managed_ips 台帳と同期する
@@ -701,7 +701,7 @@ func syncNCBruteforceWhitelist(data []SSHAllowedIP) {
 		args := make([]string, len(occBase)+len(subArgs))
 		copy(args, occBase)
 		copy(args[len(occBase):], subArgs)
-		return sab.RunArgsCombined(timeout, occCmd, args...)
+		return heartdesk.RunArgsCombined(timeout, occCmd, args...)
 	}
 
 	raw, err := occRun(30*time.Second, "config:list", "bruteForce", "--private")
@@ -772,12 +772,12 @@ func SearchIPHistory(ip string) IPSearchData {
 	}
 
 	var results []IPSearchEntry
-	jst := sab.JST()
+	jst := heartdesk.JST()
 	now := time.Now().In(jst)
 
 	// 1. SSH (logs/ssh.jsonl) — Agent が生成した JSONL を参照
 	{
-		jsonlPath := sab.SabPath("data/logs/ssh.jsonl")
+		jsonlPath := heartdesk.Path("data/logs/ssh.jsonl")
 		_ = ScanJSONL[SSHLogEvent](jsonlPath, func(ev SSHLogEvent) bool {
 			if ev.IP != ip {
 				return true
@@ -998,12 +998,12 @@ func SearchIPHistory(ip string) IPSearchData {
 // isJapanIP は ipset japan_ips でIPが日本のものか判定する
 func isJapanIP(ip string) bool {
 	// ubuntu は /usr/sbin/ipset test japan_ips * の NOPASSWD を持つ
-	out, err := sab.RunArgsCombined(5*time.Second, "sudo", "/usr/sbin/ipset", "test", "japan_ips", ip)
+	out, err := heartdesk.RunArgsCombined(5*time.Second, "sudo", "/usr/sbin/ipset", "test", "japan_ips", ip)
 	if err == nil && strings.Contains(out, "is in set") {
 		return true
 	}
 	// パスの違いを吸収
-	out2, err2 := sab.RunArgsCombined(5*time.Second, "sudo", "/sbin/ipset", "test", "japan_ips", ip)
+	out2, err2 := heartdesk.RunArgsCombined(5*time.Second, "sudo", "/sbin/ipset", "test", "japan_ips", ip)
 	return err2 == nil && strings.Contains(out2, "is in set")
 }
 
@@ -1087,7 +1087,7 @@ func loadPinStateLocked() {
 		return
 	}
 	pinStateLoadedOK = true
-	raw, err := os.ReadFile(sab.SabPath(pinLockoutStatePath))
+	raw, err := os.ReadFile(heartdesk.Path(pinLockoutStatePath))
 	if err != nil {
 		return // 未作成は正常
 	}
@@ -1112,7 +1112,7 @@ func savePinStateLocked() {
 		log.Printf("ERROR: ip_mgmt: pin lockout state encode error: %v", err)
 		return
 	}
-	path := sab.SabPath(pinLockoutStatePath)
+	path := heartdesk.Path(pinLockoutStatePath)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		log.Printf("ERROR: ip_mgmt: pin lockout state mkdir error: %v", err)
 		return

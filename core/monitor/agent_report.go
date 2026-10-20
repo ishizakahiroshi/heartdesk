@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/audit"
 	"github.com/ishizakahiroshi/heartdesk/internal/auditdb"
 	"github.com/ishizakahiroshi/heartdesk/internal/auth"
@@ -30,7 +30,7 @@ import (
 	"github.com/ishizakahiroshi/heartpost/agentsig"
 )
 
-func agentReportDirPath() string { return sab.SabPath("data/json/agent_reports") }
+func agentReportDirPath() string { return heartdesk.Path("data/json/agent_reports") }
 
 // AgentReport は Agent から受信するレポートの全体構造
 type AgentReport struct {
@@ -295,7 +295,7 @@ func AgentReportHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	now := time.Now().In(sab.JST())
+	now := time.Now().In(heartdesk.JST())
 	record := agentReportRecord{
 		ReceivedAt: now.Format(time.RFC3339),
 		AgentID:    report.AgentID,
@@ -578,7 +578,7 @@ func saveAgentReport(record agentReportRecord, retentionMonths int) error {
 	ym := now.Format("200601")
 	fpath := filepath.Join(dir, fmt.Sprintf("report_%s_%s.jsonl", record.AgentID, ym))
 
-	// レポート JSONL は sab プロセス専用のため 0600。
+	// レポート JSONL は heartdesk プロセス専用のため 0600。
 	f, err := os.OpenFile(fpath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		return fmt.Errorf("open: %w", err)
@@ -701,7 +701,7 @@ func restoreAgentLastSeenFromSQLite(ctx context.Context) bool {
 		if agent.LastReceivedAt == nil {
 			continue
 		}
-		receivedAt := agent.LastReceivedAt.In(sab.JST()).Format(time.RFC3339)
+		receivedAt := agent.LastReceivedAt.In(heartdesk.JST()).Format(time.RFC3339)
 		collectors := map[string]json.RawMessage{}
 		// 直近 N 件を古い→新しい順にマージ（JSONL restore と同思想）。
 		reports, err := reportStore.ListRawReports(ctx, agent.TenantID, agent.AgentID, time.Unix(0, 0), to, restoreSQLiteMergeLimit)
@@ -724,7 +724,7 @@ func restoreAgentLastSeenFromSQLite(ctx context.Context) bool {
 			}
 			// 最新行の ReceivedAt を採用
 			if !reports[0].ReceivedAt.IsZero() {
-				receivedAt = reports[0].ReceivedAt.In(sab.JST()).Format(time.RFC3339)
+				receivedAt = reports[0].ReceivedAt.In(heartdesk.JST()).Format(time.RFC3339)
 			}
 		}
 		updateAgentLastSeenFields(agent.AgentID, agent.AgentLabel, agent.AgentType, receivedAt, collectors)
@@ -898,7 +898,7 @@ func GetAgentStatusForConfig(cfg *config.AppConfig) []AgentLastSeen {
 	agentLastSeenMu.RLock()
 	defer agentLastSeenMu.RUnlock()
 
-	now := time.Now().In(sab.JST())
+	now := time.Now().In(heartdesk.JST())
 	result := make([]AgentLastSeen, 0, len(agentLastSeen))
 	seenIDs := make(map[string]struct{}, len(agentLastSeen))
 	for _, seen := range agentLastSeen {
@@ -919,7 +919,7 @@ func GetAgentStatusForConfig(cfg *config.AppConfig) []AgentLastSeen {
 			minutesAgo = int(now.Sub(t).Minutes())
 			alertMin := alertThresholdMin(seen.AgentType, cfg)
 			isAlert = minutesAgo >= alertMin
-			displayAt = sab.FormatDatetime(t.In(sab.JST()))
+			displayAt = heartdesk.FormatDatetime(t.In(heartdesk.JST()))
 		}
 		displayLabel := resolveAgentDisplayLabel(cfg, seen.AgentID, seen.AgentLabel)
 		result = append(result, AgentLastSeen{
@@ -1063,7 +1063,7 @@ func GetAgentOverviewForSession(role, tenantID string) []AgentOverviewItem {
 	}
 	agentLastSeenMu.RUnlock()
 
-	now := time.Now().In(sab.JST())
+	now := time.Now().In(heartdesk.JST())
 	result := make([]AgentOverviewItem, 0, len(seenCopy))
 	vendorAll := auth.Role(auth.NormalizeRole(role)) == auth.RoleVendorStaff
 	sessTenant := strings.TrimSpace(tenantID)
@@ -1330,11 +1330,11 @@ func loadLatestAgentRecordFromSQLite(ctx context.Context, tenantID, agentID stri
 		}
 	}
 	return &agentReportRecord{
-		ReceivedAt: raw.ReceivedAt.In(sab.JST()).Format(time.RFC3339),
+		ReceivedAt: raw.ReceivedAt.In(heartdesk.JST()).Format(time.RFC3339),
 		AgentID:    raw.AgentID,
 		AgentLabel: label,
 		AgentType:  agentType,
-		ReportedAt: raw.ReportedAt.In(sab.JST()).Format(time.RFC3339),
+		ReportedAt: raw.ReportedAt.In(heartdesk.JST()).Format(time.RFC3339),
 		Collectors: collectors,
 	}
 }
@@ -1413,7 +1413,7 @@ func reportReceivedAt(agentID string) string {
 	if err != nil {
 		return seen.ReceivedAt
 	}
-	return sab.FormatDatetime(t.In(sab.JST()))
+	return heartdesk.FormatDatetime(t.In(heartdesk.JST()))
 }
 
 // systemCollectorResult は system collector の JSON 構造

@@ -14,7 +14,7 @@ import (
 // Nextcloud の Cookie は Path=/nextcloud で発行されるので、ボタンの行き先が /login の下だと
 // ブラウザが Cookie を送らず、ログイン済みでも「Nextcloud にログインしてから」と案内されてしまう。
 func TestLoginPageNCLinkIsUnderNextcloudPath(t *testing.T) {
-	t.Setenv("SAB_BASE_DIR", t.TempDir())
+	t.Setenv("HEARTDESK_BASE_DIR", t.TempDir())
 	tmpl := template.Must(template.New("").Parse(`{{define "login"}}{{.NCSessionPath}}{{end}}`))
 	routes := routing.Config{MonitorBase: "/monitor", StaticBase: "/static", LoginPath: "/login"}
 	h := NewHTTPHandler(tmpl, routes, config.CardsConfig{}, config.SystemInfoData{})
@@ -41,7 +41,7 @@ func TestNCBaseURLForTenant(t *testing.T) {
 		want string
 	}{
 		{"subdomain tenant uses slug host", &routing.TenantConfig{TenantSlug: "drive", RoutingMode: "subdomain", BaseHost: "example.com"}, "https://drive.example.com/nextcloud"},
-		{"path tenant uses base host", &routing.TenantConfig{TenantSlug: "sab", RoutingMode: "path", BaseHost: "nc.example.net"}, "https://nc.example.net/nextcloud"},
+		{"path tenant uses base host", &routing.TenantConfig{TenantSlug: "heartdesk", RoutingMode: "path", BaseHost: "nc.example.net"}, "https://nc.example.net/nextcloud"},
 		{"nil tenant", nil, ""},
 		{"host not buildable", &routing.TenantConfig{RoutingMode: "subdomain", BaseHost: "example.com"}, ""},
 	}

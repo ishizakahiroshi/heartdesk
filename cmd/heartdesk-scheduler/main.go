@@ -17,8 +17,8 @@ func main() {
 		log.Fatalf("scheduler config load failed: %v", err)
 	}
 
-	if cfg.BaseDir != "" && os.Getenv("SAB_BASE_DIR") == "" {
-		_ = os.Setenv("SAB_BASE_DIR", cfg.BaseDir)
+	if cfg.BaseDir != "" && os.Getenv("HEARTDESK_BASE_DIR") == "" {
+		_ = os.Setenv("HEARTDESK_BASE_DIR", cfg.BaseDir)
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

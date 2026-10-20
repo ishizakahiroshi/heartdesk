@@ -6,7 +6,7 @@ import (
 )
 
 // Verifier はライセンスキーを検証するインターフェース。
-// 実装（verifier.go）は .gitignore で非公開。
+// 実装は verifier.go（vendorSecret はビルド時に注入する。値はソースに持たない）。
 type Verifier interface {
 	// Verify はライセンスキーとエージェントIDをローカルで検証する（起動時・オフライン）。
 	// 不正なキーの場合は error を返す。

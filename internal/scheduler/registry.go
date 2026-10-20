@@ -16,7 +16,7 @@ import (
 	"github.com/ishizakahiroshi/heartdesk/internal/scheduler/ondemand"
 )
 
-const defaultStateFilePath = "/home/sab/data/json/scheduler_state.json" // secrets-scan: allow
+const defaultStateFilePath = "/var/lib/heartdesk/data/json/scheduler_state.json"
 
 func resolveStateFilePath(configured string) string {
 	if v := strings.TrimSpace(os.Getenv("SCHED_STATE_FILE")); v != "" {
@@ -140,9 +140,9 @@ func init() {
 			DefaultCronSchedule: "*/5 * * * *",
 			RunOnStartup:        true,
 		},
-		"sab_extract": {
-			ID:                  "sab_extract",
-			Label:               "sab-extract",
+		"heartdesk_extract": {
+			ID:                  "heartdesk_extract",
+			Label:               "heartdesk-extract",
 			Summary:             "Nextcloud重要イベント抽出JSONL",
 			Category:            CategoryDaemon,
 			Interval:            1 * time.Minute,
@@ -280,7 +280,7 @@ func (s *Scheduler) snapshotState(id string) RuntimeState {
 }
 
 // SnapshotStates はジョブの実行状態を返す。
-// 別プロセス（sab 本体）から呼ばれた場合は、scheduler が書き出した state ファイルをマージして返す。
+// 別プロセス（heartdesk 本体）から呼ばれた場合は、scheduler が書き出した state ファイルをマージして返す。
 func SnapshotStates() map[string]RuntimeState {
 	return snapshotStatesFrom(resolveStateFilePath(""), initialRuntimeStates(jobDefs))
 }

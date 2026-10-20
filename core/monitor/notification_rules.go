@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/alerts"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 )
@@ -20,19 +20,19 @@ func alertRulesPath(cfg *config.AppConfig) string {
 	if cfg != nil && strings.TrimSpace(cfg.Alerts.RulesFile) != "" {
 		return strings.TrimSpace(cfg.Alerts.RulesFile)
 	}
-	return sab.SabPath("data/json/alert_rules.json")
+	return heartdesk.Path("data/json/alert_rules.json")
 }
 
 func alertStatePath(cfg *config.AppConfig) string {
 	if cfg != nil && strings.TrimSpace(cfg.Alerts.StateFile) != "" {
 		return strings.TrimSpace(cfg.Alerts.StateFile)
 	}
-	return "/tmp/nab_alert_state.json"
+	return "/tmp/heartdesk_alert_state.json"
 }
 
 var alertRulesMu sync.RWMutex
 
-// AlertRuleDefOrder はルール定義の表示順（PHP NAB_alert_rule_definitions 相当）
+// AlertRuleDefOrder はルール定義の表示順
 var AlertRuleDefOrder = []string{
 	"memory_high",
 	"disk_high",
@@ -117,7 +117,7 @@ var AlertRuleDefs = map[string]AlertRuleDef{
 	},
 }
 
-// LoadAlertRules は alert_rules.json を読み込む（NAB_alert_rules_load 相当）
+// LoadAlertRules は alert_rules.json を読み込む
 func LoadAlertRules(cfg *config.AppConfig) AlertRulesFile {
 	alertRulesMu.RLock()
 	defer alertRulesMu.RUnlock()
@@ -154,7 +154,7 @@ func saveAlertRulesFile(cfg *config.AppConfig, f AlertRulesFile) error {
 	return os.WriteFile(alertRulesPath(cfg), data, 0644)
 }
 
-// SaveAlertRules はアラートルール設定を保存する（NAB_alert_rules_save 相当）
+// SaveAlertRules はアラートルール設定を保存する
 func SaveAlertRules(cfg *config.AppConfig, payload map[string]map[string]string) (ok bool, errors []string) {
 	alertRulesMu.Lock()
 	defer alertRulesMu.Unlock()
@@ -234,7 +234,7 @@ func SaveAlertRules(cfg *config.AppConfig, payload map[string]map[string]string)
 	return true, nil
 }
 
-// SaveAlertRecipients は通知先一覧を保存する（NAB_alert_recipients_save 相当）
+// SaveAlertRecipients は通知先一覧を保存する
 func SaveAlertRecipients(cfg *config.AppConfig, recipients []AlertRecipient) (ok bool, errors []string) {
 	alertRulesMu.Lock()
 	defer alertRulesMu.Unlock()
@@ -246,7 +246,7 @@ func SaveAlertRecipients(cfg *config.AppConfig, recipients []AlertRecipient) (ok
 	}
 
 	reEmail := regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
-	now := time.Now().In(sab.JST()).Format("2006-01-02 15:04:05")
+	now := time.Now().In(heartdesk.JST()).Format("2006-01-02 15:04:05")
 
 	for i, r := range recipients {
 		if strings.TrimSpace(r.Name) == "" {
@@ -311,7 +311,7 @@ func GetNotificationRulesAPIData(cfg *config.AppConfig) NotificationRulesAPIData
 	}
 
 	// メモリ
-	memRaw := sab.Run("free -b 2>/dev/null")
+	memRaw := heartdesk.Run("free -b 2>/dev/null")
 	if memRaw != "" {
 		if m := regexp.MustCompile(`Mem:\s+(\d+)\s+(\d+)`).FindStringSubmatch(memRaw); m != nil {
 			total, _ := strconv.ParseFloat(m[1], 64)
@@ -335,7 +335,7 @@ func GetNotificationRulesAPIData(cfg *config.AppConfig) NotificationRulesAPIData
 	}
 
 	// ディスク
-	diskRaw := sab.Run("df -P / 2>/dev/null | tail -1")
+	diskRaw := heartdesk.Run("df -P / 2>/dev/null | tail -1")
 	if diskRaw != "" {
 		// Filesystem 1024-blocks Used Available Capacity% Mounted
 		if m := regexp.MustCompile(`\s+(\d+)\s+(\d+)\s+\d+\s+(\d+)%\s`).FindStringSubmatch(" " + diskRaw); m != nil {
@@ -360,7 +360,7 @@ func GetNotificationRulesAPIData(cfg *config.AppConfig) NotificationRulesAPIData
 	}
 
 	// サービス状態
-	svcOut := sab.Run("systemctl is-active nginx mariadb 2>/dev/null")
+	svcOut := heartdesk.Run("systemctl is-active nginx mariadb 2>/dev/null")
 	svcLines := strings.Split(strings.TrimSpace(svcOut), "\n")
 	svcs := []string{"nginx", "mariadb"}
 	for i, svc := range svcs {
@@ -382,7 +382,7 @@ func GetNotificationRulesAPIData(cfg *config.AppConfig) NotificationRulesAPIData
 	}
 
 	// 脅威スコア最大値
-	scoreCSV := sab.SabPath("data/csv/threat_score.csv")
+	scoreCSV := heartdesk.Path("data/csv/threat_score.csv")
 	if lines, err := os.ReadFile(scoreCSV); err == nil {
 		maxScore := 0
 		for i, line := range strings.Split(string(lines), "\n") {

@@ -4,7 +4,7 @@
 	function resourcesWrap(el, data) {
 		renderResources(el, data);
 		loadSection('ssl', 'async-ssl', renderSsl);
-		var diskUrl = getAppBase() + '/?api=disk' + (IH_AGENT_ID ? '&agent=' + encodeURIComponent(IH_AGENT_ID) : '');
+		var diskUrl = getAppBase() + '/?api=disk' + (HD_AGENT_ID ? '&agent=' + encodeURIComponent(HD_AGENT_ID) : '');
 		fetch(diskUrl).then(function(r) { return r.json(); }).then(function(d) {
 			renderDiskResources(d);
 			var dbListEl = document.getElementById('db-list-display');

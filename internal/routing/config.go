@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
 type Config struct {
@@ -18,7 +18,7 @@ type Config struct {
 	MonitorBase          string
 	VendorBase           string
 	StaticBase           string
-	SABIconFile          string
+	IconFile             string
 	MonitorFaviconFile   string
 	LoginPath            string
 	LogoutPath           string
@@ -46,21 +46,21 @@ func Current() Config {
 }
 
 func load() Config {
-	mode := strings.ToLower(strings.TrimSpace(sab.Env("SAB_ROUTING_MODE")))
+	mode := strings.ToLower(strings.TrimSpace(heartdesk.Env("HEARTDESK_ROUTING_MODE")))
 	if mode != "path" && mode != "subdomain" {
 		mode = "subdomain"
 	}
 
-	host := strings.TrimSpace(sab.Env("SAB_BASE_HOST"))
+	host := strings.TrimSpace(heartdesk.Env("HEARTDESK_BASE_HOST"))
 	if host == "" {
 		host = ""
 	}
 
-	slug := normalizeSlug(sab.Env("SAB_TENANT_SLUG"))
+	slug := normalizeSlug(heartdesk.Env("HEARTDESK_TENANT_SLUG"))
 	prefix := ""
 	if mode == "path" {
 		if slug == "" {
-			slug = "sab"
+			slug = "heartdesk"
 		}
 		prefix = "/" + slug
 	}
@@ -74,8 +74,8 @@ func load() Config {
 		MonitorBase:          prefix + "/monitor",
 		VendorBase:           prefix + "/monitor",
 		StaticBase:           prefix + "/static",
-		SABIconFile:          normalizeIconFile(sab.Env("SAB_ICON_SAB"), "favicon_sab.svg"),
-		MonitorFaviconFile:   normalizeIconFile(sab.Env("SAB_ICON_MONITOR_FAVICON"), "favicon_sab_monitor.svg"),
+		IconFile:             normalizeIconFile(heartdesk.Env("HEARTDESK_ICON"), "favicon.svg"),
+		MonitorFaviconFile:   normalizeIconFile(heartdesk.Env("HEARTDESK_ICON_MONITOR_FAVICON"), "favicon_monitor.svg"),
 		LoginPath:            prefix + "/login",
 		LogoutPath:           prefix + "/logout",
 		SettingsPasswordPath: prefix + "/settings/password",
@@ -111,8 +111,8 @@ func normalizeIconFile(in, fallback string) string {
 	return s
 }
 
-func (c Config) SABIconPath() string {
-	return c.StaticBase + "/img/" + c.SABIconFile
+func (c Config) IconPath() string {
+	return c.StaticBase + "/img/" + c.IconFile
 }
 
 func (c Config) MonitorFaviconPath() string {
@@ -124,44 +124,7 @@ func (c Config) MonitorHome() string {
 }
 
 func (c Config) IsAPIPath(path string) bool {
-	return strings.HasPrefix(path, c.MonitorAPIBase+"/") ||
-		strings.HasPrefix(path, "/sab/api/") ||
-		strings.HasPrefix(path, "/nab/api/")
-}
-
-func (c Config) LegacyToCanonical(path string) string {
-	type legacy struct {
-		from string
-		to   string
-	}
-	m := []legacy{
-		{from: "/sab/monitor", to: c.MonitorBase},
-		{from: "/sab/admin", to: c.MonitorBase},
-		{from: "/sab/user", to: c.MonitorBase}, // 旧 NC User（廃止）→ Monitor へ
-		{from: "/sab/static", to: c.StaticBase},
-		{from: "/sab/login", to: c.LoginPath},
-		{from: "/sab/logout", to: c.LogoutPath},
-		{from: "/sab/settings/password", to: c.SettingsPasswordPath},
-		{from: "/sab/settings/2fa", to: c.Settings2FAPath},
-		{from: "/sab/settings/2fa-reset", to: c.Settings2FAResetPath},
-		{from: "/sab/admin/audit-log", to: c.AdminAuditLogPath},
-		{from: "/sab/admin/unlock", to: c.AdminUnlockPath},
-		{from: "/sab/api/monitor", to: c.MonitorAPIBase},
-		{from: "/nab/monitor", to: c.MonitorBase},
-		{from: "/nab/admin", to: c.MonitorBase},
-		{from: "/nab/user", to: c.MonitorBase}, // 旧 NC User（廃止）→ Monitor へ
-		{from: "/nab/api/monitor", to: c.MonitorAPIBase},
-	}
-
-	for _, e := range m {
-		if path == e.from {
-			return e.to
-		}
-		if strings.HasPrefix(path, e.from+"/") {
-			return e.to + strings.TrimPrefix(path, e.from)
-		}
-	}
-	return path
+	return strings.HasPrefix(path, c.MonitorAPIBase+"/")
 }
 
 func (c Config) SanitizeNext(raw string) string {
@@ -176,7 +139,6 @@ func (c Config) SanitizeNext(raw string) string {
 		return c.MonitorHome()
 	}
 
-	next = c.LegacyToCanonical(next)
 	if next == c.LoginPath || strings.HasPrefix(next, c.LoginPath+"?") {
 		return c.MonitorHome()
 	}

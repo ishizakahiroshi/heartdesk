@@ -1,4 +1,4 @@
-// SAB カード: 署名鍵ローテーション (vendor-license-rotation)
+// heartdesk カード: 署名鍵ローテーション (vendor-license-rotation)
 // 依存: shared.js の escHtml / getAppBase、card_runtime.js の CardRegistry
 
 (function() {

@@ -23,7 +23,7 @@ type NginxTop5xxEntry struct {
 	Status int    `json:"status"`
 }
 
-// NginxHealthResponse は /nab/api/monitor/nginx_health のレスポンス
+// NginxHealthResponse は /api/monitor/nginx_health のレスポンス
 type NginxHealthResponse struct {
 	Window1h  NginxStatusWindow  `json:"window_1h"`
 	Window24h NginxStatusWindow  `json:"window_24h"`

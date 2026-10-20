@@ -89,7 +89,7 @@ func duSh(path string) string {
 	return "?"
 }
 
-// getDBStats は NAB_DB_DSN からDB容量をMB単位で取得して返す共通ヘルパー。
+// getDBStats は HEARTDESK_DB_DSN からDB容量をMB単位で取得して返す共通ヘルパー。
 // dbSizeMB: MB数値文字列（例: "28.2"）、取得失敗時は "?"
 // dbList:   DB別容量（Size は MB数値文字列のみ、単位なし）
 // disk.go の GetDisk() と database.go の GetBackupAPIData() の両方から呼ばれる。
@@ -205,13 +205,13 @@ func listNextcloudLogFiles(dataDir string, limit int) []DiskLogFile {
 }
 
 // geoipCountryCounts は ユニークIP→件数マップから国別集計を返す
-// NAB_GEOIP_DB が設定されていれば mmdb、なければ geoiplookup コマンドを使用する
+// HEARTDESK_GEOIP_DB が設定されていれば mmdb、なければ geoiplookup コマンドを使用する
 func geoipCountryCounts(ipCounts map[string]int) map[string]int {
 	countryCounts := map[string]int{}
 
 	// GeoIP DB が設定されていれば GetCountryFlags を活用、なければ geoiplookup コマンドにフォールバック
 	useMMDB := false
-	if mmdbPath := strings.TrimSpace(os.Getenv("SAB_GEOIP_DB")); mmdbPath != "" {
+	if mmdbPath := strings.TrimSpace(os.Getenv("HEARTDESK_GEOIP_DB")); mmdbPath != "" {
 		// main.go が TOML→env 橋渡し済みのため env 参照は意図的（geo.go 統一時に解消）
 		if _, err := os.Stat(mmdbPath); err == nil {
 			useMMDB = true

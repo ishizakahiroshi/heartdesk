@@ -11,7 +11,7 @@ package alerts
 // 小さな集計を別ファイル（nc_file_access_state.json）に持つ。alert_state.json には cooldown
 // （LastAlertTime）だけを置き、集計は入れない（肥大させない）。
 //
-// SAB が別に集めている data/logs/nextcloud.jsonl や data/logs/agents/*/audit.jsonl は使わない
+// heartdesk が別に集めている data/logs/nextcloud.jsonl や data/logs/agents/*/audit.jsonl は使わない
 // （環境によって更新が止まっているため）。Nextcloud の audit.log を直接読む。
 
 import (
@@ -35,7 +35,7 @@ import (
 	"time"
 	"unicode"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 	"github.com/ishizakahiroshi/heartdesk/internal/nclog"
 )
@@ -140,7 +140,7 @@ type ncFileAccessSettings struct {
 }
 
 func ncFileAccessSettingsPath() string {
-	return sab.SabPath("data/json/nc_file_access.json")
+	return heartdesk.Path("data/json/nc_file_access.json")
 }
 
 // loadNCFileAccessSettings は任意設定ファイルを読む。無いときは黙って既定値、
@@ -199,7 +199,7 @@ func ncAuditLogPath(cfg *config.AppConfig, s ncFileAccessSettings) string {
 // それを /tmp に向けていて、再起動で消える。ここには 30 日分の接続元の学習と
 // 学習期間の起点が入るので、消えると「初めての接続元」が再起動のたびに 3 日間判定されなくなる。
 func ncFAStatePath() string {
-	return sab.SabPath("data/json/nc_file_access_state.json")
+	return heartdesk.Path("data/json/nc_file_access_state.json")
 }
 
 // ---------------------------------------------------------------------------
@@ -756,7 +756,7 @@ func newNCFAIngester(st *ncFAState, now time.Time, services map[string]bool) *nc
 		futureLimit:  now.Add(ncFAFutureTolerance).Unix(),
 		windowStart:  now.Add(-ncFAWindow).Unix(),
 		ttlStart:     now.Add(-ncFAIPHistoryTTL).Unix(),
-		jst:          sab.JST(),
+		jst:          heartdesk.JST(),
 		services:     services,
 		folderPruned: map[string]bool{},
 	}
@@ -1186,7 +1186,7 @@ func ncFAOverflowFirstStep(ruleID string) string {
 
 func ncFAEvaluate(cfg *config.AppConfig, rules AlertRules, state *AlertState, st *ncFAState, now time.Time, services map[string]bool) []string {
 	scope := ncFAScopeLabel(cfg)
-	jst := sab.JST()
+	jst := heartdesk.JST()
 	wsTime := now.Add(-ncFAWindow)
 	ws := wsTime.Unix()
 	window := wsTime.In(jst).Format("15:04") + "〜" + now.In(jst).Format("15:04")

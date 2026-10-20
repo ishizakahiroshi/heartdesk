@@ -19,12 +19,12 @@ func main() {
 		return
 	}
 
-	tenant := os.Getenv("SAB_TENANT_ID")
-	if os.Getenv("SAB_CONFIG_DIR") == "" {
+	tenant := os.Getenv("HEARTDESK_TENANT_ID")
+	if os.Getenv("HEARTDESK_CONFIG_DIR") == "" {
 		if _, err := os.Stat("config/config.toml"); err == nil {
-			_ = os.Setenv("SAB_CONFIG_DIR", "config")
+			_ = os.Setenv("HEARTDESK_CONFIG_DIR", "config")
 		} else if _, err := os.Stat("../../config/config.toml"); err == nil {
-			_ = os.Setenv("SAB_CONFIG_DIR", "../../config")
+			_ = os.Setenv("HEARTDESK_CONFIG_DIR", "../../config")
 		}
 	}
 	cfg, err := config.LoadAppConfigForTenant(tenant)
@@ -55,7 +55,7 @@ func main() {
 }
 
 func runEnvCheck() {
-	requiredEnvs := []string{"SAB_BASE_DIR", "SAB_CONFIG_DIR", "SAB_TENANT_ID"}
+	requiredEnvs := []string{"HEARTDESK_BASE_DIR", "HEARTDESK_CONFIG_DIR", "HEARTDESK_TENANT_ID"}
 	ok := true
 	for _, e := range requiredEnvs {
 		v := os.Getenv(e)
@@ -78,25 +78,13 @@ func validateFrontendContracts(wd string) error {
 	}
 	layout := string(layoutRaw)
 	required := []string{
-		`IH_COLLAPSE_KEY = "sab.monitor.collapsed.v1"`,
-		`IH_COLLAPSE_LEGACY_KEY = "nab.monitor.collapsed.v1"`,
-		`IH_SIDENAV_SERVER_TREE_KEY = "sab.monitor.sidenav.server_tree.v1"`,
-		`IH_SIDENAV_SERVER_TREE_LEGACY_KEY = "nab.monitor.sidenav.server_tree.v1"`,
-		`IH_SIDENAV_ORDER_KEY = "sab.monitor.sidenav.order.v1"`,
+		`HD_COLLAPSE_KEY = "heartdesk.monitor.collapsed.v1"`,
+		`HD_SIDENAV_SERVER_TREE_KEY = "heartdesk.monitor.sidenav.server_tree.v1"`,
+		`HD_SIDENAV_ORDER_KEY = "heartdesk.monitor.sidenav.order.v1"`,
 	}
 	for _, needle := range required {
 		if !strings.Contains(layout, needle) {
 			return fmt.Errorf("layout.html missing %q", needle)
-		}
-	}
-	sharedRaw, err := os.ReadFile(filepath.Join(wd, "web", "static", "js", "shared.js"))
-	if err != nil {
-		return err
-	}
-	shared := string(sharedRaw)
-	for _, needle := range []string{"COLLAPSE_LEGACY_KEY", "SIDENAV_SERVER_TREE_LEGACY_KEY"} {
-		if !strings.Contains(shared, needle) {
-			return fmt.Errorf("shared.js missing legacy localStorage migration marker %q", needle)
 		}
 	}
 	order := []string{"/js/shared_utils.js", "/js/shared.js", "/js/card_runtime.js", "/js/card_refresh.js", "/js/card_jump.js", "{{range .CardJSModules}}", "/js/monitor_page.js"}
@@ -149,7 +137,7 @@ func compactTag(tag string) string {
 }
 
 func validateTrackedArtifacts(wd string) error {
-	root := filepath.Clean(filepath.Join(wd, "..", ".."))
+	root := wd
 	cmd := exec.Command("git", "ls-files")
 	cmd.Dir = root
 	out, err := cmd.Output()
@@ -162,7 +150,7 @@ func validateTrackedArtifacts(wd string) error {
 		if path == "" {
 			continue
 		}
-		if strings.HasPrefix(path, "src/sab/bin/") ||
+		if strings.HasPrefix(path, "bin/") ||
 			strings.HasPrefix(path, "NEXTCLOUD_SOURCES/") ||
 			strings.HasSuffix(path, ".local.md") ||
 			strings.HasSuffix(path, ".exe") ||

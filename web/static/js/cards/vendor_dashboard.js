@@ -1,4 +1,4 @@
-// SAB カード: Vendor Dashboard (vendor-dashboard)
+// heartdesk カード: Vendor Dashboard (vendor-dashboard)
 // 依存: shared.js の escHtml / getAppBase / formatCount、card_runtime.js の CardRegistry
 
 (function() {

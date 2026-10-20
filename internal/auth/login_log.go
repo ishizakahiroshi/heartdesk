@@ -10,13 +10,13 @@ import (
 )
 
 // LoginLogPath は既定のログイン監査ログパス。
-// 環境変数 SAB_LOGIN_LOG_PATH で上書きできる（LoginLogResolvedPath を参照）。
-const LoginLogPath = "/home/sab/log/sab_login_events.jsonl" // secrets-scan: allow
+// 環境変数 HEARTDESK_LOGIN_LOG_PATH で上書きできる（LoginLogResolvedPath を参照）。
+const LoginLogPath = "/var/lib/heartdesk/log/heartdesk_login_events.jsonl"
 
 // LoginLogResolvedPath は実際に読み書きするログインログのパスを返す。
-// SAB_LOGIN_LOG_PATH が設定されていればそれを、無ければ LoginLogPath を使う。
+// HEARTDESK_LOGIN_LOG_PATH が設定されていればそれを、無ければ LoginLogPath を使う。
 func LoginLogResolvedPath() string {
-	if p := strings.TrimSpace(os.Getenv("SAB_LOGIN_LOG_PATH")); p != "" {
+	if p := strings.TrimSpace(os.Getenv("HEARTDESK_LOGIN_LOG_PATH")); p != "" {
 		return p
 	}
 	return LoginLogPath

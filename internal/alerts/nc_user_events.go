@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 	"github.com/ishizakahiroshi/heartdesk/internal/nclog"
 )
@@ -53,7 +53,7 @@ type ncSource struct {
 // data/logs/nextcloud.jsonl のパス。core/monitor.ncJSONLPath()/ncAuditJSONLPath() の
 // agentID=="" のケースと同一（ログイン・作成イベントが 1 ファイルに混在する）。
 func ncLocalJSONLPath() string {
-	return sab.SabPath("data/logs/nextcloud.jsonl")
+	return heartdesk.Path("data/logs/nextcloud.jsonl")
 }
 
 // ncAgentJSONLPath は Agent の Nextcloud イベント JSONL パスを返す。
@@ -67,7 +67,7 @@ func ncAgentJSONLPath(agentID, kind string) (string, bool) {
 	if !ncAgentIDPattern.MatchString(id) {
 		return "", false
 	}
-	base := sab.SabPath("data/logs/agents")
+	base := heartdesk.Path("data/logs/agents")
 	joined := filepath.Clean(filepath.Join(base, id, kind+".jsonl"))
 	baseClean := filepath.Clean(base)
 	if joined != baseClean && !strings.HasPrefix(joined, baseClean+string(filepath.Separator)) {

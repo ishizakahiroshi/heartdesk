@@ -17,10 +17,10 @@ import (
 )
 
 const (
-	defaultAptStateDir  = "/home/sab/data/json"                       // secrets-scan: allow
-	defaultAptStatePath = "/home/sab/data/json/apt_update_state.json" // secrets-scan: allow
-	defaultAptLogDir    = "/home/sab/data/log"                        // secrets-scan: allow
-	defaultAptLockPath  = "/var/lock/sab-apt-update.lock"
+	defaultAptStateDir  = "/var/lib/heartdesk/data/json"
+	defaultAptStatePath = "/var/lib/heartdesk/data/json/apt_update_state.json"
+	defaultAptLogDir    = "/var/lib/heartdesk/data/log"
+	defaultAptLockPath  = "/var/lock/heartdesk-apt-update.lock"
 	defaultOCCBin       = "/usr/bin/php"
 	defaultOCCScript    = "/var/www/nextcloud/occ"
 	aptLogKeep          = 10

@@ -26,7 +26,7 @@ type NCLoginEntry struct {
 	FailureKind string `json:"failure_kind,omitempty"` // "auth"/"request" (fail のみ)
 }
 
-// NCLoginResponse は /nab/api/monitor/nc_login のレスポンス
+// NCLoginResponse は /api/monitor/nc_login のレスポンス
 type NCLoginResponse struct {
 	Logins []NCLoginEntry    `json:"logins"`
 	Rate   LoginRate         `json:"rate"`

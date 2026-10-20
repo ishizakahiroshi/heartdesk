@@ -1,4 +1,4 @@
-// Package store は SAB Vendor 集約 DB の repository interface と型定義を提供する。
+// Package store は heartdesk Vendor 集約 DB の repository interface と型定義を提供する。
 // 全 store 関数の第1引数は tenantID string 必須（ζ1）。
 // 運営横断クエリは *AcrossTenants サフィックスで明示分離。
 // SessionStore のみ tenantID 第1引数例外（ログイン直後はテナント未確定のため）。

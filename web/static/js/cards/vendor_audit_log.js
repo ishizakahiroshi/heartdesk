@@ -1,4 +1,4 @@
-// SAB カード: 監査ログ（集約）(vendor-audit-log)
+// heartdesk カード: 監査ログ（集約）(vendor-audit-log)
 // 依存: shared.js の escHtml / getAppBase / formatCount、card_runtime.js の CardRegistry。
 
 (function() {

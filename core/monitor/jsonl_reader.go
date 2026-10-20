@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
 // TailJSONL はJSONLファイルの末尾maxLines行をデコードして返す汎用ヘルパー。
@@ -89,9 +89,9 @@ func normalizeAgentID(agentID []string) string {
 
 func eventJSONLPath(localPath, agentID, kind string) string {
 	if strings.TrimSpace(agentID) == "" {
-		return sab.SabPath(localPath)
+		return heartdesk.Path(localPath)
 	}
-	return sab.SabPath(filepath.Join("data/logs/agents", agentID, kind+".jsonl"))
+	return heartdesk.Path(filepath.Join("data/logs/agents", agentID, kind+".jsonl"))
 }
 
 // =============================================================================

@@ -1,4 +1,4 @@
-// SAB カード: Nginxヘルス (sec-nginx-health)
+// heartdesk カード: Nginxヘルス (sec-nginx-health)
 // Phase 2c (C4): monitor_page.js から切り出したカード単位モジュール。
 // 依存: shared.js の escHtml / ipBadges / isWhitelisted / addRowNumbers、
 //       card_runtime.js の CardRegistry。
@@ -84,7 +84,7 @@
 		body.innerHTML = '<p class="section-loading">読み込み中...</p>';
 		modal.style.display = 'flex';
 
-		var appBase = (typeof IH_APP_BASE !== 'undefined') ? IH_APP_BASE : '/monitor';
+		var appBase = (typeof HD_APP_BASE !== 'undefined') ? HD_APP_BASE : '/monitor';
 		fetch(appBase + '/?api=nginx_url_detail&url=' + encodeURIComponent(url))
 			.then(function(r) { return r.json(); })
 			.then(function(data) {
@@ -185,7 +185,7 @@
 			btn.addEventListener('click', function() {
 				var ip = btn.getAttribute('data-ip') || '';
 				if (!ip || !confirm(ip + ' を BAN しますか？')) return;
-				var appBase = (typeof IH_APP_BASE !== 'undefined') ? IH_APP_BASE : '/monitor';
+				var appBase = (typeof HD_APP_BASE !== 'undefined') ? HD_APP_BASE : '/monitor';
 				var csrfToken = (typeof getCsrfToken === 'function') ? getCsrfToken() : '';
 				var postURL = (typeof monitorApiURL === 'function') ? monitorApiURL('fail2ban_ban') : (appBase + '/?api=fail2ban_ban');
 				fetch(postURL, {

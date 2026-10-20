@@ -18,7 +18,7 @@ var (
 	ErrUnknownKid       = errors.New("license: unknown kid")
 )
 
-// Claims はSAB独自JWTのペイロード。
+// Claims はheartdesk独自JWTのペイロード。
 type Claims struct {
 	Issuer    string `json:"iss"`
 	Subject   string `json:"sub"` // agent_id

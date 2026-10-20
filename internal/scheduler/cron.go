@@ -6,17 +6,17 @@ import (
 	"strings"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
 // jobLockPath は per-job filelock のパスを返す（C8: 二重起動防止）。
-// 本番（Linux）は /var/lock/sab-job-<id>.lock。非 Unix では filelock 側が no-op。
+// 本番（Linux）は /var/lock/heartdesk-job-<id>.lock。非 Unix では filelock 側が no-op。
 func jobLockPath(jobID string) string {
-	return filepath.Join("/var/lock", "sab-job-"+jobID+".lock")
+	return filepath.Join("/var/lock", "heartdesk-job-"+jobID+".lock")
 }
 
 // cronSpec は 5 フィールド cron（分 時 日 月 曜）の最小表現。
-// 本実装は SAB で使う範囲（"M H * * *" の時刻指定、"*/N * * * *" の分間隔、
+// 本実装は heartdesk で使う範囲（"M H * * *" の時刻指定、"*/N * * * *" の分間隔、
 // "* * * * *" の毎分）だけを解釈する。複雑な式（リスト/範囲/曜日指定）は
 // 解釈不能として ok=false を返し、呼び出し側は interval ベースにフォールバックする。
 type cronSpec struct {
@@ -85,7 +85,7 @@ func (c cronSpec) isWallClock() bool {
 // next は from 以降で最初に一致する壁時計時刻（JST）を返す。
 // 時刻指定（"M H * * *" / "M * * * *" / "* H * * *"）専用。
 func (c cronSpec) next(from time.Time) time.Time {
-	loc := sab.JST()
+	loc := heartdesk.JST()
 	t := from.In(loc).Truncate(time.Minute).Add(time.Minute)
 	// 最大 366 日先まで走査すれば必ず一致する（日/月/曜は "*" のみ）。
 	for i := 0; i < 366*24*60; i++ {

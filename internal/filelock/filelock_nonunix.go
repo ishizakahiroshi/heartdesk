@@ -9,7 +9,7 @@ import "errors"
 var ErrLocked = errors.New("filelock: already locked")
 
 // Acquire は非 Unix 環境では no-op（多重起動防止なし）。
-// SAB 本番は Linux のため production の排他は Unix 実装で担保する。
+// heartdesk 本番は Linux のため production の排他は Unix 実装で担保する。
 // Windows はローカルビルド／テスト用で、解放用クロージャも no-op を返す。
 func Acquire(path string) (func(), error) {
 	return func() {}, nil

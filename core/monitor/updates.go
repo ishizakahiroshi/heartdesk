@@ -10,7 +10,7 @@ import (
 	"os/exec"
 	"strings"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/scheduler/ondemand"
 )
 
@@ -22,16 +22,16 @@ func GetUpdatesData(agentID ...string) UpdatesData {
 		return updatesDataFromAgentReport(agentID[0])
 	}
 	// unattended-upgrades サービス状態
-	updateSvc := sab.Run("systemctl is-active unattended-upgrades 2>/dev/null")
+	updateSvc := heartdesk.Run("systemctl is-active unattended-upgrades 2>/dev/null")
 
 	// auto update設定値
-	updateAuto := sab.Run("apt-config dump APT::Periodic::Unattended-Upgrade 2>/dev/null")
+	updateAuto := heartdesk.Run("apt-config dump APT::Periodic::Unattended-Upgrade 2>/dev/null")
 	if updateAuto == "" {
 		updateAuto = `APT::Periodic::Unattended-Upgrade "0";`
 	}
 
 	// アップグレード可能パッケージ一覧（ヘッダ行を除く）
-	listRaw := sab.Run("apt list --upgradable 2>/dev/null | tail -n +2")
+	listRaw := heartdesk.Run("apt list --upgradable 2>/dev/null | tail -n +2")
 	var updateList []string
 	if listRaw != "" {
 		for _, line := range strings.Split(listRaw, "\n") {
@@ -43,15 +43,15 @@ func GetUpdatesData(agentID ...string) UpdatesData {
 	}
 
 	// unattended-upgrades ログ末尾 30行
-	updateLog := sab.Run("tail -30 /var/log/unattended-upgrades/unattended-upgrades.log 2>/dev/null")
+	updateLog := heartdesk.Run("tail -30 /var/log/unattended-upgrades/unattended-upgrades.log 2>/dev/null")
 
 	// 最終インストール時刻（history.log の mtime — install/upgrade 実行時のみ更新）
-	updateLast := formatStatMtime(sab.Run("stat -c '%y' /var/log/apt/history.log 2>/dev/null"))
+	updateLast := formatStatMtime(heartdesk.Run("stat -c '%y' /var/log/apt/history.log 2>/dev/null"))
 	// 最終リスト更新時刻（apt-get update が成功するたびに touch される stamp ファイル）
-	updateListLast := formatStatMtime(sab.Run("stat -c '%y' /var/lib/apt/periodic/update-success-stamp 2>/dev/null"))
+	updateListLast := formatStatMtime(heartdesk.Run("stat -c '%y' /var/lib/apt/periodic/update-success-stamp 2>/dev/null"))
 
 	// Ubuntu バージョン
-	ubuntuVer := sab.Run("lsb_release -ds 2>/dev/null")
+	ubuntuVer := heartdesk.Run("lsb_release -ds 2>/dev/null")
 	if ubuntuVer == "" {
 		ubuntuVer = readOSPrettyName()
 	}
@@ -63,7 +63,7 @@ func GetUpdatesData(agentID ...string) UpdatesData {
 	k := GetKernel()
 
 	// apt-mark hold で明示的に保留されたパッケージ一覧
-	heldRaw := sab.Run("apt-mark showhold 2>/dev/null")
+	heldRaw := heartdesk.Run("apt-mark showhold 2>/dev/null")
 	var heldPackages []string
 	if heldRaw != "" {
 		for _, line := range strings.Split(heldRaw, "\n") {

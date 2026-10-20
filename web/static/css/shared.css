@@ -2390,7 +2390,7 @@ td:has(.ip-clickable) { white-space: nowrap; }
 }
 
 /* ============================================================
-   Unified Card Typography (NAB Monitor / NAB Shared)
+   Unified Card Typography (Monitor / Shared)
    通常テキストは全カードで同一サイズ・同一色に統一する
    ============================================================ */
 :root {

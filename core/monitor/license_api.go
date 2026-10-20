@@ -314,7 +314,7 @@ func verifyLicenseKey(agentID, licenseKey string, cfg *config.AppConfig, remoteI
 	// license_key の署名は Vendor（ビルド時注入の vendorSecret）で検証する
 	expected, ok := license.ComputeVendorLicenseSig(tenantID, agentID)
 	if !ok {
-		return fmt.Errorf("vendorSecret not injected at build time")
+		return fmt.Errorf("vendorSecret not injected at build time; rebuild with -ldflags \"-X github.com/ishizakahiroshi/heartdesk/internal/license.vendorSecret=<secret>\"")
 	}
 	if !hmac.Equal([]byte(sig), []byte(expected)) {
 		return fmt.Errorf("invalid license_key signature")
@@ -424,9 +424,9 @@ func issueLicenseJWT(agentID string, cfg *config.AppConfig) (token, kid string, 
 	exp := now.Add(licenseTokenTTL)
 
 	claims := license.Claims{
-		Issuer:    "sab-vendor",
+		Issuer:    "heartdesk-vendor",
 		Subject:   agentID,
-		Audience:  "sab-monitor",
+		Audience:  "heartdesk-monitor",
 		TenantID:  tenantID,
 		IssuedAt:  now.Unix(),
 		ExpiresAt: exp.Unix(),
@@ -463,10 +463,10 @@ func validateAgentSessionClaims(claims *license.Claims, agentID, tenantID string
 	if claims.TenantID != tenantID {
 		return fmt.Errorf("tenant_id mismatch")
 	}
-	if claims.Audience != "sab-monitor" {
+	if claims.Audience != "heartdesk-monitor" {
 		return fmt.Errorf("invalid audience")
 	}
-	if claims.Issuer != "sab-vendor" {
+	if claims.Issuer != "heartdesk-vendor" {
 		return fmt.Errorf("invalid issuer")
 	}
 	if claims.Scope != "agent.report" {

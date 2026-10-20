@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
 var knownJails = []string{"nextcloud", "nginx-suspicious", "nginx-basic-auth", "recidive"}
@@ -29,7 +29,7 @@ type BanHeatmapJailSummary struct {
 	History []BanHist `json:"history"`
 }
 
-// BanHeatmapResponse は /nab/api/monitor/ban_heatmap のレスポンス
+// BanHeatmapResponse は /api/monitor/ban_heatmap のレスポンス
 type BanHeatmapResponse struct {
 	Jails           map[string]*BanHeatmapJailSummary `json:"jails"`
 	TotalBanned     int                               `json:"total_banned"`
@@ -50,7 +50,7 @@ func newHeatmap() [][]int {
 
 // GetBanHeatmap は logs/fail2ban.jsonl を読んで BAN ヒートマップを返す
 func GetBanHeatmap(agentID ...string) BanHeatmapResponse {
-	jst := sab.JST()
+	jst := heartdesk.JST()
 	now := time.Now().In(jst)
 	cutoff := now.AddDate(0, 0, -(banHeatmapDays - 1)).Truncate(24 * time.Hour)
 
@@ -138,8 +138,8 @@ func GetBanHeatmap(agentID ...string) BanHeatmapResponse {
 				pendingBans[ev.jail][ev.ip] = times[1:]
 				jailSummary.History = append(jailSummary.History, BanHist{
 					IP:         ev.ip,
-					BannedAt:   sab.FormatDatetime(banTime),
-					UnbannedAt: sab.FormatDatetime(ev.ts),
+					BannedAt:   heartdesk.FormatDatetime(banTime),
+					UnbannedAt: heartdesk.FormatDatetime(ev.ts),
 					Active:     false,
 				})
 			}
@@ -156,7 +156,7 @@ func GetBanHeatmap(agentID ...string) BanHeatmapResponse {
 			for _, banTime := range times {
 				jailSummary.History = append(jailSummary.History, BanHist{
 					IP:       ip,
-					BannedAt: sab.FormatDatetime(banTime),
+					BannedAt: heartdesk.FormatDatetime(banTime),
 					Active:   true,
 				})
 				jailSummary.Current++
@@ -250,7 +250,7 @@ func GetBanHeatmapCell(jail string, dow, hour int, agentID ...string) interface{
 		}
 	}
 
-	jst := sab.JST()
+	jst := heartdesk.JST()
 	now := time.Now().In(jst)
 	cutoff := now.AddDate(0, 0, -(banHeatmapDays - 1)).Truncate(24 * time.Hour)
 
@@ -334,7 +334,7 @@ func GetBanHeatmapCell(jail string, dow, hour int, agentID ...string) interface{
 
 // f2bActiveBannedIPs は F2BEvent リストから現在アクティブな BAN IP セットを返す
 func f2bActiveBannedIPs(events []F2BEvent) map[string]bool {
-	jst := sab.JST()
+	jst := heartdesk.JST()
 
 	type banEvt struct {
 		jail string
@@ -383,7 +383,7 @@ func f2bActiveBannedIPs(events []F2BEvent) map[string]bool {
 
 // f2bActiveBannedIPsWithJail は F2BEvent リストから現在アクティブな BAN IP と jail 名の map を返す
 func f2bActiveBannedIPsWithJail(events []F2BEvent) map[string]string {
-	jst := sab.JST()
+	jst := heartdesk.JST()
 
 	type banEvt struct {
 		jail string

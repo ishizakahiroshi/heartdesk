@@ -13,11 +13,11 @@ fresh public clone でも有効な内容に保つこと。 -->
 
 heartdesk は、複数のサーバーを 1 つの画面で見る Go 製のダッシュボードサーバー。Monitor の画面（サーバーごとのカード）、scheduler、認証と権限、通知、テナント管理と Vendor Console を持つ。報告を送る側（Agent）は姉妹の OSS [heartpost](https://github.com/ishizakahiroshi/heartpost)。ライセンスは Apache-2.0。
 
-2026-10-20 に、個人の用途で作った監視基盤 sab の汎用部分を切り出して作った（sab 側は動いたまま。sab は heartdesk を import せず、コードを複製した状態から始まっている）。**公開前・作業中。起動と画面の確認はまだしていない**（`README.md` の Status 節）。
+2026-10-20 に、個人の用途で作った別の監視基盤の汎用部分を切り出して作った（元の基盤は動いたまま。heartdesk を import せず、コードを複製した状態から始まっている）。旧名の環境変数・パス・cookie 名・カード ID などは heartdesk の名前に付け替え済みで、旧名の互換は持たない。**公開前・作業中**。2026-10-21 に Windows で合成データを使って起動と主な画面を確認した。それ以外は未確認（`README.md` の Status 節）。
 
 ## やらないこと（スコープ外）
 
-- 特定の会社・特定の運用のために作った機能（Nextcloud と社内システムの連携ハブ、メール gateway、組織同期、チャット連携など）。sab に残してあり、heartdesk には入れない
+- 特定の会社・特定の運用のために作った機能（Nextcloud と社内システムの連携ハブ、メール gateway、組織同期、チャット連携など）。元の基盤に残してあり、heartdesk には入れない
 - 顧客・会社の固有名、実在のホスト名・IP・メールアドレスをコードやテストの例に書くこと（例は `alpha`・`host-1`・`example.com`・`203.0.113.x`）
 - 宣伝用のドメイン・SNS アカウント（作らない方針。2026-10-20）
 
@@ -36,7 +36,7 @@ heartdesk は、複数のサーバーを 1 つの画面で見る Go 製のダッ
 - `internal/` — 共通のパッケージ（config・routing・auth・authz・alerts・scheduler・vendorsvc・license・navmeta ほか）
 - `core/monitor/` — Monitor の本体（HTTP ハンドラ・カードの API・Agent の報告の受信）
 - `core/vendor_console/` — Vendor Console の出力と鍵の入れ替え
-- `cmd/` — CLI（alerts・sab-doctor・sab-scheduler）
+- `cmd/` — CLI（alerts・heartdesk-doctor・heartdesk-scheduler）
 - `web/` — 画面（templates・static）
 - `docs/local/` — 作業ノート（git 無視。移植の記録 `port-notes_*.md` を含む）
 
@@ -54,7 +54,6 @@ heartdesk は、複数のサーバーを 1 つの画面で見る Go 製のダッ
 | 秘密の形の文字列を commit しない（既知の見本の値だけ許可） | `.gitleaks.toml` | pre-commit の gitleaks・`.github/workflows/gitleaks.yml` |
 | 固有名詞・私的パスを公開物へ入れない | `scripts/secrets-scan.mjs` | pre-commit・`.github/workflows/secrets-scan.yml` |
 | CLAUDE.md を太らせない | `scripts/check-claude-md.mjs` | pre-commit |
-| 旧名（`SAB_*` の環境変数・パス・カード ID・cookie 名など）の付け替えは未了 | `README.md` の Status 節 | なし（まとめて行う予定） |
 
 **新しいルールを足す前に、まずこの表に 1 行足せる形にできないかを考える。** できないもの
 （機械検査も、決まったファイルも無いもの）だけが本文を持ってよい。
@@ -63,7 +62,7 @@ heartdesk は、複数のサーバーを 1 つの画面で見る Go 製のダッ
 
 ビルド・コミット禁止、secrets-scan 責務、plan/bugfix/pending md の作成ルール等の AI 作業共通ルールは、各利用者のグローバル AI 設定に従う（作者環境の例: `~/.claude/CLAUDE.md` および `~/.claude/guides/`）。
 
-- sab から複製したコードに、顧客の固有名が混ざっていないかを、commit の前に確かめる（sab 側の検査の道具は作者環境にある。ここでは `scripts/secrets-scan.mjs` と gitleaks が止める）
+- 元の基盤から複製したコードに、顧客の固有名が混ざっていないかを、commit の前に確かめる（元の基盤側の検査の道具は作者環境にある。ここでは `scripts/secrets-scan.mjs` と gitleaks が止める）
 
 ## Obsidian artifacts
 

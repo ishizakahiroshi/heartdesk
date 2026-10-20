@@ -66,6 +66,7 @@ id_ecdsa
 id_ed25519
 secrets.*
 *.secret.*
+!secrets.toml.example
 *credential*
 .netrc
 .npmrc

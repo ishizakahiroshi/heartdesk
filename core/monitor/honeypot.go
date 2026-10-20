@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
-func hpLogDirPath() string { return sab.SabPath("data/json/honeypot") }
+func hpLogDirPath() string { return heartdesk.Path("data/json/honeypot") }
 
 var knownTriggers = []string{"dotfile", "wordpress", "db_tool", "microsoft", "framework", "backdoor", "query_string", "other"}
 
@@ -30,7 +30,7 @@ type hpRecord struct {
 	Headers       map[string]string `json:"headers"`
 }
 
-// HoneypotSummaryResponse は /nab/api/monitor/honeypot_summary のレスポンス
+// HoneypotSummaryResponse は /api/monitor/honeypot_summary のレスポンス
 type HoneypotSummaryResponse struct {
 	Count24h     int                    `json:"count_24h"`
 	Count7d      int                    `json:"count_7d"`
@@ -46,7 +46,7 @@ type HoneypotTriggerCount struct {
 	Count   int    `json:"count"`
 }
 
-// HoneypotHeatmapResponse は /nab/api/monitor/honeypot_heatmap のレスポンス
+// HoneypotHeatmapResponse は /api/monitor/honeypot_heatmap のレスポンス
 type HoneypotHeatmapResponse struct {
 	Heatmap      map[string][][]int `json:"heatmap"`       // [trigger][dow=0-6][hour=0-23]
 	HeatmapTotal [][]int            `json:"heatmap_total"` // [dow=0-6][hour=0-23]
@@ -70,7 +70,7 @@ type HoneypotAccessRecord struct {
 	IsBanned      bool   `json:"is_banned"`
 }
 
-// HoneypotAccessResponse は /nab/api/monitor/honeypot_access のレスポンス
+// HoneypotAccessResponse は /api/monitor/honeypot_access のレスポンス
 type HoneypotAccessResponse struct {
 	Records    []HoneypotAccessRecord `json:"records"`
 	Total      int                    `json:"total"`
@@ -80,7 +80,7 @@ type HoneypotAccessResponse struct {
 	Limit      int                    `json:"limit"`
 }
 
-// HoneypotAllResponse は /nab/api/monitor/honeypot_all のレスポンス
+// HoneypotAllResponse は /api/monitor/honeypot_all のレスポンス
 type HoneypotAllResponse struct {
 	Summary HoneypotSummaryResponse `json:"summary"`
 	Access  HoneypotAccessResponse  `json:"access"`
@@ -128,7 +128,7 @@ func hpReadRecords(sinceTs int64, agentID string) []hpRecord {
 				continue
 			}
 			if sinceTs > 0 {
-				ts, err := sab.ParseTimestamp(r.Ts)
+				ts, err := heartdesk.ParseTimestamp(r.Ts)
 				if err != nil || ts.Unix() < sinceTs {
 					continue
 				}
@@ -162,7 +162,7 @@ func hpReadAgentRecords(sinceTs int64, agentID string) []hpRecord {
 			continue
 		}
 		if sinceTs > 0 {
-			ts, err := sab.ParseTimestamp(r.Ts)
+			ts, err := heartdesk.ParseTimestamp(r.Ts)
 			if err != nil || ts.Unix() < sinceTs {
 				continue
 			}
@@ -177,7 +177,7 @@ func hpReadAgentRecords(sinceTs int64, agentID string) []hpRecord {
 
 // hpBuildSummary は 30d レコードからサマリーを生成する
 func hpBuildSummary(records []hpRecord) HoneypotSummaryResponse {
-	now := time.Now().In(sab.JST())
+	now := time.Now().In(heartdesk.JST())
 	ts24h := now.Add(-24 * time.Hour).Unix()
 	ts7d := now.Add(-7 * 24 * time.Hour).Unix()
 	todayYMD := now.Format("2006-01-02")
@@ -189,11 +189,11 @@ func hpBuildSummary(records []hpRecord) HoneypotSummaryResponse {
 	ipsBefore := make(map[string]bool) // 今日より前に登場したIP
 
 	for _, r := range records {
-		ts, err := sab.ParseTimestamp(r.Ts)
+		ts, err := heartdesk.ParseTimestamp(r.Ts)
 		if err != nil {
 			continue
 		}
-		tsJST := ts.In(sab.JST())
+		tsJST := ts.In(heartdesk.JST())
 		unix := tsJST.Unix()
 		if unix >= ts24h {
 			count24h++
@@ -218,11 +218,11 @@ func hpBuildSummary(records []hpRecord) HoneypotSummaryResponse {
 	// 今日の新規IP（今日登場した IP で、今日より前に出現がないもの）
 	newIPsToday := make(map[string]bool)
 	for _, r := range records {
-		ts, err := sab.ParseTimestamp(r.Ts)
+		ts, err := heartdesk.ParseTimestamp(r.Ts)
 		if err != nil {
 			continue
 		}
-		tsJST := ts.In(sab.JST())
+		tsJST := ts.In(heartdesk.JST())
 		if r.IP != "" && tsJST.Format("2006-01-02") == todayYMD && !ipsBefore[r.IP] {
 			newIPsToday[r.IP] = true
 		}
@@ -258,8 +258,8 @@ func hpBuildSummary(records []hpRecord) HoneypotSummaryResponse {
 // hpBuildHeatmap は直近7日のヒートマップを生成する
 func hpBuildHeatmap(records []hpRecord) HoneypotHeatmapResponse {
 	cutoff, _ := time.ParseInLocation("2006-01-02 15:04:05",
-		time.Now().In(sab.JST()).AddDate(0, 0, -6).Format("2006-01-02")+" 00:00:00",
-		sab.JST())
+		time.Now().In(heartdesk.JST()).AddDate(0, 0, -6).Format("2006-01-02")+" 00:00:00",
+		heartdesk.JST())
 	cutoffUnix := cutoff.Unix()
 
 	heatmap := make(map[string][][]int)
@@ -270,11 +270,11 @@ func hpBuildHeatmap(records []hpRecord) HoneypotHeatmapResponse {
 	maxVal := 0
 
 	for _, r := range records {
-		ts, err := sab.ParseTimestamp(r.Ts)
+		ts, err := heartdesk.ParseTimestamp(r.Ts)
 		if err != nil || ts.Unix() < cutoffUnix {
 			continue
 		}
-		tsJST := ts.In(sab.JST())
+		tsJST := ts.In(heartdesk.JST())
 		dow := int(tsJST.Weekday()+6) % 7 // 0=月..6=日
 		hour := tsJST.Hour()
 		trig := r.Trigger
@@ -324,7 +324,7 @@ func GetActiveBannedIPsWithJail(agentID string) map[string]string {
 	}
 	result := make(map[string]string)
 	for _, jail := range knownJails {
-		out := sab.RunArgs(10*time.Second, "sudo", "/usr/bin/fail2ban-client", "status", jail)
+		out := heartdesk.RunArgs(10*time.Second, "sudo", "/usr/bin/fail2ban-client", "status", jail)
 		if m := bannedIPListRe.FindStringSubmatch(out); m != nil {
 			for _, ip := range strings.Fields(m[1]) {
 				if ip != "" {
@@ -352,7 +352,7 @@ func hpBuildAccess(records []hpRecord, periodDays, limit int, banned map[string]
 
 	var filtered []hpRecord
 	for _, r := range records {
-		ts, err := sab.ParseTimestamp(r.Ts)
+		ts, err := heartdesk.ParseTimestamp(r.Ts)
 		if err != nil || ts.Unix() < sinceUnix {
 			continue
 		}
@@ -365,7 +365,7 @@ func hpBuildAccess(records []hpRecord, periodDays, limit int, banned map[string]
 	// days_span 計算
 	minTs, maxTs := int64(0), int64(0)
 	for _, r := range filtered {
-		ts, err := sab.ParseTimestamp(r.Ts)
+		ts, err := heartdesk.ParseTimestamp(r.Ts)
 		if err != nil {
 			continue
 		}
@@ -410,8 +410,8 @@ func hpBuildAccess(records []hpRecord, periodDays, limit int, banned map[string]
 		}
 		// タイムスタンプを JST 表示形式に変換
 		tsDisplay := r.Ts
-		if t, err := sab.ParseTimestamp(r.Ts); err == nil {
-			tsDisplay = sab.FormatDatetime(t.In(sab.JST()))
+		if t, err := heartdesk.ParseTimestamp(r.Ts); err == nil {
+			tsDisplay = heartdesk.FormatDatetime(t.In(heartdesk.JST()))
 		}
 		result = append(result, HoneypotAccessRecord{
 			Ts:            tsDisplay,
@@ -571,7 +571,7 @@ func GetHoneypotSummary(agentID ...string) HoneypotSummaryResponse {
 
 // GetHoneypotHeatmap は直近7日のヒートマップを返す
 func GetHoneypotHeatmap(agentID ...string) HoneypotHeatmapResponse {
-	since := time.Now().In(sab.JST()).AddDate(0, 0, -6).Truncate(24 * time.Hour).Unix()
+	since := time.Now().In(heartdesk.JST()).AddDate(0, 0, -6).Truncate(24 * time.Hour).Unix()
 	records := hpReadRecords(since, normalizeAgentID(agentID))
 	return hpBuildHeatmap(records)
 }
@@ -606,17 +606,17 @@ func GetHoneypotHeatmapCell(trigger string, dow, hour int, agentID ...string) Ho
 	if dow < 0 || dow > 6 || hour < 0 || hour > 23 {
 		return HoneypotHeatmapCellResponse{Entries: []HoneypotHeatmapCellEntry{}, Flags: map[string]string{}}
 	}
-	cutoff := time.Now().In(sab.JST()).AddDate(0, 0, -6).Truncate(24 * time.Hour)
+	cutoff := time.Now().In(heartdesk.JST()).AddDate(0, 0, -6).Truncate(24 * time.Hour)
 	records := hpReadRecords(cutoff.Unix(), normalizeAgentID(agentID))
 
 	var entries []HoneypotHeatmapCellEntry
 	ipSet := make(map[string]bool)
 	for _, r := range records {
-		ts, err := sab.ParseTimestamp(r.Ts)
+		ts, err := heartdesk.ParseTimestamp(r.Ts)
 		if err != nil {
 			continue
 		}
-		tsJST := ts.In(sab.JST())
+		tsJST := ts.In(heartdesk.JST())
 		rDow := int(tsJST.Weekday()+6) % 7
 		if rDow != dow || tsJST.Hour() != hour {
 			continue
@@ -637,8 +637,8 @@ func GetHoneypotHeatmapCell(trigger string, dow, hour int, agentID ...string) Ho
 			path += "?" + r.Query
 		}
 		tsDisplay := r.Ts
-		if t, err2 := sab.ParseTimestamp(r.Ts); err2 == nil {
-			tsDisplay = sab.FormatDatetime(t.In(sab.JST()))
+		if t, err2 := heartdesk.ParseTimestamp(r.Ts); err2 == nil {
+			tsDisplay = heartdesk.FormatDatetime(t.In(heartdesk.JST()))
 		}
 		entries = append(entries, HoneypotHeatmapCellEntry{
 			Ts:      tsDisplay,

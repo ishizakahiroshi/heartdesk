@@ -1,4 +1,4 @@
-// SAB カード: SSL 証明書状態 (sec-ssl)
+// heartdesk カード: SSL 証明書状態 (sec-ssl)
 // 依存: shared.js の escHtml / getAppBase、card_runtime.js の CardRegistry
 
 (function() {

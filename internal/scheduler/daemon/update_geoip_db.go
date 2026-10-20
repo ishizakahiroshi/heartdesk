@@ -17,9 +17,9 @@ import (
 const (
 	defaultGeoIPDBURL             = "https://ipinfo.io/data/ipinfo_lite.mmdb"
 	defaultGeoIPDBDownloadTimeout = 180 * time.Second
-	defaultGeoIPDBLogPath         = "/home/sab/data/logs/update-geoip-db.log" // secrets-scan: allow
+	defaultGeoIPDBLogPath         = "/var/lib/heartdesk/data/logs/update-geoip-db.log"
 	// geoIPDBLogPathEnv はログ出力先の差し替え口。本番の systemd unit では設定しないので
-	// defaultGeoIPDBLogPath が使われる。テストは本番パス（/home/sab 配下）へ書けないため必須。
+	// defaultGeoIPDBLogPath が使われる。テストは本番パス（/var/lib/heartdesk 配下）へ書けないため必須。
 	geoIPDBLogPathEnv         = "UPDATE_GEOIP_DB_LOG_PATH"
 	minGeoIPDBSizeBytes int64 = 1024 * 1024
 )

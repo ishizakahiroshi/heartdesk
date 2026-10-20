@@ -65,8 +65,8 @@ if (typeof window.ipBadgeLabel !== 'function') {
 		return '';
 	};
 }
-if (typeof window.__sabIsValidIP !== 'function') {
-	window.__sabIsValidIP = function(ip) {
+if (typeof window.__heartdeskIsValidIP !== 'function') {
+	window.__heartdeskIsValidIP = function(ip) {
 		ip = (ip || '').trim();
 		if (!ip) return false;
 		if (ip.indexOf(':') !== -1) {
@@ -86,8 +86,8 @@ if (typeof window.__sabIsValidIP !== 'function') {
 		return true;
 	};
 }
-if (typeof window.__sabNormalizeIP !== 'function') {
-	window.__sabNormalizeIP = function(ip) {
+if (typeof window.__heartdeskNormalizeIP !== 'function') {
+	window.__heartdeskNormalizeIP = function(ip) {
 		return (ip || '').trim().toLowerCase();
 	};
 }
@@ -247,8 +247,8 @@ function isSameOriginRequest(input) {
 
 (function initCsrfFetchWrapper() {
 	if (typeof window === 'undefined' || typeof window.fetch !== 'function') return;
-	if (window.__sabFetchWrapped) return;
-	window.__sabFetchWrapped = true;
+	if (window.__heartdeskFetchWrapped) return;
+	window.__heartdeskFetchWrapped = true;
 	var originalFetch = window.fetch.bind(window);
 
 	window.fetch = function(input, init) {
@@ -334,26 +334,26 @@ function copyText(text, el) {
 }
 
 function getAppBase() {
-	if (typeof IH_APP_BASE !== 'undefined' && IH_APP_BASE) return IH_APP_BASE;
+	if (typeof HD_APP_BASE !== 'undefined' && HD_APP_BASE) return HD_APP_BASE;
 	return '/monitor';
 }
 
 function getCardOptions(cardId) {
-	if (typeof IH_CARD_OPTIONS === 'undefined' || !IH_CARD_OPTIONS) return {};
-	var opts = IH_CARD_OPTIONS[cardId];
+	if (typeof HD_CARD_OPTIONS === 'undefined' || !HD_CARD_OPTIONS) return {};
+	var opts = HD_CARD_OPTIONS[cardId];
 	return opts && typeof opts === 'object' ? opts : {};
 }
 
 function getMonitorCardId(key, fallbackId) {
-	if (typeof IH_CARD_IDS !== 'undefined' && IH_CARD_IDS && IH_CARD_IDS[key]) {
-		return IH_CARD_IDS[key];
+	if (typeof HD_CARD_IDS !== 'undefined' && HD_CARD_IDS && HD_CARD_IDS[key]) {
+		return HD_CARD_IDS[key];
 	}
 	return fallbackId;
 }
 
 function getMonitorCardAPI(cardId, fallbackAPI) {
-	if (typeof IH_CARD_APIS !== 'undefined' && IH_CARD_APIS && IH_CARD_APIS[cardId]) {
-		return IH_CARD_APIS[cardId];
+	if (typeof HD_CARD_APIS !== 'undefined' && HD_CARD_APIS && HD_CARD_APIS[cardId]) {
+		return HD_CARD_APIS[cardId];
 	}
 	return fallbackAPI;
 }
@@ -361,8 +361,8 @@ function getMonitorCardAPI(cardId, fallbackAPI) {
 function monitorApiURL(apiName, includeAgent) {
 	var url = getAppBase() + '/?api=' + encodeURIComponent(apiName);
 	var withAgent = includeAgent !== false;
-	if (withAgent && typeof IH_AGENT_ID !== 'undefined' && IH_AGENT_ID) {
-		url += '&agent=' + encodeURIComponent(IH_AGENT_ID);
+	if (withAgent && typeof HD_AGENT_ID !== 'undefined' && HD_AGENT_ID) {
+		url += '&agent=' + encodeURIComponent(HD_AGENT_ID);
 	}
 	return url;
 }
@@ -424,8 +424,8 @@ function loadJsonCard(el, apiName, renderFn, opts) {
 	el.innerHTML = '<p class="section-loading">読み込み中...</p>';
 	var url = getAppBase() + '/?api=' + encodeURIComponent(apiName);
 	var agentID = opts.agentID;
-	if (!agentID && opts.includeAgent !== false && typeof IH_AGENT_ID !== 'undefined' && IH_AGENT_ID) {
-		agentID = IH_AGENT_ID;
+	if (!agentID && opts.includeAgent !== false && typeof HD_AGENT_ID !== 'undefined' && HD_AGENT_ID) {
+		agentID = HD_AGENT_ID;
 	}
 	if (agentID) url += '&agent=' + encodeURIComponent(agentID);
 	fetch(url, { credentials: 'same-origin' })
@@ -450,7 +450,7 @@ function fmtMB(s) {
 // ========================================
 // リソースカードの res-async-* サブカードを disk API データで更新
 // resources.php の res-async-disk-detail / res-async-db / res-async-nginx を埋める。
-// NAB Monitor では renderDisk() からも呼ばれる。NAB Admin では loadDiskResources() から直接呼ばれる。
+// Monitor では renderDisk() からも呼ばれる。Admin では loadDiskResources() から直接呼ばれる。
 // ========================================
 function renderDiskResources(data) {
 	function fmtDu(s) {
@@ -1456,19 +1456,13 @@ function getViewFilter(content, viewKey) {
 // ========================================
 // サイドナビ + 折りたたみ + localStorage
 // ========================================
-var COLLAPSE_KEY = (typeof IH_COLLAPSE_KEY !== 'undefined' && IH_COLLAPSE_KEY) ? IH_COLLAPSE_KEY : 'ihdash.collapsed.v1';
-var COLLAPSE_LEGACY_KEY = (typeof IH_COLLAPSE_LEGACY_KEY !== 'undefined' && IH_COLLAPSE_LEGACY_KEY) ? IH_COLLAPSE_LEGACY_KEY : '';
-var SIDENAV_SERVER_TREE_KEY = (typeof IH_SIDENAV_SERVER_TREE_KEY !== 'undefined' && IH_SIDENAV_SERVER_TREE_KEY) ? IH_SIDENAV_SERVER_TREE_KEY : 'ihdash.sidenav.server_tree.v1';
-var SIDENAV_SERVER_TREE_LEGACY_KEY = (typeof IH_SIDENAV_SERVER_TREE_LEGACY_KEY !== 'undefined' && IH_SIDENAV_SERVER_TREE_LEGACY_KEY) ? IH_SIDENAV_SERVER_TREE_LEGACY_KEY : '';
-var SIDENAV_ORDER_KEY = (typeof IH_SIDENAV_ORDER_KEY !== 'undefined' && IH_SIDENAV_ORDER_KEY) ? IH_SIDENAV_ORDER_KEY : 'ihdash.sidenav.order.v1';
+var COLLAPSE_KEY = (typeof HD_COLLAPSE_KEY !== 'undefined' && HD_COLLAPSE_KEY) ? HD_COLLAPSE_KEY : 'heartdesk.collapsed.v1';
+var SIDENAV_SERVER_TREE_KEY = (typeof HD_SIDENAV_SERVER_TREE_KEY !== 'undefined' && HD_SIDENAV_SERVER_TREE_KEY) ? HD_SIDENAV_SERVER_TREE_KEY : 'heartdesk.sidenav.server_tree.v1';
+var SIDENAV_ORDER_KEY = (typeof HD_SIDENAV_ORDER_KEY !== 'undefined' && HD_SIDENAV_ORDER_KEY) ? HD_SIDENAV_ORDER_KEY : 'heartdesk.sidenav.order.v1';
 
 function loadCollapsedSet() {
 	try {
 		var raw = localStorage.getItem(COLLAPSE_KEY);
-		if (!raw && COLLAPSE_LEGACY_KEY && COLLAPSE_LEGACY_KEY !== COLLAPSE_KEY) {
-			raw = localStorage.getItem(COLLAPSE_LEGACY_KEY);
-			if (raw) localStorage.setItem(COLLAPSE_KEY, raw);
-		}
 		if (!raw) return {};
 		var arr = JSON.parse(raw);
 		if (!Array.isArray(arr)) return {};
@@ -1488,10 +1482,6 @@ function saveCollapsedSet(set) {
 function loadSidenavServerTreeOpen() {
 	try {
 		var raw = localStorage.getItem(SIDENAV_SERVER_TREE_KEY);
-		if (raw === null && SIDENAV_SERVER_TREE_LEGACY_KEY && SIDENAV_SERVER_TREE_LEGACY_KEY !== SIDENAV_SERVER_TREE_KEY) {
-			raw = localStorage.getItem(SIDENAV_SERVER_TREE_LEGACY_KEY);
-			if (raw === '1' || raw === '0') localStorage.setItem(SIDENAV_SERVER_TREE_KEY, raw);
-		}
 		if (raw === '1') return true;
 		if (raw === '0') return false;
 		return null;
@@ -2396,8 +2386,7 @@ function initThemeToggle() {
 	var toggle = document.getElementById('themeToggle');
 	if (!toggle) return;
 	var body = document.body;
-	var appKey = (location.pathname.match(/\/(SAB_\w+)/) || [, 'nab'])[1];
-	var storageKey = appKey + '_theme';
+	var storageKey = 'heartdesk_theme';
 	var saved = localStorage.getItem(storageKey) || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
 	body.setAttribute('data-theme', saved);
 	toggle.textContent = saved === 'dark' ? '\u{1F319}' : '\u{2600}\u{FE0F}';
@@ -2426,7 +2415,7 @@ function initHeaderControls() {
 
 	function runSearch() {
 		var v = (input.value || '').trim();
-		if (window.__sabIsValidIP && window.__sabIsValidIP(v) && typeof window.openIpModal === 'function') {
+		if (window.__heartdeskIsValidIP && window.__heartdeskIsValidIP(v) && typeof window.openIpModal === 'function') {
 			input.removeAttribute('aria-invalid');
 			window.openIpModal(v);
 			return;
@@ -2458,7 +2447,7 @@ function initSharedUi() {
 
 function applyCardGroupLabels(root) {
 	var target = root || document;
-	var meta = (typeof IH_CARD_META !== 'undefined' && IH_CARD_META) ? IH_CARD_META : {};
+	var meta = (typeof HD_CARD_META !== 'undefined' && HD_CARD_META) ? HD_CARD_META : {};
 	target.querySelectorAll('section.card[id^="sec-"]').forEach(function(card) {
 		var h2 = card.querySelector(':scope > .card-header h2')
 			|| card.querySelector(':scope > h2');
@@ -2776,7 +2765,7 @@ function renderR2Metrics(data, fetchedAt) {
 
 var r2MetricsPromise = null;
 function r2MetricsCacheKey() {
-	var agent = (typeof IH_AGENT_ID !== 'undefined' && IH_AGENT_ID) ? String(IH_AGENT_ID) : '';
+	var agent = (typeof HD_AGENT_ID !== 'undefined' && HD_AGENT_ID) ? String(HD_AGENT_ID) : '';
 	return agent ? ('r2_metrics:' + agent) : 'r2_metrics';
 }
 function getR2Metrics(forceFetch) {
@@ -2794,8 +2783,8 @@ function getR2Metrics(forceFetch) {
 		if (r2MetricsPromise) return r2MetricsPromise;
 	}
 	var url = getAppBase() + '/?r2_metrics=1';
-	if (typeof IH_AGENT_ID !== 'undefined' && IH_AGENT_ID) {
-		url += '&agent=' + encodeURIComponent(IH_AGENT_ID);
+	if (typeof HD_AGENT_ID !== 'undefined' && HD_AGENT_ID) {
+		url += '&agent=' + encodeURIComponent(HD_AGENT_ID);
 	}
 	r2MetricsPromise = fetch(url)
 		.then(function(r) {
@@ -3741,28 +3730,28 @@ function buildCountrySelectOptions(flags, rows, ipField) {
 	return out;
 }
 
-var SAB_APP_LABELS = {
-	SAB_monitor: 'NAB Monitor',
-	SAB_admin: 'NAB Admin'
+var LOGIN_APP_LABELS = {
+	heartdesk_monitor: 'Monitor',
+	heartdesk_admin: 'Admin'
 };
 
-function nabAppLabel(app) {
+function loginAppLabel(app) {
 	var key = String(app || '').trim();
 	if (!key) return '不明';
-	return SAB_APP_LABELS[key] || key;
+	return LOGIN_APP_LABELS[key] || key;
 }
 
-function buildNabAppSelectOptions(rows) {
+function buildLoginAppSelectOptions(rows) {
 	var set = {};
 	for (var i = 0; i < rows.length; i++) {
 		var app = String(rows[i].app || '').trim();
 		if (app) set[app] = true;
 	}
-	var list = Object.keys(set).sort(function(a, b) { return nabAppLabel(a).localeCompare(nabAppLabel(b), 'ja'); });
+	var list = Object.keys(set).sort(function(a, b) { return loginAppLabel(a).localeCompare(loginAppLabel(b), 'ja'); });
 	var out = '';
 	for (var j = 0; j < list.length; j++) {
 		var key = list[j];
-		out += '<option value="' + escapeHtml(key) + '">' + escapeHtml(nabAppLabel(key)) + '</option>';
+		out += '<option value="' + escapeHtml(key) + '">' + escapeHtml(loginAppLabel(key)) + '</option>';
 	}
 	return out;
 }
@@ -3975,15 +3964,15 @@ function renderSshLoginHistory(content, data) {
 	renderSshLoginSummary(content);
 }
 
-function renderNabLoginSummary(content) {
+function renderAppLoginSummary(content) {
 	saveCurrentViewFilter(content);
-	var state = content && content.__nabLoginState ? content.__nabLoginState : null;
+	var state = content && content.__appLoginState ? content.__appLoginState : null;
 	var rows = state && state.rows ? state.rows : [];
 	var flags = state && state.flags ? state.flags : {};
 	var rateHtml = renderLoginRateStats(state ? state.rate : null);
 	if (!rows.length) { content.innerHTML = rateHtml + '<p class="empty">記録なし</p>'; return; }
 	var userSelectOptions = buildFieldSelectOptions(rows, 'user');
-	var appSelectOptions = buildNabAppSelectOptions(rows);
+	var appSelectOptions = buildLoginAppSelectOptions(rows);
 	var countryOpts = buildCountrySelectOptions(flags, rows);
 
 	var grouped = {};
@@ -4013,9 +4002,9 @@ function renderNabLoginSummary(content) {
 
 	var csrfToken = getCsrfToken();
 	var html = rateHtml;
-	html += cardViewToggle('summary', 'renderNabLoginSummary(this.closest(\'.async-content\'))', 'renderNabLoginDetail(this.closest(\'.async-content\'), null)');
+	html += cardViewToggle('summary', 'renderAppLoginSummary(this.closest(\'.async-content\'))', 'renderAppLoginDetail(this.closest(\'.async-content\'), null)');
 	html += '<div class="nc-summary-meta">直近 ' + formatCount(rows.length) + ' 件 &nbsp;/&nbsp; ' + formatCount(summaryRows.length) + ' IP</div>';
-	html += '<form method="post" data-bulk-ban="nab-login"><input type="hidden" name="csrf_token" value="' + escapeHtml(csrfToken) + '"><input type="hidden" name="ban_section" value="SAB_login"><div class="bulk-ban-bar"><label class="bulk-select-all"><input type="checkbox" data-select-all="nab-login"> 全選択</label><span class="bulk-ban-count" data-count="nab-login">0件選択中</span><button type="submit" class="btn-ban btn-bulk-ban" data-ban-btn="nab-login" disabled>選択したIPをBAN</button></div>';
+	html += '<form method="post" data-bulk-ban="app-login"><input type="hidden" name="csrf_token" value="' + escapeHtml(csrfToken) + '"><input type="hidden" name="ban_section" value="app_login"><div class="bulk-ban-bar"><label class="bulk-select-all"><input type="checkbox" data-select-all="app-login"> 全選択</label><span class="bulk-ban-count" data-count="app-login">0件選択中</span><button type="submit" class="btn-ban btn-bulk-ban" data-ban-btn="app-login" disabled>選択したIPをBAN</button></div>';
 	html += '<table class="log-table"><thead><tr class="thead-filter-row"><th class="cb-col"></th><th class="col-ip">' + buildIpFilterCell({wl:true,wlm:true,wla:true,ban:true,known:true}) + '</th><th class="col-country"><select class="filter-select" data-filter="country"><option value="">全て</option>' + countryOpts + '</select></th><th><select class="filter-select" data-filter="result"><option value="">結果</option><option value="fail">失敗あり</option><option value="success">失敗なし</option></select></th><th>' + buildFilterSelect('app', 'アプリ', appSelectOptions, true) + '</th><th>' + buildFilterSelect('user', 'ユーザー', userSelectOptions, true) + '</th><th><select class="filter-select" data-filter="device"><option value="">デバイス</option><option value="pc">PC</option><option value="mobile">モバイル</option><option value="unknown">不明</option></select></th><th><span class="filter-count"></span></th></tr><tr><th class="cb-col"></th><th class="col-ip">IP</th><th class="col-country">国</th><th>結果内訳</th><th>アプリ</th><th>ユーザー</th><th>デバイス</th><th>最終アクセス</th></tr></thead><tbody>';
 	for (var r = 0; r < summaryRows.length; r++) {
 		var row = summaryRows[r];
@@ -4024,15 +4013,15 @@ function renderNabLoginSummary(content) {
 		var disableCb = wl || !!banned;
 		var ipEsc = escapeHtml(row.ip);
 		var appList = Object.keys(row.apps).sort();
-		var appLabelList = appList.map(function(app) { return nabAppLabel(app); });
+		var appLabelList = appList.map(function(app) { return loginAppLabel(app); });
 		var userList = Object.keys(row.users).sort();
 		var dominantDevice = 'unknown';
 		var dominantCount = -1;
 		Object.keys(row.devices).forEach(function(k) {
 			if (row.devices[k] > dominantCount) { dominantCount = row.devices[k]; dominantDevice = k; }
 		});
-		html += '<tr data-ip="' + ipEsc + '" data-result="' + (row.fail > 0 ? 'fail' : 'success') + '" data-app="' + escapeHtml(appList.join(' ')) + '" data-user="' + escapeHtml(userList.join(' ')) + '" data-device="' + escapeHtml(dominantDevice) + '" data-country="' + escapeHtml(flags[row.ip] || '') + '"' + (wl ? ' data-wl="1"' : '') + (banned ? ' data-banned="1"' : '') + (KNOWN_IPS && KNOWN_IPS[row.ip] ? ' data-known="1"' : '') + loginHistoryRowToggleAttrs('detail', 'renderNabLoginDetail(this.closest(\'.async-content\'), \'' + ipEsc + '\')') + '>';
-		html += '<td class="cb-col" onclick="event.stopPropagation();"><input type="checkbox" name="ban_ips[]" value="' + ipEsc + '" data-section="nab-login"' + (disableCb ? ' disabled' : '') + '></td>';
+		html += '<tr data-ip="' + ipEsc + '" data-result="' + (row.fail > 0 ? 'fail' : 'success') + '" data-app="' + escapeHtml(appList.join(' ')) + '" data-user="' + escapeHtml(userList.join(' ')) + '" data-device="' + escapeHtml(dominantDevice) + '" data-country="' + escapeHtml(flags[row.ip] || '') + '"' + (wl ? ' data-wl="1"' : '') + (banned ? ' data-banned="1"' : '') + (KNOWN_IPS && KNOWN_IPS[row.ip] ? ' data-known="1"' : '') + loginHistoryRowToggleAttrs('detail', 'renderAppLoginDetail(this.closest(\'.async-content\'), \'' + ipEsc + '\')') + '>';
+		html += '<td class="cb-col" onclick="event.stopPropagation();"><input type="checkbox" name="ban_ips[]" value="' + ipEsc + '" data-section="app-login"' + (disableCb ? ' disabled' : '') + '></td>';
 		html += '<td class="col-ip"><code class="ip-clickable" onclick="event.stopPropagation(); openIpModal(\'' + ipEsc + '\')">' + ipEsc + '</code>' + ipBadges(row.ip) + '</td>';
 		html += '<td class="col-country nowrap">' + escapeHtml(flags[row.ip] || '') + '</td>';
 		html += '<td><span class="result-badge result-success">成功 ' + formatCount(row.success) + '</span> <span class="result-badge result-fail">失敗 ' + formatCount(row.fail) + '</span></td>';
@@ -4043,31 +4032,31 @@ function renderNabLoginSummary(content) {
 	}
 	html += '</tbody></table></form>';
 	content.innerHTML = html;
-	initBulkBan('nab-login', content);
+	initBulkBan('app-login', content);
 	autoInitCardFromDataset(content.closest('section.card'), { total: summaryRows.length });
 	var filterBar = content.querySelector('.thead-filter-row');
 	if (filterBar) setupCardFilter(filterBar, content);
 	restoreFilterState(content, getViewFilter(content, 'summary'));
 }
 
-function renderNabLoginDetail(content, filterIp) {
+function renderAppLoginDetail(content, filterIp) {
 	saveCurrentViewFilter(content);
-	var state = content && content.__nabLoginState ? content.__nabLoginState : null;
+	var state = content && content.__appLoginState ? content.__appLoginState : null;
 	var allRows = state && state.rows ? state.rows : [];
 	var flags = state && state.flags ? state.flags : {};
 	var rateHtml = renderLoginRateStats(state ? state.rate : null);
 	if (!allRows.length) { content.innerHTML = rateHtml + '<p class="empty">記録なし</p>'; return; }
 	var rows = filterIp ? allRows.filter(function(l) { return String(l.ip || '') === String(filterIp); }) : allRows.slice();
 	var userSelectOptions = buildFieldSelectOptions(rows, 'user');
-	var appSelectOptions = buildNabAppSelectOptions(rows);
+	var appSelectOptions = buildLoginAppSelectOptions(rows);
 	var countryOpts = buildCountrySelectOptions(flags, rows);
 	var csrfToken = getCsrfToken();
 	var html = rateHtml;
-	html += cardViewToggle('detail', 'renderNabLoginSummary(this.closest(\'.async-content\'))', 'renderNabLoginDetail(this.closest(\'.async-content\'), null)');
+	html += cardViewToggle('detail', 'renderAppLoginSummary(this.closest(\'.async-content\'))', 'renderAppLoginDetail(this.closest(\'.async-content\'), null)');
 	if (filterIp) {
-		html += '<div class="nc-filter-bar"><span class="nc-filter-badge">IP: ' + escapeHtml(filterIp) + '</span><button class="btn-secondary btn-sm" onclick="renderNabLoginDetail(this.closest(\'.async-content\'), null)">× 絞り込みを解除</button></div>';
+		html += '<div class="nc-filter-bar"><span class="nc-filter-badge">IP: ' + escapeHtml(filterIp) + '</span><button class="btn-secondary btn-sm" onclick="renderAppLoginDetail(this.closest(\'.async-content\'), null)">× 絞り込みを解除</button></div>';
 	}
-	html += '<form method="post" data-bulk-ban="nab-login"><input type="hidden" name="csrf_token" value="' + escapeHtml(csrfToken) + '"><input type="hidden" name="ban_section" value="SAB_login"><div class="bulk-ban-bar"><label class="bulk-select-all"><input type="checkbox" data-select-all="nab-login"> 全選択</label><span class="bulk-ban-count" data-count="nab-login">0件選択中</span><button type="submit" class="btn-ban btn-bulk-ban" data-ban-btn="nab-login" disabled>選択したIPをBAN</button></div>';
+	html += '<form method="post" data-bulk-ban="app-login"><input type="hidden" name="csrf_token" value="' + escapeHtml(csrfToken) + '"><input type="hidden" name="ban_section" value="app_login"><div class="bulk-ban-bar"><label class="bulk-select-all"><input type="checkbox" data-select-all="app-login"> 全選択</label><span class="bulk-ban-count" data-count="app-login">0件選択中</span><button type="submit" class="btn-ban btn-bulk-ban" data-ban-btn="app-login" disabled>選択したIPをBAN</button></div>';
 	html += '<div class="login-section">';
 	html += '<table class="log-table"><thead><tr class="thead-filter-row"><th class="cb-col"></th><th></th><th><select class="filter-select" data-filter="result"><option value="">結果</option><option value="success">成功</option><option value="fail">失敗</option></select></th><th>' + buildFilterSelect('app', 'アプリ', appSelectOptions, false) + '</th><th>' + buildFilterSelect('user', 'ユーザー', userSelectOptions, false) + '</th><th class="col-ip">' + buildIpFilterCell({wl:true,wlm:true,wla:true,ban:true,known:true}) + '</th><th class="col-country"><select class="filter-select" data-filter="country"><option value="">全て</option>' + countryOpts + '</select></th><th><select class="filter-select" data-filter="device"><option value="">デバイス</option><option value="pc">PC</option><option value="mobile">モバイル</option><option value="unknown">不明</option></select></th><th><span class="filter-count"></span></th></tr><tr><th class="cb-col"></th><th>時刻</th><th>結果</th><th>アプリ</th><th>ユーザー</th><th class="col-ip">IP</th><th class="col-country">国</th><th>デバイス</th><th></th></tr></thead><tbody>';
 	for (var i = 0; i < rows.length; i++) {
@@ -4082,20 +4071,20 @@ function renderNabLoginDetail(content, filterIp) {
 			if (l.pw_stats) failMeta.push(l.pw_stats);
 			userCell += '<br><small class="muted">' + escapeHtml(failMeta.join(' / ')) + '</small>';
 		}
-		html += '<tr data-ip="' + ipEsc + '" data-result="' + escapeHtml(l.result || '') + '" data-app="' + escapeHtml(l.app || '') + '" data-user="' + escapeHtml(l.user || '') + '" data-device="' + escapeHtml(l.device || '') + '" data-country="' + escapeHtml(flags[l.ip] || '') + '"' + (wl ? ' data-wl="1"' : '') + (BANNED_IPS[l.ip] ? ' data-banned="1"' : '') + (KNOWN_IPS && KNOWN_IPS[l.ip] ? ' data-known="1"' : '') + loginHistoryRowToggleAttrs('summary', 'renderNabLoginSummary(this.closest(\'.async-content\'))') + '><td class="cb-col" onclick="event.stopPropagation();"><input type="checkbox" name="ban_ips[]" value="' + ipEsc + '" data-section="nab-login"' + (wl ? ' disabled' : '') + '></td><td class="nowrap">' + escapeHtml(formatDisplayDateTime(l.time, '-')) + '</td><td>' + loginResultBadge(l.result) + '</td><td>' + escapeHtml(nabAppLabel(l.app_label || l.app || '')) + '</td><td>' + userCell + '</td><td class="col-ip"><code class="ip-clickable" onclick="event.stopPropagation(); openIpModal(\'' + ipEsc + '\')">' + ipEsc + '</code>' + ipBadges(l.ip) + '</td><td class="col-country nowrap">' + escapeHtml(flags[l.ip] || '') + '</td><td>' + deviceBadge(l) + '</td></tr>';
+		html += '<tr data-ip="' + ipEsc + '" data-result="' + escapeHtml(l.result || '') + '" data-app="' + escapeHtml(l.app || '') + '" data-user="' + escapeHtml(l.user || '') + '" data-device="' + escapeHtml(l.device || '') + '" data-country="' + escapeHtml(flags[l.ip] || '') + '"' + (wl ? ' data-wl="1"' : '') + (BANNED_IPS[l.ip] ? ' data-banned="1"' : '') + (KNOWN_IPS && KNOWN_IPS[l.ip] ? ' data-known="1"' : '') + loginHistoryRowToggleAttrs('summary', 'renderAppLoginSummary(this.closest(\'.async-content\'))') + '><td class="cb-col" onclick="event.stopPropagation();"><input type="checkbox" name="ban_ips[]" value="' + ipEsc + '" data-section="app-login"' + (wl ? ' disabled' : '') + '></td><td class="nowrap">' + escapeHtml(formatDisplayDateTime(l.time, '-')) + '</td><td>' + loginResultBadge(l.result) + '</td><td>' + escapeHtml(loginAppLabel(l.app_label || l.app || '')) + '</td><td>' + userCell + '</td><td class="col-ip"><code class="ip-clickable" onclick="event.stopPropagation(); openIpModal(\'' + ipEsc + '\')">' + ipEsc + '</code>' + ipBadges(l.ip) + '</td><td class="col-country nowrap">' + escapeHtml(flags[l.ip] || '') + '</td><td>' + deviceBadge(l) + '</td></tr>';
 	}
 	html += '</tbody></table></div></form>';
 	content.innerHTML = html;
-	initBulkBan('nab-login', content);
+	initBulkBan('app-login', content);
 	autoInitCardFromDataset(content.closest('section.card'), { total: rows.length });
 	var filterBar = content.querySelector('.thead-filter-row');
 	if (filterBar) setupCardFilter(filterBar, content);
 	restoreFilterState(content, getViewFilter(content, 'detail'));
 }
 
-function renderNabLoginHistory(content, data) {
-	content.__nabLoginState = { rows: data.entries || [], rate: data.rate || null, flags: data.flags || {} };
-	renderNabLoginSummary(content);
+function renderAppLoginHistory(content, data) {
+	content.__appLoginState = { rows: data.entries || [], rate: data.rate || null, flags: data.flags || {} };
+	renderAppLoginSummary(content);
 }
 
 function renderPhpmyadminLoginSummary(content) {
@@ -4223,7 +4212,7 @@ function resolveLoginHistorySections(content) {
 		if (Array.isArray(opts.sections)) sections = opts.sections;
 	}
 		if (!sections || sections.length === 0) {
-			sections = ['ssh', 'nextcloud', 'SAB_monitor', 'phpmyadmin'];
+			sections = ['ssh', 'nextcloud', 'heartdesk_monitor', 'phpmyadmin'];
 		}
 	return sections;
 }
@@ -4234,7 +4223,7 @@ function renderLoginHistory(content, data) {
 	sections.forEach(function(s) { allowed[s] = true; });
 	var showSsh = !!allowed.ssh;
 	var showNc = !!allowed.nextcloud;
-		var showDash = !!allowed.SAB_monitor;
+		var showDash = !!allowed.heartdesk_monitor;
 	var showPma = !!allowed.phpmyadmin;
 
 	if (!showSsh && !showNc && !showDash && !showPma) {
@@ -4385,11 +4374,11 @@ function renderServices(content, data) {
 				+ ' onclick="if(confirm(\'Nextcloudのメンテナンス修復を実行します。よろしいですか？\')){svcAction(\'nc_repair\',this);}">'
 				+ 'Nextcloud メンテナンス修復</button></div>';
 		}
-		if (actions.indexOf('restart_sab') !== -1) {
-			html += '<div class="command-card command-card--sab-restart">'
+		if (actions.indexOf('restart_heartdesk') !== -1) {
+			html += '<div class="command-card command-card--service-restart">'
 				+ '<button type="button" class="btn-warning"'
-				+ ' onclick="if(confirm(\'SABサービスを再起動します。監視画面が数秒切断される場合があります。よろしいですか？\')){svcAction(\'restart_sab\',this);}">'
-				+ 'SAB サービス再起動</button></div>';
+				+ ' onclick="if(confirm(\'heartdeskサービスを再起動します。監視画面が数秒切断される場合があります。よろしいですか？\')){svcAction(\'restart_heartdesk\',this);}">'
+				+ 'heartdesk サービス再起動</button></div>';
 		}
 		if (actions.indexOf('reboot') !== -1) {
 			html += '<div class="command-card command-card--reboot">'
@@ -5282,7 +5271,7 @@ if (typeof document !== 'undefined') {
 	// 専用 DOM を1つ用意し（無ければ生成）、OK/キャンセルで Promise を解決する。
 	window.confirmModal = function(message) {
 		return new Promise(function(resolve) {
-			var ID = 'sab-confirm-modal';
+			var ID = 'heartdesk-confirm-modal';
 			var modal = document.getElementById(ID);
 			if (!modal) {
 				modal = document.createElement('div');
@@ -6309,7 +6298,7 @@ function renderIPMgmt(content, data) {
 	var addBtn     = content.querySelector('#ip-mgmt-add-btn');
 	var registeredIPs = {};
 	for (var j = 0; j < ips.length; j++) {
-		var normalizedIp = window.__sabNormalizeIP(ips[j] && ips[j].ip);
+		var normalizedIp = window.__heartdeskNormalizeIP(ips[j] && ips[j].ip);
 		if (normalizedIp) registeredIPs[normalizedIp] = true;
 	}
 	function updatePinState() {
@@ -6320,7 +6309,7 @@ function renderIPMgmt(content, data) {
 	}
 	function updateAddButtonState() {
 		if (!ipInput || !addBtn) return;
-		var normalizedInput = window.__sabNormalizeIP(ipInput.value);
+		var normalizedInput = window.__heartdeskNormalizeIP(ipInput.value);
 		var isDuplicate = !!(normalizedInput && registeredIPs[normalizedInput]);
 		addBtn.disabled = isDuplicate;
 		addBtn.title = isDuplicate ? 'このIPは既に登録されています' : '';
@@ -6520,13 +6509,13 @@ function ipmInitEvents(container, data) {
 			var pinVal  = (container.querySelector('#ip-mgmt-pin')      || {}).value || '';
 			ipVal = ipVal.trim(); nameVal = nameVal.trim(); pinVal = pinVal.trim();
 			if (!ipVal || !nameVal) { alert('IPアドレスと名前を入力してください'); return; }
-			if (!window.__sabIsValidIP(ipVal)) { alert('IPアドレスの形式が正しくありません'); return; }
-			var normalizedIpVal = window.__sabNormalizeIP(ipVal);
+			if (!window.__heartdeskIsValidIP(ipVal)) { alert('IPアドレスの形式が正しくありません'); return; }
+			var normalizedIpVal = window.__heartdeskNormalizeIP(ipVal);
 			var duplicateRow = null;
 			if (normalizedIpVal) {
 				var rows = container.querySelectorAll('tr[data-ip]');
 				for (var i = 0; i < rows.length; i++) {
-					if (window.__sabNormalizeIP(rows[i].getAttribute('data-ip')) === normalizedIpVal) {
+					if (window.__heartdeskNormalizeIP(rows[i].getAttribute('data-ip')) === normalizedIpVal) {
 						duplicateRow = rows[i];
 						break;
 					}
@@ -6552,7 +6541,7 @@ function ipmInitEvents(container, data) {
 }
 
 function ipmDoRemove(ip, pin, row) {
-	var user = (typeof IH_REMOTE_USER !== 'undefined' && IH_REMOTE_USER) ? IH_REMOTE_USER : '';
+	var user = (typeof HD_REMOTE_USER !== 'undefined' && HD_REMOTE_USER) ? HD_REMOTE_USER : '';
 	var params = new URLSearchParams({ ip: ip, user: user, pin: pin });
 	fetch(monitorApiURL('ip_remove'), {
 		method: 'POST',

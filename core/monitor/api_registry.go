@@ -13,7 +13,7 @@ import (
 
 var monitorSimpleAPIByName = map[string]func() interface{}{
 	"realtime_resources": func() interface{} { return APIRealtimeResources() },
-	"nab_login_history":  func() interface{} { return GetNABLoginHistory() },
+	"login_history":      func() interface{} { return GetLoginHistory() },
 	"geoip_cache":        func() interface{} { return GetGeoIPCache() },
 }
 
@@ -286,8 +286,8 @@ func resolveCardIDForAPI(api string) (cardID string, mapped bool) {
 		return navmeta.CardSecNotificationRules, true
 	case "realtime_resources":
 		return navmeta.CardSecRealtimeMonitor, true
-	case "nab_login_history":
-		return navmeta.CardSecNabLoginHistory, true
+	case "login_history":
+		return navmeta.CardSecLoginHistory, true
 	case "phpmyadmin_login_history":
 		return navmeta.CardSecPhpmyadminLogin, true
 	case "ban_history":

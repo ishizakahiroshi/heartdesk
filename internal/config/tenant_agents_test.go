@@ -8,7 +8,7 @@ import (
 
 func TestLoadAppConfigForTenantUsesTenantAgentFilesAsScope(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("SAB_CONFIG_DIR", dir)
+	t.Setenv("HEARTDESK_CONFIG_DIR", dir)
 
 	writeTestFile(t, filepath.Join(dir, "config.toml"), `
 [agent."alpha-rental-host1"]

@@ -24,7 +24,7 @@ type AuditAnomalySummary struct {
 	WindowMin             int                   `json:"window_min"`
 	TotalRecent           int                   `json:"total_recent"`
 	TotalPrev             int                   `json:"total_prev"`
-	ExcludedNabAppTrusted int                   `json:"excluded_nab_app_trusted"`
+	ExcludedAppTrusted    int                   `json:"excluded_app_trusted"`
 	ExcludedInternalNoise int                   `json:"excluded_internal_noise"`
 	ExcludedLexiconNoise  int                   `json:"excluded_lexicon_noise"`
 	LogLevels             AuditAnomalyLogLevels `json:"log_levels"`
@@ -41,7 +41,7 @@ type AuditAnomalyEntry struct {
 	SampleIP   string   `json:"sample_ip"`
 }
 
-// AuditAnomalyResponse は /nab/api/monitor/audit_anomaly のレスポンス
+// AuditAnomalyResponse は /api/monitor/audit_anomaly のレスポンス
 type AuditAnomalyResponse struct {
 	Summary   AuditAnomalySummary `json:"summary"`
 	Anomalies []AuditAnomalyEntry `json:"anomalies"`
@@ -75,7 +75,7 @@ func (r *auditLogRecord) getEvent() string {
 // auditAnomalyTrustedIPs はホワイトリスト + SSHAllowed の信頼済みIPを返す
 func auditAnomalyTrustedIPs() map[string]bool {
 	m := map[string]bool{}
-	for _, ip := range strings.Split(os.Getenv("SAB_WHITELIST_IPS"), ",") {
+	for _, ip := range strings.Split(os.Getenv("HEARTDESK_WHITELIST_IPS"), ",") {
 		if ip = strings.TrimSpace(ip); ip != "" {
 			m[ip] = true
 		}
@@ -86,17 +86,17 @@ func auditAnomalyTrustedIPs() map[string]bool {
 	return m
 }
 
-// auditAnomalyIsNabAppTrustedLogin は nab_app ユーザーの信頼済みログインかを判定する
-func auditAnomalyIsNabAppTrustedLogin(rec *auditLogRecord, trustedIPs map[string]bool) bool {
+// auditAnomalyIsAppTrustedLogin は heartdesk_app ユーザーの信頼済みログインかを判定する
+func auditAnomalyIsAppTrustedLogin(rec *auditLogRecord, trustedIPs map[string]bool) bool {
 	user := strings.TrimSpace(rec.User)
 	event := rec.getEvent()
 	if event == "" {
 		return false
 	}
-	userIsNabApp := user == "nab_app" ||
-		strings.Contains(event, `"nab_app"`) ||
-		strings.Contains(event, `'nab_app'`)
-	if !userIsNabApp {
+	userIsApp := user == "heartdesk_app" ||
+		strings.Contains(event, `"heartdesk_app"`) ||
+		strings.Contains(event, `'heartdesk_app'`)
+	if !userIsApp {
 		return false
 	}
 	ip := strings.TrimSpace(rec.RemoteAddr)
@@ -151,7 +151,7 @@ func GetAuditAnomaly(agentID ...string) AuditAnomalyResponse {
 	}
 	events := map[string]*eventAccumulator{}
 	totalRecent, totalPrev := 0, 0
-	excludedNabAppTrusted, excludedInternalNoise, excludedLexiconNoise := 0, 0, 0
+	excludedAppTrusted, excludedInternalNoise, excludedLexiconNoise := 0, 0, 0
 
 	for _, ev := range ncEvents {
 		if ev.Source != "" && ev.Source != "audit" {
@@ -163,8 +163,8 @@ func GetAuditAnomaly(agentID ...string) AuditAnomalyResponse {
 			continue
 		}
 
-		if auditAnomalyIsNabAppTrustedLogin(&rec, trustedIPs) {
-			excludedNabAppTrusted++
+		if auditAnomalyIsAppTrustedLogin(&rec, trustedIPs) {
+			excludedAppTrusted++
 			continue
 		}
 		if auditAnomalyIsInternalNoise(&rec) {
@@ -278,7 +278,7 @@ func GetAuditAnomaly(agentID ...string) AuditAnomalyResponse {
 			WindowMin:             windowMin,
 			TotalRecent:           totalRecent,
 			TotalPrev:             totalPrev,
-			ExcludedNabAppTrusted: excludedNabAppTrusted,
+			ExcludedAppTrusted:    excludedAppTrusted,
 			ExcludedInternalNoise: excludedInternalNoise,
 			ExcludedLexiconNoise:  excludedLexiconNoise,
 			LogLevels:             logLevels,

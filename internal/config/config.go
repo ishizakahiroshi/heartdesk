@@ -9,9 +9,9 @@ import (
 	"time"
 )
 
-const defaultDaemonEnvPath = "/home/sab/daemon.env" // secrets-scan: allow
+const defaultDaemonEnvPath = "/var/lib/heartdesk/daemon.env"
 
-// DefaultTenantID は SAB_TENANT_ID 未設定時に使用するデフォルトテナントID。
+// DefaultTenantID は HEARTDESK_TENANT_ID 未設定時に使用するデフォルトテナントID。
 // 既定値を 1 箇所に集約する。BuildSystemInfo の表示も LoadAppConfigForTenant も
 // この値を既定とする。
 const DefaultTenantID = "default"
@@ -80,17 +80,17 @@ type SchedulerConfig struct {
 	LoginEventsPath      string
 	AgentEventDir        string
 	AgentID              string
-	// TenantID は稼働中ホストのテナント ID（SAB_TENANT_ID / DefaultTenantID）。
+	// TenantID は稼働中ホストのテナント ID（HEARTDESK_TENANT_ID / DefaultTenantID）。
 	// tenants/<id>/secrets.toml を直接読む外部スクリプトの起動に使う。
 	TenantID string
 }
 
 // LoadSchedulerConfig は config.toml を優先で読み込み、なければ daemon.env から読み込む
-// SAB_TENANT_ID 環境変数でテナントIDを受け取る（未設定時は DefaultTenantID）
+// HEARTDESK_TENANT_ID 環境変数でテナントIDを受け取る（未設定時は DefaultTenantID）
 func LoadSchedulerConfig() (*SchedulerConfig, error) {
-	// TOML を試す（テナント対応）。SAB_TENANT_ID 未設定時は LoadAppConfigForTenant 内で
+	// TOML を試す（テナント対応）。HEARTDESK_TENANT_ID 未設定時は LoadAppConfigForTenant 内で
 	// DefaultTenantID が適用される。
-	appCfg, err := LoadAppConfigForTenant(os.Getenv("SAB_TENANT_ID"))
+	appCfg, err := LoadAppConfigForTenant(os.Getenv("HEARTDESK_TENANT_ID"))
 	if err == nil {
 		return appCfg.ToSchedulerConfig(), nil
 	}
@@ -115,18 +115,18 @@ func LoadSchedulerConfig() (*SchedulerConfig, error) {
 		AlertRulesPath:          mustGetEnv("ALERT_RULES_PATH"),
 		AlertStatePath:          mustGetEnv("ALERT_STATE_PATH"),
 		SSHIPListPath:           mustGetEnv("SSH_IP_LIST_PATH"),
-		GeoIPDBPath:             strings.TrimSpace(os.Getenv("SAB_GEOIP_DB")),
-		GeoIPToken:              strings.TrimSpace(os.Getenv("SAB_IPINFO_TOKEN")),
-		GeoIPDBURL:              strings.TrimSpace(os.Getenv("SAB_GEOIP_DB_URL")),
-		GeoIPRefreshHours:       parseIntEnv("SAB_GEOIP_DB_REFRESH_HOURS", 24),
-		GeoIPDownloadTimeoutSec: parseIntEnv("SAB_GEOIP_DB_DOWNLOAD_TIMEOUT_SEC", 180),
+		GeoIPDBPath:             strings.TrimSpace(os.Getenv("HEARTDESK_GEOIP_DB")),
+		GeoIPToken:              strings.TrimSpace(os.Getenv("HEARTDESK_IPINFO_TOKEN")),
+		GeoIPDBURL:              strings.TrimSpace(os.Getenv("HEARTDESK_GEOIP_DB_URL")),
+		GeoIPRefreshHours:       parseIntEnv("HEARTDESK_GEOIP_DB_REFRESH_HOURS", 24),
+		GeoIPDownloadTimeoutSec: parseIntEnv("HEARTDESK_GEOIP_DB_DOWNLOAD_TIMEOUT_SEC", 180),
 		CollectInterval:         parseDurationEnv("SCHED_COLLECT_INTERVAL", 5*time.Minute),
 		ScoreInterval:           parseDurationEnv("SCHED_SCORE_INTERVAL", 5*time.Minute),
 		ExtractInterval:         parseDurationEnv("SCHED_EXTRACT_INTERVAL", 1*time.Minute),
 		AlertsInterval:          parseDurationEnv("SCHED_ALERTS_INTERVAL", 5*time.Minute),
 		UpdateGeoIPDBInterval:   parseDurationEnv("SCHED_UPDATE_GEOIP_DB_INTERVAL", 24*time.Hour),
 		APIRunMap:               parseAPIRunMap(os.Getenv("SCHED_API_RUN_MAP")),
-		TenantID:                ResolveTenantID(os.Getenv("SAB_TENANT_ID")),
+		TenantID:                ResolveTenantID(os.Getenv("HEARTDESK_TENANT_ID")),
 	}
 	return cfg, nil
 }
@@ -143,7 +143,7 @@ func TryLoadSchedulerConfig() (_ *SchedulerConfig, err error) {
 
 // LoadDaemonEnvOptional は daemon.env を読み込み、未存在は許容する。
 func LoadDaemonEnvOptional() error {
-	envPath := strings.TrimSpace(os.Getenv("SAB_DAEMON_ENV_PATH"))
+	envPath := strings.TrimSpace(os.Getenv("HEARTDESK_DAEMON_ENV_PATH"))
 	if envPath == "" {
 		envPath = defaultDaemonEnvPath
 	}

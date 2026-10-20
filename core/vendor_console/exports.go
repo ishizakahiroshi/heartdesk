@@ -62,9 +62,9 @@ func IssueOfflineLicenseJWT(cfg *config.AppConfig, agentID string, expiryDays, g
 	exp := now.AddDate(0, 0, expiryDays)
 
 	claims := license.Claims{
-		Issuer:    "sab-vendor",
+		Issuer:    "heartdesk-vendor",
 		Subject:   agentID,
-		Audience:  "sab-agent",
+		Audience:  "heartdesk-agent",
 		TenantID:  tenantID,
 		IssuedAt:  now.Unix(),
 		ExpiresAt: exp.Unix(),

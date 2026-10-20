@@ -3,7 +3,7 @@ package monitor
 import (
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
 // SSHAttackEntry は1IPのSSH攻撃集計
@@ -15,7 +15,7 @@ type SSHAttackEntry struct {
 	DstPort string `json:"dst_port"` // 攻撃先ポート（syslog の SSH BLOCKED DPT フィールド）
 }
 
-// SSHChartResponse は /nab/api/monitor/ssh_chart のレスポンス
+// SSHChartResponse は /api/monitor/ssh_chart のレスポンス
 type SSHChartResponse struct {
 	SSHAttacks      map[string]*SSHAttackEntry `json:"ssh_attacks"`
 	HourlyAttacks   []int                      `json:"hourly_attacks"`    // 直近24時間の時間帯別集計
@@ -42,7 +42,7 @@ type parsedSSHData struct {
 // parseSSHAttacks は logs/ssh.jsonl を読み、SSH 攻撃データをまとめて返す共通ヘルパー。
 // Agent が生成した JSONL を利用し、auth.log への直接アクセスは行わない。
 func parseSSHAttacks(agentID ...string) parsedSSHData {
-	jst := sab.JST()
+	jst := heartdesk.JST()
 	now := time.Now().In(jst)
 	cutoff24h := now.Add(-24 * time.Hour)
 	cutoff7d := now.AddDate(0, 0, -7)
@@ -71,7 +71,7 @@ func parseSSHAttacks(agentID ...string) parsedSSHData {
 		t = t.In(jst)
 
 		hour := t.Hour()
-		dt := sab.FormatDatetime(t)
+		dt := heartdesk.FormatDatetime(t)
 
 		if e, ok := attacks[ev.IP]; ok {
 			e.Count++
@@ -106,7 +106,7 @@ func parseSSHAttacks(agentID ...string) parsedSSHData {
 		Hourly7d:  hourly7d,
 		Total:     total,
 		Flags:     flags,
-		UpdatedAt: sab.FormatDatetime(now),
+		UpdatedAt: heartdesk.FormatDatetime(now),
 	}
 }
 

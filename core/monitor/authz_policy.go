@@ -47,7 +47,7 @@ type authzActionMeta struct {
 
 var authzActionMetaByID = map[string]authzActionMeta{
 	"reboot":                {Label: "サーバー再起動", Feature: "サービス操作", CardIDs: []string{navmeta.CardSecServices}},
-	"restart_sab":           {Label: "SAB再起動", Feature: "サービス操作", CardIDs: []string{navmeta.CardSecServices}},
+	"restart_heartdesk":     {Label: "heartdesk再起動", Feature: "サービス操作", CardIDs: []string{navmeta.CardSecServices}},
 	"maintenance_on":        {Label: "メンテナンスON", Feature: "メンテナンス切替", CardIDs: []string{navmeta.CardSecServices}},
 	"maintenance_off":       {Label: "メンテナンスOFF", Feature: "メンテナンス切替", CardIDs: []string{navmeta.CardSecServices}},
 	"nc_repair":             {Label: "Nextcloud 修復", Feature: "保守実行", CardIDs: []string{navmeta.CardSecServices}},
@@ -111,7 +111,7 @@ func GetAuthzCatalog() authzCatalogResponse {
 
 func authzActionList() []authzActionEntry {
 	destructive := []string{
-		"reboot", "restart_sab", "maintenance_on", "maintenance_off", "nc_repair",
+		"reboot", "restart_heartdesk", "maintenance_on", "maintenance_off", "nc_repair",
 		"apt_update", "apt_upgrade", "apt_full_upgrade",
 		"toggle_auto_update", "fail2ban_ban", "fail2ban_unban",
 		"ip_add", "ip_remove", "ip_rename", "ip_changetype",

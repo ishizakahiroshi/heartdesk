@@ -14,15 +14,13 @@ import (
 
 	"github.com/oschwald/maxminddb-golang"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 )
 
 // geoCacheFile は GeoIP キャッシュのテスト用上書きパス。
 //
-// 旧 "/tmp/nab_geoip_cache_go.json"（world-writable /tmp +
-// nab レガシー命名 + 0644 world-readable）を廃止し、BASE_DIR 配下の data/json/ へ
-// 0640 で保存する。/tmp の第三者汚染による GeoIP 判定改ざんを防ぐ。
+// world-writable な /tmp ではなく、BASE_DIR 配下の data/json/ へ 0640 で保存する。/tmp の第三者汚染による GeoIP 判定改ざんを防ぐ。
 // キャッシュ内容は国コードのみでトークンは含まれない。
 var geoCacheFile string
 
@@ -30,11 +28,11 @@ func geoCacheFilePath() string {
 	if geoCacheFile != "" {
 		return geoCacheFile
 	}
-	return sab.SabPath("data/json/geoip_cache.json")
+	return heartdesk.Path("data/json/geoip_cache.json")
 }
 
 // geoSettings は geo.go が参照する GeoIP 設定（env 直読みはせず AppConfig 由来）。
-// SetGeoConfig で起動時に 1 度だけ設定する。SAB_IPINFO_TOKEN 等を process env へ
+// SetGeoConfig で起動時に 1 度だけ設定する。HEARTDESK_IPINFO_TOKEN 等を process env へ
 // 書き戻さないことで、util.Run の子プロセス（bash -c 等）へのトークン露出を断つ。
 type geoSettings struct {
 	Mode         string
@@ -146,7 +144,7 @@ func geoSaveFile(cache map[string]geoCacheEntry, meta geoCacheMeta) {
 	if err != nil {
 		return
 	}
-	// 0640（sab:sab）で保存。world-readable を廃止。
+	// 0640（heartdesk:heartdesk）で保存。world-readable を廃止。
 	path := geoCacheFilePath()
 	_ = os.MkdirAll(filepath.Dir(path), 0750)
 	_ = os.WriteFile(path, raw, 0640)

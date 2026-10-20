@@ -15,14 +15,14 @@ import (
 	"strings"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/auth"
 	"github.com/ishizakahiroshi/heartdesk/internal/navmeta"
 )
 
 // exportFilename は出力ファイル名を生成する（YmdHis 形式タイムスタンプ付き）
 func exportFilename(prefix, ext string) string {
-	ts := time.Now().In(sab.JST()).Format("20060102150405")
+	ts := time.Now().In(heartdesk.JST()).Format("20060102150405")
 	return prefix + "_" + ts + "." + ext
 }
 
@@ -61,7 +61,7 @@ const (
 	exportKeyNextcloud    = "nextcloud"
 	exportKeyAuditAnomaly = "audit_anomaly"
 	exportKeyBan          = "ban"
-	exportKeyNabLogin     = "NAB_login"
+	exportKeyLoginHistory = "login_history"
 	exportKeyPhpMyAdmin   = "phpmyadmin_login"
 	exportKeyNginx        = "nginx"
 	exportKeySSHLogin     = "ssh_login"
@@ -77,7 +77,7 @@ var exportHandlers = map[string]func(http.ResponseWriter){
 	exportKeyNextcloud:    exportNextcloud,
 	exportKeyAuditAnomaly: exportAuditAnomaly,
 	exportKeyBan:          exportBan,
-	exportKeyNabLogin:     exportNabLogin,
+	exportKeyLoginHistory: exportLoginHistory,
 	exportKeyPhpMyAdmin:   exportPhpMyAdminLogin,
 	exportKeyNginx:        exportNginx,
 	exportKeySSHLogin:     exportSSHLogin,
@@ -121,7 +121,7 @@ var exportCardIDByKey = map[string]string{
 	exportKeyNextcloud:    navmeta.CardSecNcLogin,
 	exportKeyAuditAnomaly: navmeta.CardSecAuditAnomaly,
 	exportKeyBan:          navmeta.CardSecFail2ban,
-	exportKeyNabLogin:     navmeta.CardSecNabLoginHistory,
+	exportKeyLoginHistory: navmeta.CardSecLoginHistory,
 	exportKeyPhpMyAdmin:   navmeta.CardSecPhpmyadminLogin,
 	exportKeyNginx:        navmeta.CardSecNginxLog,
 	exportKeySSHLogin:     navmeta.CardSecSSHLoginHistory,
@@ -176,7 +176,7 @@ func allowExport(r *http.Request, exportType string) bool {
 
 func exportHoneypot(w http.ResponseWriter) {
 	// 当月 + 前月の JSONL ファイルを読み込む
-	now := time.Now().In(sab.JST())
+	now := time.Now().In(heartdesk.JST())
 	prevMonth := now.AddDate(0, -1, 0)
 	patterns := []string{
 		filepath.Join(hpLogDirPath(), fmt.Sprintf("honeypot_%s.jsonl", now.Format("200601"))),
@@ -233,7 +233,7 @@ func exportNextcloud(w http.ResponseWriter) {
 
 	var sb strings.Builder
 	sb.WriteString("Nextcloud ログイン履歴\n")
-	sb.WriteString(fmt.Sprintf("出力日時: %s\n", time.Now().In(sab.JST()).Format("2006-01-02 15:04:05")))
+	sb.WriteString(fmt.Sprintf("出力日時: %s\n", time.Now().In(heartdesk.JST()).Format("2006-01-02 15:04:05")))
 	sb.WriteString(fmt.Sprintf("件数: %d\n\n", len(d.Logins)))
 	sep := strings.Repeat("-", 100) + "\n"
 	sb.WriteString(sep)
@@ -254,7 +254,7 @@ func exportAuditAnomaly(w http.ResponseWriter) {
 
 	var sb strings.Builder
 	sb.WriteString("Nextcloud 監査ログ異常検知\n")
-	sb.WriteString(fmt.Sprintf("出力日時: %s\n", time.Now().In(sab.JST()).Format("2006-01-02 15:04:05")))
+	sb.WriteString(fmt.Sprintf("出力日時: %s\n", time.Now().In(heartdesk.JST()).Format("2006-01-02 15:04:05")))
 	sb.WriteString(fmt.Sprintf("直近%d分 合計: %d件 / 前期間: %d件\n\n",
 		d.Summary.WindowMin, d.Summary.TotalRecent, d.Summary.TotalPrev))
 
@@ -281,7 +281,7 @@ func exportBan(w http.ResponseWriter) {
 
 	var sb strings.Builder
 	sb.WriteString("fail2ban BAN 一覧\n")
-	sb.WriteString(fmt.Sprintf("出力日時: %s\n", time.Now().In(sab.JST()).Format("2006-01-02 15:04:05")))
+	sb.WriteString(fmt.Sprintf("出力日時: %s\n", time.Now().In(heartdesk.JST()).Format("2006-01-02 15:04:05")))
 	sb.WriteString(fmt.Sprintf("BAN 総数: %d\n\n", d.BanTotal))
 
 	for _, j := range d.Jails {
@@ -294,13 +294,13 @@ func exportBan(w http.ResponseWriter) {
 	_, _ = w.Write([]byte(sb.String()))
 }
 
-// ---- NAB ログイン履歴 ----
+// ---- heartdesk ログイン履歴 ----
 
-func exportNabLogin(w http.ResponseWriter) {
+func exportLoginHistory(w http.ResponseWriter) {
 	d := GetNginxLoginHistories()
-	entries := d.NAB.Entries
-	setDownloadHeader(w, exportFilename("NAB_login_history", "txt"), "text/plain; charset=utf-8")
-	writeNginxLoginText(w, "NAB Monitor ログイン履歴", entries)
+	entries := d.Heartdesk.Entries
+	setDownloadHeader(w, exportFilename("login_history", "txt"), "text/plain; charset=utf-8")
+	writeNginxLoginText(w, "heartdesk ログイン履歴", entries)
 }
 
 // ---- phpMyAdmin ログイン履歴 ----
@@ -315,7 +315,7 @@ func exportPhpMyAdminLogin(w http.ResponseWriter) {
 func writeNginxLoginText(w http.ResponseWriter, title string, entries []NginxLoginEntry) {
 	var sb strings.Builder
 	sb.WriteString(title + "\n")
-	sb.WriteString(fmt.Sprintf("出力日時: %s\n", time.Now().In(sab.JST()).Format("2006-01-02 15:04:05")))
+	sb.WriteString(fmt.Sprintf("出力日時: %s\n", time.Now().In(heartdesk.JST()).Format("2006-01-02 15:04:05")))
 	sb.WriteString(fmt.Sprintf("件数: %d\n\n", len(entries)))
 
 	sep := strings.Repeat("-", 100) + "\n"
@@ -338,7 +338,7 @@ func exportNginx(w http.ResponseWriter) {
 
 	var sb strings.Builder
 	sb.WriteString("Nginx アクセスログ\n")
-	sb.WriteString(fmt.Sprintf("出力日時: %s\n", time.Now().In(sab.JST()).Format("2006-01-02 15:04:05")))
+	sb.WriteString(fmt.Sprintf("出力日時: %s\n", time.Now().In(heartdesk.JST()).Format("2006-01-02 15:04:05")))
 	sb.WriteString(fmt.Sprintf("件数: %d\n\n", d.Total))
 
 	sep := strings.Repeat("-", 120) + "\n"
@@ -361,7 +361,7 @@ func exportSSHLogin(w http.ResponseWriter) {
 
 	var sb strings.Builder
 	sb.WriteString("SSH / SFTP ログイン履歴\n")
-	sb.WriteString(fmt.Sprintf("出力日時: %s\n", time.Now().In(sab.JST()).Format("2006-01-02 15:04:05")))
+	sb.WriteString(fmt.Sprintf("出力日時: %s\n", time.Now().In(heartdesk.JST()).Format("2006-01-02 15:04:05")))
 	sb.WriteString(fmt.Sprintf("件数: %d\n\n", len(d.Entries)))
 
 	sep := strings.Repeat("-", 100) + "\n"
@@ -467,15 +467,15 @@ func exportAll(w http.ResponseWriter) {
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)
 
-	ts := time.Now().In(sab.JST()).Format("2006-01-02 15:04:05")
+	ts := time.Now().In(heartdesk.JST()).Format("2006-01-02 15:04:05")
 
 	// readme.txt
 	if rw, err := zw.Create("readme.txt"); err == nil {
-		fmt.Fprintf(rw, "NAB Monitor 全ログエクスポート\n出力日時: %s\n\n", ts)
+		fmt.Fprintf(rw, "heartdesk 全ログエクスポート\n出力日時: %s\n\n", ts)
 		fmt.Fprintf(rw, "ファイル一覧:\n")
 		fmt.Fprintf(rw, "  fail2ban_status.txt   - fail2ban BAN 状況\n")
 		fmt.Fprintf(rw, "  ssh_login_history.txt - SSH/SFTP ログイン履歴\n")
-		fmt.Fprintf(rw, "  NAB_login_history.txt - NAB Monitor ログイン履歴\n")
+		fmt.Fprintf(rw, "  login_history.txt - heartdesk ログイン履歴\n")
 		fmt.Fprintf(rw, "  phpmyadmin_login.txt  - phpMyAdmin ログイン履歴\n")
 		fmt.Fprintf(rw, "  nc_login_history.txt  - Nextcloud ログイン履歴\n")
 		fmt.Fprintf(rw, "  threat_score.csv      - 脅威スコア\n")
@@ -495,7 +495,7 @@ func exportAll(w http.ResponseWriter) {
 
 	addText("fail2ban_status.txt", exportBan)
 	addText("ssh_login_history.txt", exportSSHLogin)
-	addText("NAB_login_history.txt", exportNabLogin)
+	addText("login_history.txt", exportLoginHistory)
 	addText("phpmyadmin_login.txt", exportPhpMyAdminLogin)
 	addText("nc_login_history.txt", exportNextcloud)
 	addText("threat_score.csv", exportThreatScore)

@@ -12,7 +12,7 @@ import (
 	"time"
 	"unicode"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/audit"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 	"github.com/ishizakahiroshi/heartdesk/internal/httpsec"
@@ -64,7 +64,7 @@ type LoginPageData struct {
 	Info          string
 	StaticBase    string
 	AssetVersion  string // 静的アセットのキャッシュバスティング用ビルドID（C2/C3）
-	SABIconPath   string
+	IconPath      string
 	LoginPath     string
 	NCSessionPath string
 	Stage         string
@@ -166,7 +166,7 @@ func (h *HTTPHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 	sessionMgr.ClearCookie(w, r)
 	clearChallengeCookie(w, r)
-	// C4（session-fixation-no-regenerate）: ログアウト時は sab_csrf を再発行せず明示クリアし、
+	// C4（session-fixation-no-regenerate）: ログアウト時は heartdesk_csrf を再発行せず明示クリアし、
 	// セッション束縛トークンを残さない。次のログイン画面表示で新規発行される。
 	ClearCSRFCookie(w, r)
 	http.Redirect(w, r, h.routes.LoginPath, http.StatusFound)
@@ -399,7 +399,7 @@ func (h *HTTPHandler) renderLogin(w http.ResponseWriter, r *http.Request, errMsg
 		Info:          infoMsg,
 		StaticBase:    h.routes.StaticBase,
 		AssetVersion:  h.systemInfo.AssetVersion,
-		SABIconPath:   h.routes.SABIconPath(),
+		IconPath:      h.routes.IconPath(),
 		LoginPath:     h.routes.LoginPath,
 		NCSessionPath: ncSessionEntryPath + "?next=" + url.QueryEscape(next),
 		Stage:         stage,
@@ -424,7 +424,7 @@ func (h *HTTPHandler) renderLoginWithChallenge(w http.ResponseWriter, r *http.Re
 		Info:         infoMsg,
 		StaticBase:   h.routes.StaticBase,
 		AssetVersion: h.systemInfo.AssetVersion,
-		SABIconPath:  h.routes.SABIconPath(),
+		IconPath:     h.routes.IconPath(),
 		LoginPath:    h.routes.LoginPath,
 		Stage:        "totp",
 		Username:     challenge.User.Username,
@@ -583,7 +583,7 @@ func (h *HTTPHandler) render2FASettingsPage(w http.ResponseWriter, r *http.Reque
 	}
 	provisioningURI := ""
 	if secret != "" {
-		provisioningURI = TOTPProvisioningURI("SAB", sess.Username, secret)
+		provisioningURI = TOTPProvisioningURI("heartdesk", sess.Username, secret)
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	httpsec.SetHTMLSecurityHeaders(w)
@@ -771,7 +771,7 @@ func parseAuditTime(raw string) *time.Time {
 	if s == "" {
 		return nil
 	}
-	t, err := sab.ParseTimestamp(s)
+	t, err := heartdesk.ParseTimestamp(s)
 	if err != nil {
 		return nil
 	}

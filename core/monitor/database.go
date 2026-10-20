@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 )
 
@@ -86,7 +86,7 @@ func loadLocalBackupFiles(dir, pattern string) []BackupFile {
 		out = append(out, BackupFile{
 			Name: filepath.Base(file.path),
 			Size: fmt.Sprintf("%d", file.info.Size()),
-			Date: sab.FormatDatetime(file.info.ModTime().In(sab.JST())),
+			Date: heartdesk.FormatDatetime(file.info.ModTime().In(heartdesk.JST())),
 		})
 	}
 	return out

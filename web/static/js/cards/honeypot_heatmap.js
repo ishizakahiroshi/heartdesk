@@ -1,4 +1,4 @@
-// SAB カード: ハニーポットヒートマップ (sec-honeypot-heatmap)
+// heartdesk カード: ハニーポットヒートマップ (sec-honeypot-heatmap)
 // Phase 2b (C3): monitor_page.js から切り出したカード単位モジュール。
 // 依存: shared.js の escHtml / HM_DAYS / buildHeatmapTable / HP_TRIGGER_LABELS /
 //       isWhitelisted / ipBadges / openIpModal / addRowNumbers、
@@ -61,7 +61,7 @@
 		body.innerHTML = '<p class="section-loading">読み込み中...</p>';
 		modal.style.display = 'flex';
 
-		var appBase = (typeof IH_APP_BASE !== 'undefined') ? IH_APP_BASE : '/monitor';
+		var appBase = (typeof HD_APP_BASE !== 'undefined') ? HD_APP_BASE : '/monitor';
 		fetch(appBase + '/?api=honeypot_heatmap_cell&trigger=' + encodeURIComponent(trigger) + '&dow=' + encodeURIComponent(String(dow)) + '&hour=' + encodeURIComponent(String(hour)))
 			.then(function(r) { return r.json(); })
 			.then(function(data) {
@@ -122,7 +122,7 @@
 	}
 
 	function setupHpHeatmapModalEvents() {
-		var appBase = (typeof IH_APP_BASE !== 'undefined') ? IH_APP_BASE : '/monitor';
+		var appBase = (typeof HD_APP_BASE !== 'undefined') ? HD_APP_BASE : '/monitor';
 		var msg = document.getElementById('hp-hm-ban-msg');
 		function setMsg(text, isOk) {
 			if (!msg) return;

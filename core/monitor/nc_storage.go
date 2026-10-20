@@ -22,7 +22,7 @@ func GetNcStorage(cfg *config.AppConfig) NcStorageData {
 		cacheFile = strings.TrimSpace(cfg.NextcloudCache.StorageCacheFile)
 	}
 	if cacheFile == "" {
-		cacheFile = "/home/sab/data/json/nc_storage_summary.json" // secrets-scan: allow
+		cacheFile = "/var/lib/heartdesk/data/json/nc_storage_summary.json"
 	}
 	cacheTTL := 300
 	if cfg != nil && cfg.NextcloudCache.StorageCacheTTL >= 0 {

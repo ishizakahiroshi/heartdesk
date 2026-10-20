@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
 // =============================================================================
@@ -31,7 +31,7 @@ type NginxLogRate struct {
 	Delta     int      `json:"delta"`      // recent - prev
 }
 
-// NginxStatsResponse は /nab/api/monitor/nginx_log の JSON レスポンス（PHP nginx_stats 互換）
+// NginxStatsResponse は /api/monitor/nginx_log の JSON レスポンス（PHP nginx_stats 互換）
 type NginxStatsResponse struct {
 	Logs  []NginxLogItem    `json:"logs"`
 	Flags map[string]string `json:"flags"`
@@ -150,7 +150,7 @@ type NginxURLDetailTopIP struct {
 	Count int    `json:"count"`
 }
 
-// NginxURLDetailResponse は /nab/api/monitor/nginx_url_detail のレスポンス（PHP 互換）
+// NginxURLDetailResponse は /api/monitor/nginx_url_detail のレスポンス（PHP 互換）
 type NginxURLDetailResponse struct {
 	URL          string                `json:"url"`
 	Window       string                `json:"window"`
@@ -213,7 +213,7 @@ func GetNginxURLDetail(targetURL string, limit int, agentID ...string) NginxURLD
 		byIP[ev.IP]++
 
 		entries = append(entries, NginxURLDetailEntry{
-			Time:    t.In(sab.JST()).Format("2006-01-02 15:04:05"),
+			Time:    t.In(heartdesk.JST()).Format("2006-01-02 15:04:05"),
 			IP:      ev.IP,
 			Method:  ev.Method,
 			Status:  ev.Status,
@@ -336,7 +336,7 @@ func GetNginxLog(limit int, agentID ...string) NginxLogResponse {
 		uaInfo := ParseUA(ev.UA)
 		displayTime := ev.TS
 		if t, err := time.Parse(time.RFC3339, ev.TS); err == nil {
-			displayTime = sab.FormatDatetime(t.In(sab.JST()))
+			displayTime = heartdesk.FormatDatetime(t.In(heartdesk.JST()))
 		}
 		entries = append(entries, NginxLogEntry{
 			IP:      ev.IP,

@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
 // APIRealtimeResources は /proc 系ファイルからリアルタイムリソース情報を取得する
@@ -13,7 +13,7 @@ func APIRealtimeResources() RealtimeData {
 	s := getResourceSample()
 
 	// ディスク
-	diskRaw := strings.TrimSpace(sab.Run("df / | tail -1"))
+	diskRaw := strings.TrimSpace(heartdesk.Run("df / | tail -1"))
 	var diskPct int
 	var diskUsed, diskTotal int64
 	if diskRaw != "" {

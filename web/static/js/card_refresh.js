@@ -143,11 +143,11 @@
 	}
 
 	function displayAgentID() {
-		return (typeof IH_AGENT_ID !== 'undefined' && IH_AGENT_ID) ? String(IH_AGENT_ID) : '';
+		return (typeof HD_AGENT_ID !== 'undefined' && HD_AGENT_ID) ? String(HD_AGENT_ID) : '';
 	}
 
 	function displayAgentType() {
-		return (typeof IH_AGENT_TYPE !== 'undefined' && IH_AGENT_TYPE) ? String(IH_AGENT_TYPE) : '';
+		return (typeof HD_AGENT_TYPE !== 'undefined' && HD_AGENT_TYPE) ? String(HD_AGENT_TYPE) : '';
 	}
 
 	// HTML エスケープは shared.js の正準 escHtml に統一する。
@@ -347,7 +347,7 @@
 		var agentID = displayAgentID();
 		var agentType = displayAgentType();
 		var lines = [];
-		lines.push('# ===== SAB disabled_cards paste start =====');
+		lines.push('# ===== heartdesk disabled_cards paste start =====');
 		lines.push('# 貼り付け先:');
 		lines.push('#   config/config.toml の [agent."' + agentID + '"] セクション内');
 		lines.push('#');
@@ -368,7 +368,7 @@
 			lines.push('  "' + item.id + '", # ' + item.label);
 		});
 		lines.push(']');
-		lines.push('# ===== SAB disabled_cards paste end =====');
+		lines.push('# ===== heartdesk disabled_cards paste end =====');
 		return lines.join('\n');
 	}
 
@@ -470,7 +470,7 @@
 		if (card.classList.contains('collapsed')) {
 			card.classList.remove('collapsed');
 			try {
-				var key = (typeof IH_COLLAPSE_KEY !== 'undefined' && IH_COLLAPSE_KEY) ? IH_COLLAPSE_KEY : 'ihdash.collapsed.v1';
+				var key = (typeof HD_COLLAPSE_KEY !== 'undefined' && HD_COLLAPSE_KEY) ? HD_COLLAPSE_KEY : 'heartdesk.collapsed.v1';
 				var raw = localStorage.getItem(key);
 				var arr = raw ? JSON.parse(raw) : [];
 				if (Array.isArray(arr)) {
@@ -486,8 +486,8 @@
 			if (btn) { btn.classList.remove('error'); btn.classList.add('spinning'); btn.disabled = true; btn.textContent = '更新中…'; }
 			var url = getAppBase() + '/?api=' + encodeURIComponent(rc.apiName);
 			if (rc.extraParams) url += '&' + rc.extraParams;
-			if (typeof IH_AGENT_ID !== 'undefined' && IH_AGENT_ID) {
-				url += '&agent=' + encodeURIComponent(IH_AGENT_ID);
+			if (typeof HD_AGENT_ID !== 'undefined' && HD_AGENT_ID) {
+				url += '&agent=' + encodeURIComponent(HD_AGENT_ID);
 			}
 			fetch(url, { credentials: 'same-origin' })
 				.then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
@@ -512,10 +512,10 @@
 		}
 
 		var apiId = cardIdFromSectionId(cardId);
-		var base = (typeof IH_APP_BASE !== 'undefined' && IH_APP_BASE) ? IH_APP_BASE : '/monitor';
+		var base = (typeof HD_APP_BASE !== 'undefined' && HD_APP_BASE) ? HD_APP_BASE : '/monitor';
 		var url = base + '/card?card=' + encodeURIComponent(apiId);
-		if (typeof IH_AGENT_ID !== 'undefined' && IH_AGENT_ID) {
-			url += '&agent=' + encodeURIComponent(IH_AGENT_ID);
+		if (typeof HD_AGENT_ID !== 'undefined' && HD_AGENT_ID) {
+			url += '&agent=' + encodeURIComponent(HD_AGENT_ID);
 		}
 
 		if (btn) {
@@ -637,13 +637,13 @@
 
 	// =============================================================================
 	// カード表示モード適用（policy.cards / policy.child_cards）
-	// IH_CARD_VIEW_MODES       = { "sec-xxx": "summary" | "hidden" }
-	// IH_CHILD_CARD_VIEW_MODES = { "sec-xxx": { "child-id": "summary" | "hidden" } }
+	// HD_CARD_VIEW_MODES       = { "sec-xxx": "summary" | "hidden" }
+	// HD_CHILD_CARD_VIEW_MODES = { "sec-xxx": { "child-id": "summary" | "hidden" } }
 	// =============================================================================
 
 	function applyCardViewModes() {
-		var modes = (typeof IH_CARD_VIEW_MODES !== 'undefined') ? IH_CARD_VIEW_MODES : {};
-		var childModes = (typeof IH_CHILD_CARD_VIEW_MODES !== 'undefined') ? IH_CHILD_CARD_VIEW_MODES : {};
+		var modes = (typeof HD_CARD_VIEW_MODES !== 'undefined') ? HD_CARD_VIEW_MODES : {};
+		var childModes = (typeof HD_CHILD_CARD_VIEW_MODES !== 'undefined') ? HD_CHILD_CARD_VIEW_MODES : {};
 
 		// 親カード
 		Object.keys(modes).forEach(function(cardId) {

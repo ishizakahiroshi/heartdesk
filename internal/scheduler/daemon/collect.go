@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	sab "github.com/ishizakahiroshi/heartdesk/internal"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 )
 
@@ -27,9 +27,9 @@ const (
 
 // CollectResources は collect_resources.sh 相当のリソース監視CSV追記を実行する。
 func CollectResources(ctx context.Context, cfg *config.SchedulerConfig) error {
-	resourceLogPath := sab.SabPath(defaultResourceLogPath)
+	resourceLogPath := heartdesk.Path(defaultResourceLogPath)
 	collectLogPath := defaultCollectLogPath
-	heartbeatPath := sab.SabPath(defaultCollectHeartbeat)
+	heartbeatPath := heartdesk.Path(defaultCollectHeartbeat)
 	if cfg != nil && strings.TrimSpace(cfg.ResourceLogPath) != "" {
 		resourceLogPath = strings.TrimSpace(cfg.ResourceLogPath)
 	}

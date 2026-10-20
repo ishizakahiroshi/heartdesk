@@ -1,12 +1,12 @@
-// SAB カードランタイム: CardRegistry
+// heartdesk カードランタイム: CardRegistry
 // Phase 2a (C2): 各カードの loadSection 呼び出しを宣言的に登録し、
 // DOMContentLoaded で一括実行するための土台。
 //
 // 利用例:
 //   CardRegistry.register('BanHeatmap', {
-//     cardKey: 'BAN_HEATMAP',        // IH_CARD_IDS のキー
-//     fallbackId: 'sec-ban-heatmap', // IH_CARD_IDS に無い場合のフォールバック
-//     apiFallback: 'ban_heatmap',    // IH_CARD_APIS に無い場合のフォールバック
+//     cardKey: 'BAN_HEATMAP',        // HD_CARD_IDS のキー
+//     fallbackId: 'sec-ban-heatmap', // HD_CARD_IDS に無い場合のフォールバック
+//     apiFallback: 'ban_heatmap',    // HD_CARD_APIS に無い場合のフォールバック
 //     render: renderBanHeatmap,      // function(el, data)
 //     screens: '*',                  // 'monitor' / 'server_detail' / '*'（省略時は '*'）
 //     wrap: function(el, data) { ... } // 任意。render の代わりに呼ばれるカスタム loadSection ハンドラ
@@ -15,7 +15,7 @@
 //   CardRegistry.autoLoadAll();      // DOMContentLoaded で呼び出す
 //
 // 非依存: loadSection / getMonitorCardId / getMonitorCardAPI は shared.js 側で定義済み。
-// 非依存: IH_CARD_IDS / IH_CARD_APIS は layout.html で先行定義済み。
+// 非依存: HD_CARD_IDS / HD_CARD_APIS は layout.html で先行定義済み。
 
 (function(global) {
 	'use strict';
@@ -23,9 +23,9 @@
 	var entries = [];
 
 	function currentScreen() {
-		// server_detail 画面では IH_AGENT_ID が非空文字で先行注入されている。
+		// server_detail 画面では HD_AGENT_ID が非空文字で先行注入されている。
 		// monitor 画面では空文字（layout.html 経由 or monitor_page.js のガード）。
-		if (typeof global.IH_AGENT_ID !== 'undefined' && global.IH_AGENT_ID) {
+		if (typeof global.HD_AGENT_ID !== 'undefined' && global.HD_AGENT_ID) {
 			return 'server_detail';
 		}
 		return 'monitor';

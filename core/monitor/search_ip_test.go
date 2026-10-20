@@ -9,7 +9,7 @@ import (
 
 func TestGetSearchIPUsesAgentEventJSONL(t *testing.T) {
 	base := t.TempDir()
-	t.Setenv("SAB_BASE_DIR", base)
+	t.Setenv("HEARTDESK_BASE_DIR", base)
 
 	dir := filepath.Join(base, "data", "logs", "agents", "alpha-vps-host1")
 	if err := os.MkdirAll(dir, 0755); err != nil {

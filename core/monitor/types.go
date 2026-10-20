@@ -28,7 +28,7 @@ type NextcloudInfo struct {
 	Capacity string `json:"capacity"` // "12.3 GB / 50.0 GB"
 }
 
-// ServicesResponse は /nab/api/services の JSON レスポンス
+// ServicesResponse は /api/services の JSON レスポンス
 type ServicesResponse struct {
 	Services    map[string]ServiceInfo `json:"services"`
 	Order       []string               `json:"order"` // サービス表示順
@@ -102,7 +102,7 @@ type PageData struct {
 	VendorBase                string
 	StaticBase                string
 	AssetVersion              string // 静的アセットのキャッシュバスティング用ビルドID
-	SABIconPath               string
+	IconPath                  string
 	MonitorFaviconPath        string
 	LogoutPath                string
 	BaseHost                  string
@@ -129,12 +129,12 @@ type PageData struct {
 	StorageForecast           StorageForecastData
 	JSVars                    template.JS // ページ読み込み時に注入するJS変数宣言（SSH_ALLOWED_TYPES等）
 	ResourceBarThresholds     template.JS // リソースバーしきい値（BAR_THRESHOLDS）
-	CardOptions               template.JS // ページ読み込み時に注入するカード別オプション（IH_CARD_OPTIONS）
-	CardIDs                   template.JS // ページ読み込み時に注入するカードID辞書（IH_CARD_IDS）
-	CardAPIs                  template.JS // ページ読み込み時に注入するカードAPI辞書（IH_CARD_APIS）
-	CardViewModes             template.JS // ユーザー別カード表示モード（IH_CARD_VIEW_MODES）
-	ChildCardViewModes        template.JS // ユーザー別子カード表示モード（IH_CHILD_CARD_VIEW_MODES）
-	CardMeta                  template.JS // カードごとの親分類・表示順メタデータ（IH_CARD_META）
+	CardOptions               template.JS // ページ読み込み時に注入するカード別オプション（HD_CARD_OPTIONS）
+	CardIDs                   template.JS // ページ読み込み時に注入するカードID辞書（HD_CARD_IDS）
+	CardAPIs                  template.JS // ページ読み込み時に注入するカードAPI辞書（HD_CARD_APIS）
+	CardViewModes             template.JS // ユーザー別カード表示モード（HD_CARD_VIEW_MODES）
+	ChildCardViewModes        template.JS // ユーザー別子カード表示モード（HD_CHILD_CARD_VIEW_MODES）
+	CardMeta                  template.JS // カードごとの親分類・表示順メタデータ（HD_CARD_META）
 	CardJSModules             []string    // 表示カードに対応する cards/*.js モジュール（layout.html で range 出力）
 	SystemInfo                config.SystemInfoData
 	HeaderLinks               []HeaderLink
@@ -154,7 +154,7 @@ type ServerDetailPageData struct {
 	VendorBase                string
 	StaticBase                string
 	AssetVersion              string // 静的アセットのキャッシュバスティング用ビルドID
-	SABIconPath               string
+	IconPath                  string
 	MonitorFaviconPath        string
 	LogoutPath                string
 	SettingsPasswordPath      string
@@ -245,7 +245,7 @@ type ProcessInfo struct {
 	Command string `json:"command"`
 }
 
-// ProcessesResponse は /nab/api/monitor/processes の JSON レスポンス
+// ProcessesResponse は /api/monitor/processes の JSON レスポンス
 type ProcessesResponse struct {
 	TopCPU      []ProcessInfo `json:"top_cpu"`
 	TopMem      []ProcessInfo `json:"top_mem"`
@@ -273,7 +273,7 @@ type R2OperationsInfo struct {
 	Month  string `json:"month"`
 }
 
-// R2MetricsData は /nab/api/monitor/r2_metrics の JSON レスポンス
+// R2MetricsData は /api/monitor/r2_metrics の JSON レスポンス
 type R2MetricsData struct {
 	Storage    *R2StorageInfo    `json:"storage"`
 	Operations *R2OperationsInfo `json:"operations"`
@@ -310,7 +310,7 @@ type NcStorageCache struct {
 	File   string `json:"file"`
 }
 
-// NcStorageData は /nab/api/monitor/nc_storage の JSON レスポンス
+// NcStorageData は /api/monitor/nc_storage の JSON レスポンス
 type NcStorageData struct {
 	Users             NcUserSummary       `json:"users"`
 	Groupfolders      []NcGroupFolder     `json:"groupfolders"`
@@ -333,7 +333,7 @@ type DiskLogFile struct {
 	Date string `json:"date"`
 }
 
-// DiskData は /nab/api/monitor/disk の JSON レスポンス
+// DiskData は /api/monitor/disk の JSON レスポンス
 type DiskData struct {
 	NcDataSize    string         `json:"nc_data_size"`
 	NcAppSize     string         `json:"nc_app_size"`
@@ -414,7 +414,7 @@ type LoadStat struct {
 	Min15 float64 `json:"15m"`
 }
 
-// RealtimeData は /nab/api/monitor/realtime のレスポンス
+// RealtimeData は /api/monitor/realtime のレスポンス
 type RealtimeData struct {
 	CPURaw    *CPURaw  `json:"cpu_raw"`
 	Memory    MemStat  `json:"memory"`
@@ -482,7 +482,7 @@ type AlertRuleRuntime struct {
 	ValueType string `json:"value_type,omitempty"`
 }
 
-// NotificationRulesAPIData は /nab/api/monitor/alert_rules の GET レスポンス
+// NotificationRulesAPIData は /api/monitor/alert_rules の GET レスポンス
 type NotificationRulesAPIData struct {
 	Rules   map[string]AlertRuleConfig  `json:"rules"`
 	Runtime map[string]AlertRuleRuntime `json:"runtime"`

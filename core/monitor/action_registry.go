@@ -151,8 +151,8 @@ func (h *Handler) dispatchAction(w http.ResponseWriter, r *http.Request, api str
 		h.actionSetMaintenance(aw, r, false)
 	case "nc_repair":
 		h.actionNCRepair(aw, r)
-	case "restart_sab":
-		h.actionRestartSab(aw, r)
+	case "restart_heartdesk":
+		h.actionRestartHeartdesk(aw, r)
 	case "reboot":
 		h.actionReboot(aw, r)
 	// --- Updates アクション（P5） ---
@@ -316,7 +316,7 @@ func isMonitorActionAllowed(r *http.Request, sess auth.Session, api string) bool
 
 func isAgentUnsupportedAction(actionKey string) bool {
 	switch actionKey {
-	case "reboot", "restart_sab",
+	case "reboot", "restart_heartdesk",
 		"maintenance_on", "maintenance_off", "nc_repair",
 		"apt_update", "apt_upgrade", "apt_full_upgrade", "toggle_auto_update",
 		"fail2ban_ban", "fail2ban_unban",

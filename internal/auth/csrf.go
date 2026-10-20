@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-const csrfCookieName = "sab_csrf"
+const csrfCookieName = "heartdesk_csrf"
 
 var errInvalidCSRF = errors.New("invalid csrf token")
 

@@ -1,4 +1,4 @@
-// SAB カード: BAN ヒートマップ (sec-ban-heatmap)
+// heartdesk カード: BAN ヒートマップ (sec-ban-heatmap)
 // Phase 2b (C3): monitor_page.js から切り出したカード単位モジュール。
 // 依存: shared.js の escHtml / HM_DAYS / buildHeatmapTable / isWhitelisted /
 //       ipBadges / openIpModal / addRowNumbers、card_runtime.js の CardRegistry。
@@ -44,7 +44,7 @@
 		body.innerHTML = '<p class="section-loading">読み込み中...</p>';
 		modal.style.display = 'flex';
 
-		var appBase = (typeof IH_APP_BASE !== 'undefined') ? IH_APP_BASE : '/monitor';
+		var appBase = (typeof HD_APP_BASE !== 'undefined') ? HD_APP_BASE : '/monitor';
 		fetch(appBase + '/?api=ban_heatmap_cell&jail=' + encodeURIComponent(jail) + '&dow=' + encodeURIComponent(String(dow)) + '&hour=' + encodeURIComponent(String(hour)))
 			.then(function(r) { return r.json(); })
 			.then(function(data) {
@@ -99,7 +99,7 @@
 	}
 
 	function setupBanHeatmapModalEvents() {
-		var appBase = (typeof IH_APP_BASE !== 'undefined') ? IH_APP_BASE : '/monitor';
+		var appBase = (typeof HD_APP_BASE !== 'undefined') ? HD_APP_BASE : '/monitor';
 		var msg = document.getElementById('hm-ban-msg');
 		function setMsg(text, isOk) {
 			if (!msg) return;
