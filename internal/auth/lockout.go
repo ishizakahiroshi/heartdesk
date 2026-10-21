@@ -69,6 +69,12 @@ func (m *LockoutManager) lockedLocked(key string, now time.Time) bool {
 	if !ok {
 		return false
 	}
+	// まだロックされていない（失敗が閾値に達する前）の状態では、失敗回数をここで消さない。
+	// LockedTo がゼロ値のまま now.After を比べると常に真になり、ログインのたびに失敗回数が 0 に
+	// 戻って閾値に届かず、ロックが一度も発動しなかった。
+	if state.LockedTo.IsZero() {
+		return false
+	}
 	if now.After(state.LockedTo) {
 		state.Failures = 0
 		state.LockedAt = time.Time{}
