@@ -293,7 +293,7 @@ func main() {
 
 	// --- 静的ファイル ---
 	staticPattern := routingCfg.StaticBase + "/"
-	staticHandler := http.StripPrefix(staticPattern, http.FileServer(http.FS(staticContent)))
+	staticHandler := http.StripPrefix(staticPattern, http.FileServer(noListFileSystem{http.FS(staticContent)}))
 	mux.Handle(staticPattern, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 		staticHandler.ServeHTTP(w, r)

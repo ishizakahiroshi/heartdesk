@@ -136,7 +136,7 @@ Cards for a monitored agent show what that agent reported. With only the basic r
 HEARTDESK_CONFIG_DIR=/path/to/config go run ./cmd/heartdesk-doctor
 ```
 
-It is a development check of the source tree, not a diagnosis of a running server. The `env` sub-command currently fails when `HEARTDESK_TENANT_ID` is unset, although the tenant ID is optional for the server itself.
+It is a development check of the source tree, not a diagnosis of a running server. `heartdesk-doctor env` checks the environment variables: only `HEARTDESK_BASE_DIR` is required, and it reports which config directory and tenant would be used when `HEARTDESK_CONFIG_DIR` or `HEARTDESK_TENANT_ID` is unset.
 
 ## Health check
 

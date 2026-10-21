@@ -306,6 +306,9 @@ type AuditAggregatedConfig struct {
 	RetentionYears int    `toml:"retention_years"`
 }
 
+// defaultAppName は [system_info] app_name 未設定時にシステム情報へ出すアプリ名。
+const defaultAppName = "heartdesk"
+
 // SystemInfoData はシステム情報・ライセンス表示用のデータ構造
 type SystemInfoData struct {
 	AppName         string
@@ -365,8 +368,13 @@ func (cfg *AppConfig) applyDefaults() {
 // BuildSystemInfo は AppConfig + 実行時情報から SystemInfoData を構築する。
 // ログイン画面・モーダルなど複数箇所で同一データを共有するための共通ファクトリ。
 func BuildSystemInfo(cfg *AppConfig, appVersion, assetVersion, vendorName, tenantID, tenantSlug string) SystemInfoData {
+	appName := strings.TrimSpace(cfg.SystemInfo.AppName)
+	if appName == "" {
+		// [system_info] app_name 未設定でもシステム情報のモーダルが空にならないようにする。
+		appName = defaultAppName
+	}
 	info := SystemInfoData{
-		AppName:         cfg.SystemInfo.AppName,
+		AppName:         appName,
 		AppVersion:      appVersion,
 		AssetVersion:    assetVersion,
 		VendorName:      vendorName,

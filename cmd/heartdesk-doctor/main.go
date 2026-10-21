@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 	"github.com/ishizakahiroshi/heartdesk/internal/navmeta"
 	"os"
@@ -55,20 +56,42 @@ func main() {
 }
 
 func runEnvCheck() {
-	requiredEnvs := []string{"HEARTDESK_BASE_DIR", "HEARTDESK_CONFIG_DIR", "HEARTDESK_TENANT_ID"}
-	ok := true
-	for _, e := range requiredEnvs {
-		v := os.Getenv(e)
-		if v == "" {
-			fmt.Printf("NG: %s is not set\n", e)
-			ok = false
-		} else {
-			fmt.Printf("OK: %s=%s\n", e, v)
-		}
+	lines, ok := checkEnv(os.Getenv)
+	for _, l := range lines {
+		fmt.Println(l)
 	}
 	if !ok {
 		os.Exit(1)
 	}
+}
+
+// checkEnv は起動に使う環境変数を調べる。HEARTDESK_BASE_DIR だけが必須（サーバーは未設定だと起動しない）。
+// HEARTDESK_CONFIG_DIR は未設定なら BASE_DIR/config、HEARTDESK_TENANT_ID は未設定なら default テナントで動くので、
+// 未設定は NG にしない。
+func checkEnv(getenv func(string) string) (lines []string, ok bool) {
+	ok = true
+	base := getenv("HEARTDESK_BASE_DIR")
+	if base == "" {
+		lines = append(lines, "NG: HEARTDESK_BASE_DIR is not set")
+		ok = false
+	} else {
+		lines = append(lines, "OK: HEARTDESK_BASE_DIR="+base)
+	}
+
+	if v := getenv("HEARTDESK_CONFIG_DIR"); v != "" {
+		lines = append(lines, "OK: HEARTDESK_CONFIG_DIR="+v)
+	} else if base != "" {
+		lines = append(lines, "OK: HEARTDESK_CONFIG_DIR is not set (using "+filepath.Join(base, "config")+")")
+	} else {
+		lines = append(lines, "OK: HEARTDESK_CONFIG_DIR is not set (using "+filepath.Join(heartdesk.DefaultRoot, "config")+")")
+	}
+
+	if v := getenv("HEARTDESK_TENANT_ID"); v != "" {
+		lines = append(lines, "OK: HEARTDESK_TENANT_ID="+v)
+	} else {
+		lines = append(lines, "OK: HEARTDESK_TENANT_ID is not set (using tenant "+config.DefaultTenantID+")")
+	}
+	return lines, ok
 }
 
 func validateFrontendContracts(wd string) error {
