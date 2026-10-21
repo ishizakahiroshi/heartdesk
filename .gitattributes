@@ -1,0 +1,3 @@
+# Keep line endings LF on every OS. The HTML templates and static files are embedded into the binary
+# (go:embed), and some tests look for "\n" inside them, so a CRLF checkout on Windows breaks them.
+* text=auto eol=lf
