@@ -18,3 +18,13 @@ node scripts/secrets-scan.mjs --staged --block || exit 1
 
 # 3. CLAUDE.md の肥大の検査
 node scripts/check-claude-md.mjs || exit 1
+
+# 4. omitnix: コミット済みの .omitnix/index.json が、いまのソースと食い違っていたら止める。
+#    書き換えはしない（hook が生成物を書き換えると、レビューされていない内容がコミットへ混ざるため）。
+#    止まったら `omitnix` を実行して差分を確認し、生成された index.json を自分で git add する。
+#    omitnix が無い端末では何もしない。新規ファイルの gate（--gate）は入れていない。
+if command -v omitnix >/dev/null 2>&1; then
+  omitnix --check || exit 1
+elif command -v python >/dev/null 2>&1 && python -c "import omitnix" >/dev/null 2>&1; then
+  python -m omitnix --check || exit 1
+fi

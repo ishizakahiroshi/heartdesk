@@ -54,6 +54,7 @@ heartdesk は、複数のサーバーを 1 つの画面で見る Go 製のダッ
 | 秘密の形の文字列を commit しない（既知の見本の値だけ許可） | `.gitleaks.toml` | pre-commit の gitleaks・`.github/workflows/gitleaks.yml` |
 | 固有名詞・私的パスを公開物へ入れない | `scripts/secrets-scan.mjs` | pre-commit・`.github/workflows/secrets-scan.yml` |
 | CLAUDE.md を太らせない | `scripts/check-claude-md.mjs` | pre-commit |
+| 全ファイルの索引と、表からファイルへの逆引きを最新に保つ | `.omitnix/index.json`（`omitnix` で生成。`pip install "omitnix[all]"`） | pre-commit（`omitnix --check`・書き換えはしない） |
 
 **新しいルールを足す前に、まずこの表に 1 行足せる形にできないかを考える。** できないもの
 （機械検査も、決まったファイルも無いもの）だけが本文を持ってよい。
