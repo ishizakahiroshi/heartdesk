@@ -13,7 +13,7 @@ fresh public clone でも有効な内容に保つこと。 -->
 
 heartdesk は、複数のサーバーを 1 つの画面で見る Go 製のダッシュボードサーバー。Monitor の画面（サーバーごとのカード）、scheduler、認証と権限、通知、テナント管理と Vendor Console を持つ。報告を送る側（Agent）は姉妹の OSS [heartpost](https://github.com/ishizakahiroshi/heartpost)。ライセンスは Apache-2.0。
 
-2026-10-20 に、個人の用途で作った別の監視基盤の汎用部分を切り出して作った（元の基盤は動いたまま。heartdesk を import せず、コードを複製した状態から始まっている）。旧名の環境変数・パス・cookie 名・カード ID などは heartdesk の名前に付け替え済みで、旧名の互換は持たない。**公開前・作業中**。2026-10-21 に Windows で合成データを使って起動と主な画面を確認した。それ以外は未確認（`README.md` の Status 節）。
+2026-10-20 に、個人の用途で作った別の監視基盤の汎用部分を切り出して作った（元の基盤は動いたまま。heartdesk を import せず、コードを複製した状態から始まっている）。旧名の環境変数・パス・cookie 名・カード ID などは heartdesk の名前に付け替え済みで、旧名の互換は持たない。**公開前・作業中**。2026-10-21 に Windows と Linux（WSL の Ubuntu）で、合成データを使って起動・ログイン・主な画面・署名つき報告の受理を確認し、CI（Ubuntu と Windows の build・test・vet）も通っている。未確認の範囲は `README.md` の Status 節と `CHANGELOG.md` の Notes。
 
 ## やらないこと（スコープ外）
 
