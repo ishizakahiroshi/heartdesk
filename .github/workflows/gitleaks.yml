@@ -5,6 +5,8 @@ name: gitleaks
 # 2026-10-21 追加。既知の見本の値の例外はリポの .gitleaks.toml（ファイルと値の両方が合うときだけ許す）に書く。
 # 個人アカウントのリポなので gitleaks のライセンスキーは要らない。
 # pull_request では起動しない。PR の commit は branch への push の時点で同じ検査を通っている。
+# 2026-10-21: 手元で作る commit は手元の pre-commit の hook で検査する。GitHub では、外の AI（bot アカウント ishizakahiroshi-bot）が push したときと、手動のときだけ走らせる。
+# bot の作業 branch への push で走るので、PR の commit も見る。
 
 on:
   push:
@@ -15,6 +17,7 @@ permissions:
 
 jobs:
   gitleaks:
+    if: github.event_name == 'workflow_dispatch' || github.actor == 'ishizakahiroshi-bot'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout (full history)

@@ -1,13 +1,12 @@
 # Go CI. Template: github-actions assets/ci-go.yml.
 # web/ is go:embed of static HTML/JS/CSS, not a frontend build — no frontend job.
+# 2026-10-21: This is a private repo, so commits made locally are checked locally. On GitHub this runs only for PRs from the external AI (bot account ishizakahiroshi-bot) and for manual runs.
+# It no longer starts on push (it does not run for pushes from the local machine or for merging a PR).
 name: Validate
 
 on:
   pull_request:
-  push:
-    branches:
-      - main
-      - develop
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,6 +14,7 @@ permissions:
 jobs:
   go-check:
     name: Go (${{ matrix.os }})
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.user.login == 'ishizakahiroshi-bot'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -36,6 +36,7 @@ jobs:
         run: go mod verify
 
   go-mod-tidy:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.user.login == 'ishizakahiroshi-bot'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,6 +50,7 @@ jobs:
         run: git diff --exit-code -- go.mod go.sum
 
   govulncheck:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.user.login == 'ishizakahiroshi-bot'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -60,6 +62,7 @@ jobs:
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
   claude-md:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.user.login == 'ishizakahiroshi-bot'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
