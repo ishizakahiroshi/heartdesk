@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "generated": {
-    "commit": "49b91ad5401e8fceac765ef9b70351ada11dd4e2",
+    "commit": "01c6bb6769f5fb6e0bc6a23d1e98787cef7d934c",
     "dirty": false,
     "tool": "omitnix 0.1.3",
     "partial": false,
