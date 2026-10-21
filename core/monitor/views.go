@@ -601,7 +601,8 @@ func (h *Handler) renderServerDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	agentType := seen.AgentType
+	// 種類は設定（[agent."<id>"] agent_type）を優先し、無ければ報告の値。カードの出し分け（capabilities）と同じ基準にする。
+	agentType := h.appCfg.EffectiveAgentType(seen.AgentID, seen.AgentType)
 	if agentType == "" {
 		agentType = "vps"
 	}

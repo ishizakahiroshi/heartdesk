@@ -18,7 +18,7 @@ func (s *sqliteAgentStore) UpsertAgent(ctx context.Context, tenantID string, a A
 		VALUES (?, ?, ?, ?, ?, ?)
 		ON CONFLICT(tenant_id, agent_id) DO UPDATE SET
 			agent_label      = excluded.agent_label,
-			agent_type       = excluded.agent_type,
+			agent_type       = COALESCE(NULLIF(excluded.agent_type, ''), agents.agent_type),
 			last_received_at = excluded.last_received_at`
 	var lastRecv *string
 	if a.LastReceivedAt != nil {

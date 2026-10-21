@@ -508,6 +508,30 @@ func (cfg *AppConfig) IsLocalAgent(agentID string) bool {
 	return ok && agent.IsPrimary
 }
 
+// NormalizeAgentType は agent_type を前後空白除去 + 小文字化し、"vps" / "rental" のいずれかなら
+// それを返す。空・未知の種類は "" を返す（呼び出し側が既定値を決める）。
+func NormalizeAgentType(s string) string {
+	switch t := strings.ToLower(strings.TrimSpace(s)); t {
+	case "vps", "rental":
+		return t
+	}
+	return ""
+}
+
+// EffectiveAgentType は agentID の種類を 1 つに決めて返す。
+// [agent."<id>"] の agent_type（運用者が決めた値）を優先し、未設定のときだけ報告の種類を使う。
+// どちらも "vps" / "rental" でなければ ""。agent_label と同じく設定が報告に勝つ。
+func (cfg *AppConfig) EffectiveAgentType(agentID, reportedType string) string {
+	if cfg != nil && cfg.Agents != nil {
+		if agent, ok := cfg.Agents[agentID]; ok {
+			if t := NormalizeAgentType(agent.AgentType); t != "" {
+				return t
+			}
+		}
+	}
+	return NormalizeAgentType(reportedType)
+}
+
 // ComponentEnabled は指定コンポーネントが有効かを返す。
 // 未設定・cfg が nil のときは true（既定で有効）。name は前後空白除去 + 小文字化して正規化する
 // （config.toml [components] のキーは小文字で書く運用のため、比較前に呼び出し側の表記ゆれのみ吸収する）。

@@ -112,7 +112,11 @@ func (h *Handler) dispatchAction(w http.ResponseWriter, r *http.Request, api str
 	if targetAgentID != "" && isAgentUnsupportedAction(actionKey) {
 		seen := GetAgentLastSeenByID(targetAgentID)
 		msg := "agent 指定での操作APIは未対応です（deploy/SSH 手順を使用してください）"
-		if seen != nil && strings.EqualFold(strings.TrimSpace(seen.AgentType), "rental") {
+		reportedType := ""
+		if seen != nil {
+			reportedType = seen.AgentType
+		}
+		if h.appCfg.EffectiveAgentType(targetAgentID, reportedType) == "rental" {
 			msg = "rental agent は read-only のため、この操作は実行できません"
 		}
 		writeActionError(w, msg, http.StatusForbidden)

@@ -300,9 +300,16 @@ func AgentReportHandler(w http.ResponseWriter, r *http.Request) {
 		ReceivedAt: now.Format(time.RFC3339),
 		AgentID:    report.AgentID,
 		AgentLabel: report.AgentLabel,
-		AgentType:  report.AgentType,
+		// 報告の agent_type は "vps" / "rental" に正規化する。空・未知の値は "" とし、
+		// 保存済みの種類を空で上書きしない（updateAgentLastSeenFields / UpsertAgent 側で保持）。
+		AgentType:  config.NormalizeAgentType(report.AgentType),
 		ReportedAt: report.ReportedAt,
 		Collectors: report.Collectors,
+	}
+	if want := cfg.EffectiveAgentType(agentID, ""); want != "" && record.AgentType != "" && record.AgentType != want {
+		if prev := GetAgentLastSeenByID(agentID); prev == nil || prev.AgentType != record.AgentType {
+			log.Printf("WARN: agent_report: agent_type mismatch agent=%s config=%s reported=%s (config wins)", agentID, want, record.AgentType)
+		}
 	}
 
 	if _, _, _, ok := currentAgentReportStores(); ok {
@@ -635,6 +642,12 @@ func updateAgentLastSeen(record agentReportRecord, cfg *config.AppConfig) {
 func updateAgentLastSeenFields(agentID, agentLabel, agentType, receivedAt string, collectors map[string]json.RawMessage) {
 	agentLastSeenMu.Lock()
 	defer agentLastSeenMu.Unlock()
+	if agentType == "" {
+		// 種類の無い報告で、以前に受けた種類を消さない。
+		if prev := agentLastSeen[agentID]; prev != nil {
+			agentType = prev.AgentType
+		}
+	}
 	agentLastSeen[agentID] = &AgentLastSeen{
 		AgentID:    agentID,
 		AgentLabel: agentLabel,
@@ -908,6 +921,7 @@ func GetAgentStatusForConfig(cfg *config.AppConfig) []AgentLastSeen {
 			}
 		}
 		seenIDs[seen.AgentID] = struct{}{}
+		effType := cfg.EffectiveAgentType(seen.AgentID, seen.AgentType)
 		t, parseErr := time.Parse(time.RFC3339, seen.ReceivedAt)
 		// パース失敗は健全扱いにせずアラートにする。
 		minutesAgo := 0
@@ -917,7 +931,7 @@ func GetAgentStatusForConfig(cfg *config.AppConfig) []AgentLastSeen {
 			isAlert = true
 		} else {
 			minutesAgo = int(now.Sub(t).Minutes())
-			alertMin := alertThresholdMin(seen.AgentType, cfg)
+			alertMin := alertThresholdMin(effType, cfg)
 			isAlert = minutesAgo >= alertMin
 			displayAt = heartdesk.FormatDatetime(t.In(heartdesk.JST()))
 		}
@@ -925,7 +939,7 @@ func GetAgentStatusForConfig(cfg *config.AppConfig) []AgentLastSeen {
 		result = append(result, AgentLastSeen{
 			AgentID:           seen.AgentID,
 			AgentLabel:        displayLabel,
-			AgentType:         seen.AgentType,
+			AgentType:         effType,
 			ReceivedAt:        seen.ReceivedAt,
 			ReceivedAtDisplay: displayAt,
 			MinutesAgo:        minutesAgo,
@@ -957,8 +971,12 @@ func GetAgentStatusForConfig(cfg *config.AppConfig) []AgentLastSeen {
 	return result
 }
 
+// alertThresholdMin は agent の種類（cfg.EffectiveAgentType で決めた値）に応じた無報告アラート閾値（分）を返す。
 func alertThresholdMin(agentType string, cfg *config.AppConfig) int {
-	switch agentType {
+	if cfg == nil {
+		cfg = &config.AppConfig{}
+	}
+	switch config.NormalizeAgentType(agentType) {
 	case "rental":
 		if cfg.AgentHealth.RentalAlertMin > 0 {
 			return cfg.AgentHealth.RentalAlertMin
@@ -1074,6 +1092,7 @@ func GetAgentOverviewForSession(role, tenantID string) []AgentOverviewItem {
 				continue
 			}
 		}
+		effType := cfg.EffectiveAgentType(seen.AgentID, seen.AgentType)
 		t, parseErr := time.Parse(time.RFC3339, seen.ReceivedAt)
 		// パース失敗は minutesAgo=0 の健全扱いせずアラートにする。
 		minutesAgo := 0
@@ -1082,7 +1101,7 @@ func GetAgentOverviewForSession(role, tenantID string) []AgentOverviewItem {
 			isAlert = true
 		} else {
 			minutesAgo = int(now.Sub(t).Minutes())
-			alertMin := alertThresholdMin(seen.AgentType, cfg)
+			alertMin := alertThresholdMin(effType, cfg)
 			isAlert = minutesAgo >= alertMin
 		}
 
@@ -1097,7 +1116,7 @@ func GetAgentOverviewForSession(role, tenantID string) []AgentOverviewItem {
 		item := AgentOverviewItem{
 			AgentID:    seen.AgentID,
 			AgentLabel: displayLabel,
-			AgentType:  seen.AgentType,
+			AgentType:  effType,
 			AgentIP:    resolveAgentDisplayIP(cfg, seen.AgentID),
 			IsPrimary:  isPrimary,
 			ReceivedAt: seen.ReceivedAt,

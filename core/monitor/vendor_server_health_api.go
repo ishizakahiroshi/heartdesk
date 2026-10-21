@@ -48,7 +48,7 @@ func GetVendorServerHealth(r *http.Request, appCfg *config.AppConfig) interface{
 
 	if appCfg != nil {
 		for agentID, cfg := range appCfg.Agents {
-			if cfg.AgentType != "vps" {
+			if config.NormalizeAgentType(cfg.AgentType) != "vps" {
 				continue
 			}
 			label := cfg.AgentLabel
