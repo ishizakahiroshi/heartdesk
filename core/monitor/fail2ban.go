@@ -516,14 +516,49 @@ func computeBanTrends(events []F2BEvent) (
 	return
 }
 
+// fail2banRun は fail2ban-client を含むコマンドの実行器（stdout+stderr の結合出力と終了状態を返す）。
+// テストでは実システムを触らないよう、これを差し替える。
+var fail2banRun = heartdesk.RunArgsCombined
+
+// fail2banReasonMax は失敗理由としてメッセージに載せる出力の最大文字数。
+const fail2banReasonMax = 300
+
+// fail2banClient は `sudo fail2ban-client <args...>` を実行し、結合出力と成否を返す。
+// 成否の基準は終了コード（err == nil）。fail2ban-client は失敗を "NOK: ..." と出すことがあるため、
+// 終了コード 0 でも行頭が NOK の出力は失敗として扱う。失敗時のエラーには出力（理由）を含める。
+func fail2banClient(args ...string) (string, error) {
+	full := append([]string{"/usr/bin/fail2ban-client"}, args...)
+	out, err := fail2banRun(10*time.Second, "sudo", full...)
+	if err != nil {
+		return out, fail2banFailure(out, err.Error())
+	}
+	for _, line := range strings.Split(out, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "NOK") {
+			return out, fail2banFailure(out, "fail2ban-client が NOK を返しました")
+		}
+	}
+	return out, nil
+}
+
+// fail2banFailure は失敗理由の文字列を作る。出力があればそれを、無ければ fallback を使う。
+func fail2banFailure(out, fallback string) error {
+	reason := strings.Join(strings.Fields(out), " ")
+	if reason == "" {
+		reason = fallback
+	}
+	if r := []rune(reason); len(r) > fail2banReasonMax {
+		reason = string(r[:fail2banReasonMax]) + "..."
+	}
+	return fmt.Errorf("%s", reason)
+}
+
 // BanIP は指定 IP を recidive jail に BAN する
 func BanIP(ip string) error {
 	if !isValidIP(ip) {
 		return fmt.Errorf("invalid IP: %s", ip)
 	}
-	out := heartdesk.RunArgs(10*time.Second, "sudo", "/usr/bin/fail2ban-client", "set", "recidive", "banip", ip)
-	if strings.Contains(strings.ToLower(out), "error") || out == "" {
-		return fmt.Errorf("ban 失敗: %s", out)
+	if _, err := fail2banClient("set", "recidive", "banip", ip); err != nil {
+		return fmt.Errorf("ban 失敗: %w", err)
 	}
 	appendManualBan(ip)
 	return nil
@@ -548,10 +583,26 @@ func UnbanIP(ip, jail string) error {
 		}
 		targets = []string{jail}
 	}
+	var succeeded, failed []string
 	for _, j := range targets {
-		heartdesk.RunArgs(10*time.Second, "sudo", "/usr/bin/fail2ban-client", "set", j, "unbanip", ip)
+		out, err := fail2banClient("set", j, "unbanip", ip)
+		switch {
+		case err == nil:
+			succeeded = append(succeeded, j)
+		case strings.Contains(strings.ToLower(out), "not banned"):
+			// その jail では BAN されていないだけ（全 jail 指定のとき普通に起きる）。失敗として数えない。
+		default:
+			failed = append(failed, j+": "+err.Error())
+		}
 	}
-	return nil
+	if len(failed) == 0 {
+		return nil
+	}
+	if len(succeeded) == 0 {
+		return fmt.Errorf("unban 失敗: %s", strings.Join(failed, " / "))
+	}
+	return fmt.Errorf("一部の jail で unban に失敗しました（成功: %s / 失敗: %s）",
+		strings.Join(succeeded, ", "), strings.Join(failed, " / "))
 }
 
 // isValidIP は IPv4 / IPv6 アドレスの形式を検証する

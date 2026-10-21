@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"mime"
 	"net/http"
@@ -95,14 +96,22 @@ func (h *Handler) actionBulkBan(w http.ResponseWriter, r *http.Request) {
 			banned = append(banned, ip)
 		}
 	}
+	if len(failed) == 0 {
+		if len(banned) == 0 {
+			writeActionError(w, "BANするIPが指定されていません", http.StatusBadRequest)
+			return
+		}
+		writeActionOK(w, strings.Join(banned, ", ")+" をBANしました")
+		return
+	}
+	// 1 件でも失敗したら ok:false。全件失敗は単発 BAN と同じ 400 のエラー応答、
+	// 一部成功のときも本文に成功数・失敗数と理由を含めて 400 で返す（成功分は BAN 済み）。
 	var parts []string
 	if len(banned) > 0 {
-		parts = append(parts, strings.Join(banned, ", ")+" をBANしました")
+		parts = append(parts, fmt.Sprintf("成功 %d 件: %s をBANしました", len(banned), strings.Join(banned, ", ")))
 	}
-	if len(failed) > 0 {
-		parts = append(parts, "失敗: "+strings.Join(failed, ", "))
-	}
-	writeActionOK(w, strings.Join(parts, "\n"))
+	parts = append(parts, fmt.Sprintf("失敗 %d 件: %s", len(failed), strings.Join(failed, ", ")))
+	writeActionError(w, strings.Join(parts, "\n"), http.StatusBadRequest)
 }
 
 // ---- IP 管理アクション（WLM 操作は PIN 検証必須）----
@@ -532,9 +541,24 @@ func (h *Handler) actionAptFullUpgrade(w http.ResponseWriter, r *http.Request) {
 	writeActionOK(w, "apt-get full-upgrade をバックグラウンドで開始しました")
 }
 
+// parseAutoUpdateMode は toggle_auto_update の mode を解釈する。受け付けるのは enable / disable だけ。
+// それ以外（空・未知の値）は ok=false を返し、勝手に「無効化」へ倒さない。
+func parseAutoUpdateMode(mode string) (enable, ok bool) {
+	switch strings.TrimSpace(mode) {
+	case "enable":
+		return true, true
+	case "disable":
+		return false, true
+	}
+	return false, false
+}
+
 func (h *Handler) actionToggleAutoUpdate(w http.ResponseWriter, r *http.Request) {
-	mode := strings.TrimSpace(r.FormValue("mode"))
-	enable := mode == "enable"
+	enable, ok := parseAutoUpdateMode(r.FormValue("mode"))
+	if !ok {
+		writeActionError(w, "mode は enable か disable を指定してください", http.StatusBadRequest)
+		return
+	}
 	if err := ToggleAutoUpdate(enable); err != nil {
 		writeActionError(w, "自動更新設定の変更に失敗しました: "+err.Error(), http.StatusInternalServerError)
 		return

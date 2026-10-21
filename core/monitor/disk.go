@@ -205,14 +205,13 @@ func listNextcloudLogFiles(dataDir string, limit int) []DiskLogFile {
 }
 
 // geoipCountryCounts は ユニークIP→件数マップから国別集計を返す
-// HEARTDESK_GEOIP_DB が設定されていれば mmdb、なければ geoiplookup コマンドを使用する
+// GeoIP DB（[paths].geoip_db。geo.go の設定）が使えれば mmdb、なければ geoiplookup コマンドを使用する
 func geoipCountryCounts(ipCounts map[string]int) map[string]int {
 	countryCounts := map[string]int{}
 
 	// GeoIP DB が設定されていれば GetCountryFlags を活用、なければ geoiplookup コマンドにフォールバック
 	useMMDB := false
-	if mmdbPath := strings.TrimSpace(os.Getenv("HEARTDESK_GEOIP_DB")); mmdbPath != "" {
-		// main.go が TOML→env 橋渡し済みのため env 参照は意図的（geo.go 統一時に解消）
+	if mmdbPath := geoipDBPathForCountryCounts(); mmdbPath != "" {
 		if _, err := os.Stat(mmdbPath); err == nil {
 			useMMDB = true
 		}
@@ -249,6 +248,16 @@ func geoipCountryCounts(ipCounts map[string]int) map[string]int {
 		countryCounts[country] += cnt
 	}
 	return countryCounts
+}
+
+// geoipDBPathForCountryCounts は国別集計が使う GeoIP DB のパスを返す。
+// geo.go と同じ設定（[paths].geoip_db を SetGeoConfig で取り込んだもの）を優先し、
+// 未設定のときだけ従来どおり環境変数 HEARTDESK_GEOIP_DB を見る。
+func geoipDBPathForCountryCounts() string {
+	if p := strings.TrimSpace(geoSettingsSnapshot().DBPath); p != "" {
+		return p
+	}
+	return strings.TrimSpace(os.Getenv("HEARTDESK_GEOIP_DB"))
 }
 
 // geoipLookup は geoiplookup コマンドで国名を返す

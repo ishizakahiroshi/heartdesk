@@ -3,6 +3,8 @@ package monitor
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -228,30 +230,115 @@ type ipInfoMMDBRecord struct {
 }
 
 // geoDB は MaxMind DB ハンドルを遅延オープンして保持する。ルックアップごとの
-// Open/Close を避け、パスが変わった場合のみ開き直す。maxminddb.Reader は
-// 複数 goroutine からの Lookup に対して安全なため共有してよい。
+// Open/Close を避け、パスが変わったとき、およびファイルが差し替えられたとき
+// （mtime またはサイズが変わったとき）だけ開き直す。
+//
+// DB ファイルは別プロセスの scheduler（update_geoip_db）が日次で差し替えるため、
+// 稼働中のサーバーは差し替えに気づいて開き直す必要がある。stat は参照のたびには行わず、
+// geoDBStatInterval に 1 回だけ行う。
+//
+// 旧ハンドルの Close は mmap を解放するため、Lookup 中に閉じるとプロセスが落ちる。
+// そのため Lookup は geoDBMu の RLock を持ったまま行い、開き直し（Close を伴う）は
+// 書き込みロックの下でだけ行う。
 var (
-	geoDBMu     sync.Mutex
-	geoDBReader *maxminddb.Reader
-	geoDBPath   string
+	geoDBMu        sync.RWMutex
+	geoDBReader    *maxminddb.Reader
+	geoDBPath      string
+	geoDBModTime   time.Time
+	geoDBSize      int64
+	geoDBCheckedAt time.Time
+	geoDBLastWarn  string // 直近に警告ログを出した失敗理由（同じ理由は繰り返さない）
 )
 
-func geoDB(dbPath string) (*maxminddb.Reader, error) {
+// geoDBStatInterval は DB ファイルの差し替えを確認する間隔。
+var geoDBStatInterval = 60 * time.Second
+
+// geoDBOpen は DB ファイルを開く関数（テストで差し替える）。
+var geoDBOpen = func(path string) (*maxminddb.Reader, error) { return maxminddb.Open(path) }
+
+// geoDBWarnOnce は DB が開けない理由を 1 回だけ警告ログに出す。理由が変わらない間は繰り返さない。
+// 出すのはパスとエラー文だけで、API トークンなどは含めない。geoDBMu の外から呼ぶこと。
+func geoDBWarnOnce(dbPath string, err error) {
+	msg := fmt.Sprintf("GeoIP DB を使えません (path=%s): %v", dbPath, err)
 	geoDBMu.Lock()
-	defer geoDBMu.Unlock()
-	if geoDBReader != nil && geoDBPath == dbPath {
-		return geoDBReader, nil
+	same := geoDBLastWarn == msg
+	geoDBLastWarn = msg
+	geoDBMu.Unlock()
+	if !same {
+		log.Printf("WARN: monitor: %s", msg)
 	}
-	r, err := maxminddb.Open(dbPath)
+}
+
+// geoDBFresh は、保持中のハンドルをそのまま使ってよいかを返す（geoDBMu を持った状態で呼ぶ）。
+func geoDBFresh(dbPath string, now time.Time) bool {
+	return geoDBReader != nil && geoDBPath == dbPath && now.Sub(geoDBCheckedAt) < geoDBStatInterval
+}
+
+// ensureGeoDB は dbPath のハンドルを保持し、必要なら開き直す。
+// 開き直しに失敗したときに旧ハンドルが同じパスのものなら、それを使い続ける。
+func ensureGeoDB(dbPath string) error {
+	now := time.Now()
+	geoDBMu.RLock()
+	fresh := geoDBFresh(dbPath, now)
+	geoDBMu.RUnlock()
+	if fresh {
+		return nil
+	}
+
+	geoDBMu.Lock()
+	if geoDBFresh(dbPath, now) {
+		geoDBMu.Unlock()
+		return nil
+	}
+	info, statErr := os.Stat(dbPath)
+	samePath := geoDBReader != nil && geoDBPath == dbPath
+	if samePath && statErr == nil && info.ModTime().Equal(geoDBModTime) && info.Size() == geoDBSize {
+		geoDBCheckedAt = now
+		geoDBMu.Unlock()
+		return nil
+	}
+	r, err := geoDBOpen(dbPath)
 	if err != nil {
-		return nil, err
+		if samePath {
+			// 差し替え途中・破損などで開けない間は、開いてある旧 DB を使い続ける。
+			geoDBCheckedAt = now
+			geoDBMu.Unlock()
+			geoDBWarnOnce(dbPath, fmt.Errorf("差し替えられた DB を開けないため、旧 DB を使い続けます: %w", err))
+			return nil
+		}
+		geoDBMu.Unlock()
+		return err
 	}
 	if geoDBReader != nil {
 		_ = geoDBReader.Close()
 	}
 	geoDBReader = r
 	geoDBPath = dbPath
-	return geoDBReader, nil
+	geoDBCheckedAt = now
+	geoDBLastWarn = "" // 開けたので、次に失敗したときはまた警告を出す
+	if statErr == nil {
+		geoDBModTime = info.ModTime()
+		geoDBSize = info.Size()
+	} else {
+		geoDBModTime = time.Time{}
+		geoDBSize = 0
+	}
+	geoDBMu.Unlock()
+	return nil
+}
+
+// withGeoDB は最新の DB ハンドルを fn に渡す。fn の実行中はハンドルが閉じられない。
+func withGeoDB(dbPath string, fn func(db *maxminddb.Reader)) error {
+	if err := ensureGeoDB(dbPath); err != nil {
+		return err
+	}
+	geoDBMu.RLock()
+	defer geoDBMu.RUnlock()
+	if geoDBReader == nil || geoDBPath != dbPath {
+		return fmt.Errorf("GeoIP DB のハンドルが取得できません")
+	}
+	fn(geoDBReader)
+	return nil
 }
 
 func lookupCountryFlagsFromDB(ips []string) map[string]string {
@@ -260,32 +347,33 @@ func lookupCountryFlagsFromDB(ips []string) map[string]string {
 		return nil
 	}
 
-	db, err := geoDB(dbPath)
-	if err != nil {
-		return nil
-	}
-
 	fetched := make(map[string]string, len(ips))
-	for _, ip := range ips {
-		parsed := net.ParseIP(ip)
-		if parsed == nil {
-			continue
+	err := withGeoDB(dbPath, func(db *maxminddb.Reader) {
+		for _, ip := range ips {
+			parsed := net.ParseIP(ip)
+			if parsed == nil {
+				continue
+			}
+			var record ipInfoMMDBRecord
+			if err := db.Lookup(parsed, &record); err != nil {
+				continue
+			}
+			cc := strings.TrimSpace(record.CountryCode)
+			if cc == "" {
+				cc = strings.TrimSpace(record.Country.ISOCode)
+			}
+			if cc == "" {
+				continue
+			}
+			cc = strings.ToLower(cc)
+			flag := ccToFlag(cc)
+			name := ccToName(cc)
+			fetched[ip] = strings.TrimSpace(flag + " " + name)
 		}
-		var record ipInfoMMDBRecord
-		if err := db.Lookup(parsed, &record); err != nil {
-			continue
-		}
-		cc := strings.TrimSpace(record.CountryCode)
-		if cc == "" {
-			cc = strings.TrimSpace(record.Country.ISOCode)
-		}
-		if cc == "" {
-			continue
-		}
-		cc = strings.ToLower(cc)
-		flag := ccToFlag(cc)
-		name := ccToName(cc)
-		fetched[ip] = strings.TrimSpace(flag + " " + name)
+	})
+	if err != nil {
+		geoDBWarnOnce(dbPath, err)
+		return nil
 	}
 	return fetched
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -76,11 +77,23 @@ func NewScheduler(cfg *config.SchedulerConfig, logger *log.Logger) *Scheduler {
 			delete(s.jobs, "purge_archived_tenants")
 			delete(s.jobs, "purge_old_reports")
 		}
+		// GeoIP を使わない構成（DB パスも IPinfo トークンも未設定）では update_geoip_db を
+		// 登録しない。登録したままだと起動時と毎日「not configured」エラーになる。
+		if !geoIPUpdateConfigured(cfg) {
+			delete(s.jobs, "update_geoip_db")
+		}
 		for id := range cfg.DisabledJobs {
 			delete(s.jobs, id)
 		}
 	}
 	return s
+}
+
+// geoIPUpdateConfigured は GeoIP DB の更新ジョブに必要な設定のどれかが入っているかを返す。
+// DB パス（[paths].geoip_db）も IPinfo トークン（[geoip].token）も空なら、GeoIP を使わない構成。
+// どちらか片方でも入っていれば、設定漏れをエラーで知らせられるようにジョブは登録する。
+func geoIPUpdateConfigured(cfg *config.SchedulerConfig) bool {
+	return strings.TrimSpace(cfg.GeoIPDBPath) != "" || strings.TrimSpace(cfg.GeoIPToken) != ""
 }
 
 func (s *Scheduler) Run(ctx context.Context) error {

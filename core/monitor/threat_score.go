@@ -385,15 +385,13 @@ func BanHighScore(ip string) error {
 		return fmt.Errorf("不正な IP: %s", ip)
 	}
 	// シェル文字列組立を避け、引数を配列で渡す（コマンドインジェクション余地を排除）。
-	out, _ := heartdesk.RunArgsCombined(10*time.Second, "sudo", "/usr/bin/fail2ban-client", "set", "recidive", "banip", ip)
-	if strings.Contains(out, "1") || strings.Contains(out, "OK") {
-		appendManualBan(ip)
-		return nil
+	// 成否は終了コードで判定する（出力に "1" や "OK" を含むかでは判定しない。"NOK" が "OK" を含むため）。
+	// 出力は失敗理由の表示にだけ使う。
+	if _, err := fail2banClient("set", "recidive", "banip", ip); err != nil {
+		return fmt.Errorf("fail2ban-client エラー: %w", err)
 	}
-	if strings.TrimSpace(out) == "" {
-		return fmt.Errorf("fail2ban-client コマンドが失敗しました（出力なし）")
-	}
-	return fmt.Errorf("fail2ban-client エラー: %s", out)
+	appendManualBan(ip)
+	return nil
 }
 
 // ---- 脅威スコア履歴・イベント履歴 API ----
