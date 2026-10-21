@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented in this file.
 
-## [0.1.0] - Unreleased
+## [0.1.0] - 2026-10-21
 
 First release, as a pre-release. heartdesk is the dashboard side of a small monitoring pair: it receives
 signed reports from [heartpost](https://github.com/ishizakahiroshi/heartpost) agents and shows them in one place.
