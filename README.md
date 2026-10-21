@@ -71,7 +71,7 @@ This is based on the setup used for the 2026-10-21 start-up check; sections that
 - `HEARTDESK_CONFIG_DIR`: directory with `config.toml` and `secrets.toml`. If unset, `$HEARTDESK_BASE_DIR/config` is used (or `/var/lib/heartdesk/config` when `HEARTDESK_BASE_DIR` is not set either).
 - `HEARTDESK_BASE_DIR`: base directory for data and for `config/users.toml`. **Required** for the server: the process exits if it is unset. Everything heartdesk itself writes goes under it: `data/` (for example `data/vendor/`, `data/json/`, `data/audit/`, `data/nc_extract/`, `data/avatars/`), `data/logs/` (the scheduler's job logs, such as `collect_resources.log`), `log/` (the login event log) and `bin/`. The scheduler and the other commands use the same root; only code paths that run without `HEARTDESK_BASE_DIR` fall back to `/var/lib/heartdesk`. Places on the monitored host (Nextcloud under `/var/www/nextcloud`, `/var/log/nginx`, `/var/log/fail2ban.log*`, `/var/backups/mariadb`, `/etc/...`) and lock files in `/var/lock` are not moved.
 - `HEARTDESK_TENANT_ID`: optional. Unset means the tenant `default`, which this minimal setup uses.
-- `HEARTDESK_LOGIN_LOG_PATH`: optional. By default the login event log goes to `$HEARTDESK_BASE_DIR/log/heartdesk_login_events.jsonl`. If that directory does not exist, a line is logged at each login and login still works; create it or set this variable to a writable file path to avoid it.
+- `HEARTDESK_LOGIN_LOG_PATH`: optional. By default the login event log goes to `$HEARTDESK_BASE_DIR/log/heartdesk_login_events.jsonl`. If that directory does not exist, a line is logged at each login and login still works; create it (`mkdir -p "$HEARTDESK_BASE_DIR/log"`) or set this variable to a writable file path to avoid it.
 
 **2. `config.toml`** (in `HEARTDESK_CONFIG_DIR`; sample: `examples/config/config.toml.example`)
 
@@ -101,7 +101,7 @@ Each `[[users]]` entry has `id`, `username`, `name`, `password_hash`, `role` and
 
 - `role` is one of `vendor_staff`, `tenant_admin`, `tenant_user`.
 - `access_screens` is a list of `monitor` and/or `vendor`. If it is omitted or empty, the user cannot open any screen.
-- `password_hash` is the string `bcrypt$` followed by a bcrypt hash, so a stored value looks like `bcrypt$$2a$12$...`. A bare `$2a$...` hash without the `bcrypt$` prefix is refused. The repository has no command that makes this hash, so use a small program outside the repository. In an empty scratch directory, save this as `main.go`, run `go mod init hashgen && go mod tidy`, then `go run . '<your password>'`:
+- `password_hash` is the string `bcrypt$` followed by a bcrypt hash, so a stored value looks like `bcrypt$$2a$12$...`. A bare `$2a$...` hash without the `bcrypt$` prefix is refused. The repository has no command that makes this hash, so use a small program outside the repository. In an empty scratch directory, save this as `main.go`, run `go mod init hashgen && go get golang.org/x/crypto@v0.51.0 && go mod tidy` (the pin keeps it on the same `x/crypto` version as heartdesk; the latest one needs a newer Go), then `go run . '<your password>'`:
 
   ```go
   package main
@@ -176,7 +176,6 @@ core/monitor/        the Monitor: HTTP handlers, card APIs, agent report receive
 core/vendor_console/ Vendor Console exports and license-key rotation
 cmd/                 command-line tools: alerts, heartdesk-doctor, heartdesk-scheduler
 web/                 HTML templates and static files (CSS, JS), embedded into the binary
-docs/                documents (docs/local is not tracked by git)
 ```
 
 ## Configuration
@@ -185,6 +184,6 @@ Settings are read from TOML files in the directory given by `HEARTDESK_CONFIG_DI
 
 ## Dependencies
 
-- Go 1.25 or later (see `go.mod`)
+- Go 1.25.13 or later (see `go.mod`; an older `go` command downloads that toolchain by itself unless `GOTOOLCHAIN=local` is set)
 - The agent-side signing package from heartpost (`github.com/ishizakahiroshi/heartpost`)
 - SQLite through `modernc.org/sqlite` (no cgo)
