@@ -235,11 +235,11 @@ func (h *Handler) renderAuditLog(w http.ResponseWriter, r *http.Request) {
 					</div>
 					<div style="flex:1 1 180px;">
 						<label>開始（RFC3339/JST）</label>
-						<input type="text" name="from" value="%s" placeholder="2026-04-18T00:00:00+09:00">
+						<input type="text" name="from" value="%s" placeholder="YYYY-MM-DDT00:00:00+09:00">
 					</div>
 					<div style="flex:1 1 180px;">
 						<label>終了（RFC3339/JST）</label>
-						<input type="text" name="to" value="%s" placeholder="2026-04-18T23:59:59+09:00">
+						<input type="text" name="to" value="%s" placeholder="YYYY-MM-DDT23:59:59+09:00">
 					</div>
 					<div style="flex:1 1 120px;">
 						<label>表示件数</label>
