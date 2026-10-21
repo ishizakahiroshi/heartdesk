@@ -425,7 +425,7 @@ type AgentConfig struct {
 	AgentType    string   `toml:"agent_type"` // "vps" | "rental"
 	AgentLabel   string   `toml:"agent_label"`
 	AgentIP      string   `toml:"agent_ip"`
-	IsPrimary    bool     `toml:"is_primary"`   // true = heartdesk本体サーバー（Main Server）
+	IsPrimary    bool     `toml:"is_primary"`   // true = heartdesk 自身が動いているサーバー（Main Server）。カードと操作はこのサーバー自身で実行する
 	Capabilities []string `toml:"capabilities"` // カード表示制御に使う能力キー
 }
 
@@ -485,6 +485,17 @@ func (cfg *AppConfig) AgentCapabilities(agentID string) []string {
 		return normalizeCapabilities(agent.Capabilities)
 	}
 	return normalizeCapabilities(DefaultAgentCapabilitiesByType(agent.AgentType))
+}
+
+// IsLocalAgent は agentID が heartdesk 自身の動いているサーバー（[agent."<id>"] is_primary = true）かを返す。
+// true のときだけ、カードや操作は報告ではなくこのサーバー自身のコマンド実行で値を取る。
+// default_agent（最初に表示するエージェント）かどうかとは無関係で、未設定・未登録の ID は false。
+func (cfg *AppConfig) IsLocalAgent(agentID string) bool {
+	if cfg == nil || agentID == "" || cfg.Agents == nil {
+		return false
+	}
+	agent, ok := cfg.Agents[agentID]
+	return ok && agent.IsPrimary
 }
 
 // ComponentEnabled は指定コンポーネントが有効かを返す。

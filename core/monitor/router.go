@@ -40,7 +40,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, `{"error":"forbidden agent"}`, http.StatusForbidden)
 			return
 		}
-		if agentID != "" && h.appCfg != nil && h.appCfg.UI.DefaultAgent == agentID {
+		if h.appCfg.IsLocalAgent(agentID) {
 			agentID = ""
 		}
 		if err := json.NewEncoder(w).Encode(GetR2Metrics(h.appCfg, agentID)); err != nil {

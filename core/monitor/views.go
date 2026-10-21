@@ -620,9 +620,10 @@ func (h *Handler) renderServerDetail(w http.ResponseWriter, r *http.Request) {
 
 	// 表示可能カードのナビとカードHTMLを構築
 	nav := buildServerDetailNav(visibleCards, cardModes, cfg)
-	// default_agent（Monitor本体VPS）はローカル実行と同等なので agentID="" 扱いにする
+	// heartdesk 自身のサーバー（is_primary = true の agent）はローカル実行と同等なので agentID="" 扱いにする
 	ssrAgentID := seen.AgentID
-	if h.appCfg != nil && h.appCfg.UI.DefaultAgent == ssrAgentID {
+	isLocal := h.appCfg.IsLocalAgent(ssrAgentID)
+	if isLocal {
 		ssrAgentID = ""
 	}
 	cards := buildServerDetailCards(h, visibleCards, cardModes, ssrAgentID)
@@ -653,7 +654,7 @@ func (h *Handler) renderServerDetail(w http.ResponseWriter, r *http.Request) {
 		ShowOverviewRefreshButton: false,
 		CSRFToken:                 csrfToken,
 		Now:                       heartdesk.FormatDatetime(time.Now().In(heartdesk.JST())),
-		IsMaint:                   GetMaintenanceMode(),
+		IsMaint:                   isLocal && GetMaintenanceMode(),
 		CurrentAgentID:            seen.AgentID,
 		ServerTree:                agentOverviewForRequest(r),
 		Nav:                       nav,

@@ -22,6 +22,10 @@ agent_id = "default-web-01"
 agent_type = "vps"
 # Label shown in the UI.
 agent_label = "example web server"
+# Set to true only for the server that heartdesk itself runs on. For that agent the cards and
+# actions run commands on this machine instead of using reports. Leave it unset (false) for every
+# monitored server: their cards are built from the reports the agent sends.
+# is_primary = true
 
 [ui]
 # Agent shown first. Must be one of the [agent."..."] tables above.

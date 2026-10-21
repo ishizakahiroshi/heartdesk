@@ -61,7 +61,8 @@ This is based on the setup used for the 2026-10-21 start-up check; sections that
 
 - `[server] listen_addr`: listen address. If empty, `:8765` (all interfaces) is used. Prefer loopback behind a reverse proxy.
 - `[agent."<agent_id>"]` with `agent_id`, `agent_type` (`vps` or `rental`), `agent_label`: one table per monitored server.
-- `[ui] default_agent`: the agent shown first.
+- `[agent."<agent_id>"] is_primary`: optional, default `false`. Set `true` only for the server that heartdesk itself runs on. For that agent, cards and actions run commands on this machine. For every other agent (including `default_agent`), cards are built only from the reports the agent sends, and a card whose data the agent does not send shows as unavailable.
+- `[ui] default_agent`: the agent shown first. It does not make that agent local; see `is_primary`.
 - `[agent_report] strict_license`: the default is `true`, which rejects a report that has no Bearer (JWT) token. The minimal setup sets `false` so that reports with only the HMAC signature are accepted.
 
 An `agent_id` must look like `<tenant_id>-<name>` (for the default tenant: `default-web-01`). The part before the first `-` is the tenant ID and may contain only `a-z`, `0-9` and `_`. Entries in `[agent_keys]` and `[agent_allowed_ips]` whose tenant matches but which have no `[agent."<id>"]` table are dropped at load time with a log message.
@@ -123,10 +124,11 @@ Open `http://<listen_addr>/login` in a browser. After login, the Monitor is at `
 
 Not part of this minimal setup and not described here: `tenants/<id>/` overrides, the `[security]`, `[alerts]`, `[geoip]` and `[nextcloud]` sections, TOTP, and the scheduler.
 
-Two things you may notice with this minimal setup:
+One thing you may notice with this minimal setup:
 
 - The login page shows a "Nextcloud" login button even when Nextcloud is not configured. It leads to a 404.
-- Some cards on the server detail page (for example system updates and services) read the machine that runs heartdesk, not the data reported by the agent. They can show values of the heartdesk host.
+
+Cards for a monitored agent show what that agent reported. With only the basic report from the 2026-10-21 check, cards such as system updates, services, disk and SSL show as unavailable until the agent sends the matching data.
 
 ## Doctor
 

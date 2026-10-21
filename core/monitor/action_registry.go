@@ -85,7 +85,7 @@ func (h *Handler) dispatchAction(w http.ResponseWriter, r *http.Request, api str
 	actionKey := normalizeMonitorActionKey(api)
 	targetAgentID := strings.TrimSpace(r.URL.Query().Get("agent"))
 	// action API も ?agent= を受けるため、agent_id 形式の厳格検証と
-	// tenant 越境チェックを default_agent 同視化より前に実施する。
+	// tenant 越境チェックをローカル agent の同視化より前に実施する。
 	// 従来は isMonitorActionAllowed 内で tenant == nil の場合にフェイルオープン
 	// していたが、enforceAgentTenantBoundary で fail-closed に統一する。
 	if targetAgentID != "" && !isValidAgentID(targetAgentID) {
@@ -104,8 +104,9 @@ func (h *Handler) dispatchAction(w http.ResponseWriter, r *http.Request, api str
 		})
 		return
 	}
-	// default_agent（Monitor本体VPS）はローカル実行と同等なので agentID="" 扱いにする
-	if targetAgentID != "" && h.appCfg != nil && h.appCfg.UI.DefaultAgent == targetAgentID {
+	// heartdesk 自身のサーバー（is_primary = true の agent）はローカル実行と同等なので agentID="" 扱いにする。
+	// それ以外の agent は、ここで "" にしない（遠隔の agent への操作が heartdesk のサーバーで実行されるのを防ぐ）。
+	if h.appCfg.IsLocalAgent(targetAgentID) {
 		targetAgentID = ""
 	}
 	if targetAgentID != "" && isAgentUnsupportedAction(actionKey) {

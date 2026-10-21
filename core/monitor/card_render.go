@@ -94,7 +94,7 @@ func (h *Handler) APICard(w http.ResponseWriter, r *http.Request) {
 	var data interface{}
 	agentID := strings.TrimSpace(r.URL.Query().Get("agent"))
 	// APICard も dispatchAPI と同様に agent_id を厳格検証する。
-	// 形式チェック → tenant 越境チェック → default_agent 同視化 の順で適用する。
+	// 形式チェック → tenant 越境チェック → ローカル agent の同視化 の順で適用する。
 	if agentID != "" && !isValidAgentID(agentID) {
 		http.Error(w, "invalid agent", http.StatusBadRequest)
 		return
@@ -103,8 +103,8 @@ func (h *Handler) APICard(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "forbidden agent", http.StatusForbidden)
 		return
 	}
-	// default_agent（Monitor本体VPS）はローカル実行と同等なので agentID="" 扱いにする
-	if agentID != "" && h.appCfg != nil && h.appCfg.UI.DefaultAgent == agentID {
+	// heartdesk 自身のサーバー（is_primary = true の agent）はローカル実行と同等なので agentID="" 扱いにする
+	if h.appCfg.IsLocalAgent(agentID) {
 		agentID = ""
 	}
 	switch card {

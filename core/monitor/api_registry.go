@@ -104,12 +104,13 @@ func (h *Handler) dispatchAPI(w http.ResponseWriter, r *http.Request, api string
 	}
 
 	// agentID 対応 API は ?agent= を読み取って渡す。
-	// Monitor 本体 VPS（default_agent）への要求はローカル実行と同等なので agentID="" 扱いにする。
+	// heartdesk 自身のサーバー（is_primary = true の agent）への要求はローカル実行と同等なので agentID="" 扱いにする。
+	// default_agent は最初に表示する agent を決めるだけで、ここでは見ない（遠隔の agent を本体の値で表示しないため）。
 	// ただし resource_graph は JSONL をエージェントID で引くため生の agentID を保持する。
 	rawAgentID := strings.TrimSpace(r.URL.Query().Get("agent"))
 	// ?agent= は最終的に eventJSONLPath / loadGraphReportsJSONL 等で
 	// filepath.Join / filepath.Glob に連結されるため、パストラバーサル（../）や他テナント agent_id の
-	// 指定を防ぐべく、空文字（=default_agent/ローカル扱い）以外は ingestion 側と同じ厳格パターンで検証する。
+	// 指定を防ぐべく、空文字（=ローカル扱い）以外は ingestion 側と同じ厳格パターンで検証する。
 	if rawAgentID != "" && !isValidAgentID(rawAgentID) {
 		http.Error(w, `{"error":"invalid agent"}`, http.StatusBadRequest)
 		return
@@ -122,7 +123,7 @@ func (h *Handler) dispatchAPI(w http.ResponseWriter, r *http.Request, api string
 		return
 	}
 	agentID := rawAgentID
-	if agentID != "" && h.appCfg != nil && h.appCfg.UI.DefaultAgent == agentID {
+	if h.appCfg.IsLocalAgent(agentID) {
 		agentID = ""
 	}
 	if handler, ok := agentSimpleAPIByName[api]; ok {
