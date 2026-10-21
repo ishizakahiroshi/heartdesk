@@ -6,7 +6,6 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -401,7 +400,7 @@ func (h *HTTPHandler) renderLogin(w http.ResponseWriter, r *http.Request, errMsg
 		AssetVersion:  h.systemInfo.AssetVersion,
 		IconPath:      h.routes.IconPath(),
 		LoginPath:     h.routes.LoginPath,
-		NCSessionPath: ncSessionEntryPath + "?next=" + url.QueryEscape(next),
+		NCSessionPath: ncSessionLinkFor(ncSessionBaseURL(), next),
 		Stage:         stage,
 		Username:      username,
 		ChallengeID:   challengeID,

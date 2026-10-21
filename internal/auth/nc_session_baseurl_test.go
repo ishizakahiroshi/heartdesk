@@ -14,21 +14,32 @@ import (
 // Nextcloud の Cookie は Path=/nextcloud で発行されるので、ボタンの行き先が /login の下だと
 // ブラウザが Cookie を送らず、ログイン済みでも「Nextcloud にログインしてから」と案内されてしまう。
 func TestLoginPageNCLinkIsUnderNextcloudPath(t *testing.T) {
+	link := ncSessionLinkFor("https://nc.example.net/nextcloud", "/monitor/")
+	if !strings.HasPrefix(link, "/nextcloud/") {
+		t.Fatalf("NC login link = %q, want a path under /nextcloud/ so the browser sends Nextcloud cookies", link)
+	}
+	if !strings.Contains(link, "next=") {
+		t.Fatalf("NC login link = %q, want next= to be carried over", link)
+	}
+}
+
+// Nextcloud のベース URL が導けないとき（テナント未設定）は、押すと 404 になるボタンを出さない。
+func TestLoginPageHidesNCLinkWhenNotConfigured(t *testing.T) {
+	if got := ncSessionLinkFor("", "/monitor/"); got != "" {
+		t.Fatalf("ncSessionLinkFor(empty base) = %q, want empty", got)
+	}
+
+	// 画面全体でも空になる（HEARTDESK_TENANT_ID 未設定 = 最小構成）。
 	t.Setenv("HEARTDESK_BASE_DIR", t.TempDir())
-	tmpl := template.Must(template.New("").Parse(`{{define "login"}}{{.NCSessionPath}}{{end}}`))
+	t.Setenv("HEARTDESK_TENANT_ID", "")
+	tmpl := template.Must(template.New("").Parse(`{{define "login"}}[{{.NCSessionPath}}]{{end}}`))
 	routes := routing.Config{MonitorBase: "/monitor", StaticBase: "/static", LoginPath: "/login"}
 	h := NewHTTPHandler(tmpl, routes, config.CardsConfig{}, config.SystemInfoData{})
 
-	r := httptest.NewRequest(http.MethodGet, "/login?next=/monitor/", nil)
 	w := httptest.NewRecorder()
-	h.renderLogin(w, r, "", "")
-
-	body := w.Body.String()
-	if !strings.HasPrefix(body, "/nextcloud/") {
-		t.Fatalf("NC login link = %q, want a path under /nextcloud/ so the browser sends Nextcloud cookies", body)
-	}
-	if !strings.Contains(body, "next=") {
-		t.Fatalf("NC login link = %q, want next= to be carried over", body)
+	h.renderLogin(w, httptest.NewRequest(http.MethodGet, "/login?next=/monitor/", nil), "", "")
+	if body := w.Body.String(); body != "[]" {
+		t.Fatalf("login page NCSessionPath = %q, want empty when no tenant is configured", body)
 	}
 }
 

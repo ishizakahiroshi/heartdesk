@@ -124,9 +124,7 @@ Open `http://<listen_addr>/login` in a browser. After login, the Monitor is at `
 
 Not part of this minimal setup and not described here: `tenants/<id>/` overrides, the `[security]`, `[alerts]`, `[geoip]` and `[nextcloud]` sections, TOTP, and the scheduler.
 
-One thing you may notice with this minimal setup:
-
-- The login page shows a "Nextcloud" login button even when Nextcloud is not configured. It leads to a 404.
+The login page shows the "Nextcloud" login button only when `HEARTDESK_TENANT_ID` names a tenant in `tenants.toml` that has a public host (the button also needs a reverse-proxy rule that passes `/nextcloud/heartdesk-login` to `<login path>/nc`). In this minimal setup the button is not shown.
 
 Cards for a monitored agent show what that agent reported. With only the basic report from the 2026-10-21 check, cards such as system updates, services, disk and SSL show as unavailable until the agent sends the matching data.
 

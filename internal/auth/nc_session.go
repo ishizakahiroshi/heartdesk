@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -51,6 +52,16 @@ func ncBaseURLForTenant(tc *routing.TenantConfig) string {
 		return ""
 	}
 	return "https://" + host + "/nextcloud"
+}
+
+// ncSessionLinkFor はログイン画面の「Nextcloud のログインで入る」の行き先を返す。
+// Nextcloud のベース URL が導けない（HEARTDESK_TENANT_ID 未設定・tenants.toml に公開ホストが無い）ときは
+// 空を返し、画面はボタンを出さない。出すと押した先が 404 になる。
+func ncSessionLinkFor(base, next string) string {
+	if base == "" {
+		return ""
+	}
+	return ncSessionEntryPath + "?next=" + url.QueryEscape(next)
 }
 
 // ocsSucceeded は OCS の meta.statuscode が成功かを返す。
