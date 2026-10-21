@@ -117,7 +117,7 @@ func FormatRawDatetime(s string) string {
 
 // Run は bash -c でスクリプトを実行し、トリムした stdout を返す。エラー時は空文字。
 //
-// 重要（C7: run-bash-c-residual）: 本関数は `bash -c <script>` でシェル経由実行する。
+// 重要: 本関数は `bash -c <script>` でシェル経由実行する。
 // script は **リテラル固定文字列専用**であり、HTTP リクエスト由来などの動的入力を
 // 連結・埋め込みしてはならない（シェルインジェクションの温床になる）。config 値（TOML）の
 // 埋め込みは現状許容しているが、ユーザー入力が混ざりうる箇所は必ず RunArgs /

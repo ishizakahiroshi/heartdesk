@@ -6,14 +6,14 @@
 
 	var CARD_ID = 'vendor-nc-overview';
 
-	// C9-C1: ローカル esc は廃止し正準 escHtml に統一。
+	// ローカル esc は廃止し正準 escHtml に統一。
 	var esc = (typeof window !== 'undefined' && window.escHtml) ? window.escHtml : function(s) { return String(s == null ? '' : s); };
 
 	function base() {
 		return typeof getAppBase === 'function' ? getAppBase() : '/monitor';
 	}
 
-	// C9-C4: ローカル doFetch を撤去し共通 loadJsonCard に統一。
+	// ローカル doFetch を撤去し共通 loadJsonCard に統一。
 	function load(el) {
 		window.loadJsonCard(el, 'vendor_nc_overview', render, { includeAgent: false });
 	}

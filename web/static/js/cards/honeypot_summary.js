@@ -1,5 +1,5 @@
 // heartdesk カード: ハニーポット概要 (sec-honeypot-summary)
-// Phase 2b (C3): monitor_page.js から切り出したカード単位モジュール。
+// monitor_page.js から切り出したカード単位モジュール。
 // 依存: shared.js の escHtml / HP_TRIGGER_LABELS、card_runtime.js の CardRegistry。
 
 (function() {

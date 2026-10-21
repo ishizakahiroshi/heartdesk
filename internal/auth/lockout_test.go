@@ -14,7 +14,7 @@ func newTestLockoutManager() *LockoutManager {
 }
 
 // TestLockoutUsernameFallback は IP が変わっても username 単独キーで
-// ロックが成立する（C3: trust-xff-ip-spoofing）ことを確認する。
+// ロックが成立することを確認する。
 func TestLockoutUsernameFallback(t *testing.T) {
 	m := newTestLockoutManager()
 	now := time.Now()

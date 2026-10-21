@@ -22,7 +22,7 @@ type Context struct {
 
 // Resolve は agentID を Context に解決する。
 //
-// C-039（target-resolve-tenant-boundary）: 呼び出し側に tenant 境界の表明を
+// 呼び出し側に tenant 境界の表明を
 // 強制するため、必ず expectedTenantID（現在のセッション/リクエストが属する
 // tenant_id）を受け取る。agentID プレフィックス（"<tenant_id>-<type>-<name>"）
 // から抽出した tenant_id と expectedTenantID が一致しない場合はエラーを返し、
@@ -44,7 +44,7 @@ func Resolve(agentID string, expectedTenantID string, cfg *config.AppConfig) (Co
 	if !ok {
 		return Context{}, fmt.Errorf("unknown agent: %s", id)
 	}
-	// C-039: tenant 境界チェック。expectedTenantID が指定されている場合のみ
+	// tenant 境界チェック。expectedTenantID が指定されている場合のみ
 	// 検証する（空文字は「呼び出し元が tenant 文脈を持たない」ことを明示）。
 	if expected := strings.TrimSpace(expectedTenantID); expected != "" {
 		actual := tenantIDFromAgentID(id)

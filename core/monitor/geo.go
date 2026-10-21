@@ -296,7 +296,7 @@ func GetCountryFlags(ips []string) map[string]string {
 		return map[string]string{}
 	}
 
-	// Phase 1: キャッシュチェック
+	// まずキャッシュを確認する
 	geoMu.Lock()
 	if geoMemCache == nil || time.Since(geoMemLoadedAt) > geoMemCacheTTL {
 		geoMemCache, geoMemMeta = geoLoadFile()

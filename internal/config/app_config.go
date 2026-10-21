@@ -42,7 +42,7 @@ type AppConfig struct {
 	} `toml:"ssh"`
 
 	Security struct {
-		// IPMgmtPin は WLM 操作用 PIN（C5: pin-nonconstant-compare-weak で int→string 化）。
+		// IPMgmtPin は WLM 操作用 PIN。
 		// 平文 PIN を文字列で保持する。比較は subtle.ConstantTimeCompare で行う。
 		// 最低 6 桁の英数字を推奨（検証は VerifyPIN 側で行う）。
 		// より強固にする場合は ip_mgmt_pin_hash（bcrypt）を設定すると優先される。
@@ -183,10 +183,10 @@ type AppConfig struct {
 		// StateFile は scheduler_state.json の配置先（未設定時は既定パス）。
 		StateFile string `toml:"state_file"`
 		// AlertsIntervalMinutes は alerts daemon ジョブの実行間隔（分）。
-		// C8（alerts-never-invoked）: 0（未設定）なら registry の既定 5 分を使う。
+		// 0（未設定）なら registry の既定 5 分を使う。
 		AlertsIntervalMinutes int `toml:"alerts_interval_minutes"`
 		// VendorPurgeIntervalHours は purge_old_reports / purge_archived_tenants の
-		// 実行間隔（時間）。C8（purge-jobs-unregistered）: 0（未設定）なら NewScheduler が
+		// 実行間隔（時間）。0（未設定）なら NewScheduler が
 		// purge ジョブを無効化する（VendorDBPath なし環境向けの既存ロジック）。
 		VendorPurgeIntervalHours int             `toml:"vendor_purge_interval_hours"`
 		Jobs                     map[string]bool `toml:"jobs"`
@@ -218,8 +218,8 @@ type AppConfig struct {
 		RetentionMonths  int `toml:"retention_months"`
 		TimestampSkewSec int `toml:"timestamp_skew_sec"`
 		// StrictLicense は Bearer(JWT) 無しの agent report を拒否するか。
-		// C3（agent-report-hmac-no-jwt-default）対応で *bool 化し、未設定時の既定を
-		// true（厳格）に変更した。新規テナント/Agent は config 未記載なら自動で
+		// *bool で保持し、未設定時の既定は
+		// true（厳格）。新規テナント/Agent は config 未記載なら自動で
 		// strict 受信になる。JWT 未対応の既存 Agent を抱えるテナントは移行期間中だけ
 		// 明示的に `strict_license = false` を書き、JWT 取得確認後に削除する。
 		StrictLicense *bool `toml:"strict_license"`
@@ -293,7 +293,7 @@ type AppConfig struct {
 
 	// AggregatorAgentKeys は集約 Monitor で aggregator 経路（collector_id="audit_log"）に
 	// 適用する agent_id → HMAC 秘密鍵マップ。secrets.toml の [aggregator_agent_keys] で管理する。
-	// 通常の [agent_keys] とは別キー（A4）で運用し、漏洩時の影響範囲を分離する。
+	// 通常の [agent_keys] とは別キーで運用し、漏洩時の影響範囲を分離する。
 	AggregatorAgentKeys map[string]string `toml:"aggregator_agent_keys"`
 }
 
@@ -308,7 +308,7 @@ type AuditAggregatedConfig struct {
 type SystemInfoData struct {
 	AppName         string
 	AppVersion      string
-	AssetVersion    string // 静的アセットのキャッシュバスティング用ビルドID（C2: ?v= に付与）
+	AssetVersion    string // 静的アセットのキャッシュバスティング用ビルドID（?v= に付与）
 	VendorName      string
 	TenantID        string
 	TenantSlug      string
@@ -352,7 +352,7 @@ func (cfg *AppConfig) applyDefaults() {
 		}
 		cfg.UI.IPTypeLabels[key] = cur
 	}
-	// C3（agent-report-hmac-no-jwt-default）: strict_license 未設定時の既定は true。
+	// strict_license 未設定時の既定は true。
 	// 既存 Agent 互換のため明示的に false を書いたテナントはその値を尊重する。
 	if cfg.AgentReport.StrictLicense == nil {
 		def := true
@@ -426,7 +426,7 @@ type AgentConfig struct {
 	AgentLabel   string   `toml:"agent_label"`
 	AgentIP      string   `toml:"agent_ip"`
 	IsPrimary    bool     `toml:"is_primary"`   // true = heartdesk本体サーバー（Main Server）
-	Capabilities []string `toml:"capabilities"` // C7: カード表示制御に使う能力キー
+	Capabilities []string `toml:"capabilities"` // カード表示制御に使う能力キー
 }
 
 var defaultAgentCapabilitiesByType = map[string][]string{
@@ -777,8 +777,8 @@ func (ac *AppConfig) ToSchedulerConfig() *SchedulerConfig {
 		AgentID:                 ac.UI.DefaultAgent,
 		BaseDir:                 ac.Paths.BaseDir,
 		StateFile:               ac.Scheduler.StateFile,
-		// C8（purge-jobs-unregistered）: これまで struct literal に未代入で常に 0 だったため
-		// daemon.go の purge 有効化分岐に入らずジョブが無効化され続けていた。設定値を反映する。
+		// 設定値を反映する。未代入だと常に 0 となり、daemon.go の purge 有効化分岐に入らず
+		// ジョブが無効化される。
 		VendorPurgeIntervalHours: ac.Scheduler.VendorPurgeIntervalHours,
 		TenantID:                 ac.TenantID,
 	}
@@ -788,7 +788,7 @@ func (ac *AppConfig) ToSchedulerConfig() *SchedulerConfig {
 	if ac.GeoIP.DBRefreshHours > 0 {
 		cfg.UpdateGeoIPDBInterval = time.Duration(ac.GeoIP.DBRefreshHours) * time.Hour
 	}
-	// C8（alerts-never-invoked）: AlertsInterval を設定値（分）から組み立てる。
+	// AlertsInterval を設定値（分）から組み立てる。
 	if ac.Scheduler.AlertsIntervalMinutes > 0 {
 		cfg.AlertsInterval = time.Duration(ac.Scheduler.AlertsIntervalMinutes) * time.Minute
 	}

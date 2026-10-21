@@ -9,7 +9,7 @@ import (
 )
 
 // expectedJobIDs は registry.go の jobDefs に登録されているべきジョブ ID 一覧。
-// C8（purge-jobs-unregistered / alerts-never-invoked）: purge_old_reports /
+// purge_old_reports /
 // purge_archived_tenants / alerts の登録漏れ再発をこのテストで検知する。
 var expectedJobIDs = []string{
 	"collect_resources",
@@ -56,7 +56,7 @@ func TestRetiredJobsNotRegistered(t *testing.T) {
 	}
 }
 
-// TestPurgeAndAlertsRegistered は C8 で追加した 3 ジョブが
+// TestPurgeAndAlertsRegistered は alerts / purge_old_reports / purge_archived_tenants の 3 ジョブが
 // CategoryDaemon・Handler 付き・Interval>0 で登録されていることを確認する。
 func TestPurgeAndAlertsRegistered(t *testing.T) {
 	for _, id := range []string{"alerts", "purge_old_reports", "purge_archived_tenants"} {
@@ -76,7 +76,7 @@ func TestPurgeAndAlertsRegistered(t *testing.T) {
 	}
 }
 
-// TestParseCronSpecWallClock は時刻指定 cron の解釈と次回発火計算（C8）を検証する。
+// TestParseCronSpecWallClock は時刻指定 cron の解釈と次回発火計算を検証する。
 func TestParseCronSpecWallClock(t *testing.T) {
 	spec, ok := parseCronSpec("0 1 * * *")
 	if !ok {

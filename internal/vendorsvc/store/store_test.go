@@ -74,7 +74,7 @@ func TestTenantCRUD(t *testing.T) {
 		t.Errorf("Type = %q, want %q", got.Type, tenant.Type)
 	}
 
-	// C-002 regression: CreateTenant 後の created_at / updated_at が
+	// regression: CreateTenant 後の created_at / updated_at が
 	// parseStoreTime のフォーマット不一致でゼロ値にならないこと（datetime('now') と
 	// "2006-01-02T15:04:05Z" の整合性）。
 	if got.CreatedAt.IsZero() {
@@ -87,7 +87,7 @@ func TestTenantCRUD(t *testing.T) {
 
 // TestParseStoreTimeFallback は parseStoreTime が SQLite の datetime('now') 既定形式
 // （"YYYY-MM-DD HH:MM:SS"）と Go 側 ISO8601 形式（"2006-01-02T15:04:05Z"）の両方を
-// パースできることを確認する（C-002 回帰防止）。
+// パースできることを確認する。
 func TestParseStoreTimeFallback(t *testing.T) {
 	cases := []struct {
 		name string
@@ -110,7 +110,7 @@ func TestParseStoreTimeFallback(t *testing.T) {
 }
 
 // TestSessionCreateTimestamps は CreateSession 後の created_at / last_seen_at が
-// ゼロ値にならないことを確認する（C-002 回帰防止: Session 用テストはこれが既存にない）。
+// ゼロ値にならないことを確認する（Session 用テストはこれが既存にない）。
 func TestSessionCreateTimestamps(t *testing.T) {
 	ctx := context.Background()
 	s := openTestDB(t)
@@ -151,7 +151,7 @@ func TestSessionCreateTimestamps(t *testing.T) {
 }
 
 // TestLedgerIssuedAtNotZero は AppendLedger 後の issued_at が非ゼロであることを
-// 確認する（C-002 回帰防止）。
+// 確認する。
 func TestLedgerIssuedAtNotZero(t *testing.T) {
 	ctx := context.Background()
 	s := openTestDB(t)
@@ -372,7 +372,7 @@ func TestAppendLedger_AutoCreatesTenant(t *testing.T) {
 // TestMigrateLedgerFromJSONFile_AutoCreatesTenants は、tenants テーブルがまだ空の状態で
 // 旧 JSON 台帳に未登録テナント (tenant-a, tenant-b) のエントリが含まれていても、
 // MigrateLedgerFromJSONFile が FK 制約違反で失敗せず、親 tenants 行を担保した上で
-// 全行を license_ledger に取り込めることを検証する（C-014 回帰テスト）。
+// 全行を license_ledger に取り込めることを検証する。
 func TestMigrateLedgerFromJSONFile_AutoCreatesTenants(t *testing.T) {
 	ctx := context.Background()
 	s, db := openTestDBWithRaw(t)
@@ -426,7 +426,7 @@ func TestMigrateLedgerFromJSONFile_AutoCreatesTenants(t *testing.T) {
 		t.Fatalf("write json: %v", err)
 	}
 
-	// 取り込み: FK 違反で失敗せず、3 件すべて入ること（C-014 回帰）
+	// 取り込み: FK 違反で失敗せず、3 件すべて入ること
 	n, err := store.MigrateLedgerFromJSONFile(ctx, db, jsonPath)
 	if err != nil {
 		t.Fatalf("MigrateLedgerFromJSONFile failed (FK regression): %v", err)
@@ -475,7 +475,7 @@ func TestMigrateLedgerFromJSONFile_AutoCreatesTenants(t *testing.T) {
 	}
 }
 
-// TestUpdateUserPasswordTenantBoundary は C-036 回帰防止:
+// TestUpdateUserPasswordTenantBoundary の回帰防止:
 //   - tenantID="" の UpdateUserPassword はエラーになる（テナント境界を保証）
 //   - 別テナント所属ユーザーへの UpdateUserPassword は no-op（ハッシュは変わらない）
 //   - 同テナント所属ユーザーへの UpdateUserPassword は成功する

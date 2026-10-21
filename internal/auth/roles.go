@@ -21,8 +21,7 @@ type Screen string
 
 const (
 	ScreenMonitor Screen = "monitor"
-	// ScreenVendor は Vendor Console 専用の画面（C3 monitor-god-package /
-	// vendor-role-check-duplication）。Vendor Console を Monitor から screen レベルの
+	// ScreenVendor は Vendor Console 専用の画面。Vendor Console を Monitor から screen レベルの
 	// 認可境界で分離するために追加する。既定で vendor_staff のみに付与する。
 	ScreenVendor Screen = "vendor"
 )
@@ -34,7 +33,7 @@ var validScreens = map[Screen]struct{}{
 }
 
 // defaultAccessScreens は role ごとの既定 access_screens。
-// C3（monitor-god-package）: ScreenVendor は vendor_staff のみに既定付与する。
+// ScreenVendor は vendor_staff のみに既定付与する。
 // nc_admin / nc_user 画面は廃止済み（Monitor に一本化）。全ロールの既定は monitor を含む。
 var defaultAccessScreens = map[Role][]Screen{
 	RoleVendorStaff: {ScreenMonitor, ScreenVendor},
@@ -43,8 +42,7 @@ var defaultAccessScreens = map[Role][]Screen{
 }
 
 // AllowsVendor は access_screens に Vendor Console 画面が含まれるかを返す。
-// Vendor 系ハンドラの認可判定を 1 箇所に集約するためのヘルパ（C3
-// vendor-role-check-duplication）。従来は 17 箇所で手書きしていた。
+// Vendor 系ハンドラの認可判定を 1 箇所に集約するためのヘルパ。従来は 17 箇所で手書きしていた。
 func AllowsVendor(accessScreens []string) bool {
 	return ScreenAllowed(accessScreens, ScreenVendor)
 }

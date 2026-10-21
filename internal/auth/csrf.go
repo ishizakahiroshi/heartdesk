@@ -16,7 +16,7 @@ var errInvalidCSRF = errors.New("invalid csrf token")
 
 // EnsureCSRFCookie は CSRF Cookie を確保し、現在値を返す。
 //
-// C4（csrf-token-not-bound-to-session）: ログイン済み（セッションあり）の場合は
+// ログイン済み（セッションあり）の場合は
 // セッションに束縛されたトークンを正本とし、Cookie 値がそれと異なれば束縛トークンへ
 // 揃え直す。これにより別セッションのトークン使い回しを断つ。
 // 未ログイン（ログイン画面等）はセッションが無いため、従来どおりランダムトークンを
@@ -48,7 +48,7 @@ func EnsureCSRFCookie(w http.ResponseWriter, r *http.Request) string {
 }
 
 // ForceReissueCSRFCookie はセッション束縛トークンを Cookie へ強制再発行する。
-// C4（session-fixation-no-regenerate）: completeLogin がセッション ID 更新後に呼び、
+// completeLogin がセッション ID 更新後に呼び、
 // ログイン前の使い回しトークンを必ず無効化する。
 func ForceReissueCSRFCookie(w http.ResponseWriter, r *http.Request) string {
 	if bound, ok := DefaultSessionManager().CSRFTokenForRequest(r); ok {
@@ -86,7 +86,7 @@ func setCSRFCookie(w http.ResponseWriter, r *http.Request, token string) {
 
 // VerifyCSRF はダブルサブミット + セッション束縛で CSRF トークンを検証する。
 //
-// C4（csrf-token-not-bound-to-session）: Cookie 値とリクエスト値（ヘッダ/フォーム）の
+// Cookie 値とリクエスト値（ヘッダ/フォーム）の
 // 一致に加え、セッションがある場合は Cookie 値がそのセッションに束縛されたトークンと
 // 一致することも要求する。これにより別セッションで発行されたトークンを拒否する。
 func VerifyCSRF(r *http.Request) error {

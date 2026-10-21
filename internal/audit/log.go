@@ -19,7 +19,7 @@ import (
 
 // 監査ログの保存形式:
 //   - 旧: 単一ファイル data/json/audit_log.jsonl
-//   - 新: 日付別ファイル <logDir>/audit_log.jsonl.YYYY-MM-DD（A1 / A2）
+//   - 新: 日付別ファイル <logDir>/audit_log.jsonl.YYYY-MM-DD
 //   - Agent 側 audit_log_tail collector は同ディレクトリを glob して tail する
 //
 // 環境変数:

@@ -121,4 +121,4 @@ func jsonNestedMapJS(m map[string]map[string]string) template.JS {
 	return template.JS(safeJSON(m))
 }
 
-// ---- Services アクション（P4） ----
+// ---- Services アクション ----

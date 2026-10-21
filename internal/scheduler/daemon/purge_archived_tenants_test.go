@@ -129,7 +129,7 @@ func sessionExists(t *testing.T, db *sql.DB, sessionID string) bool {
 }
 
 // TestPurgeArchivedTenants_InvalidatesStaleSessions は、purge 対象テナントを
-// current_tenant_id に持つ session が purge トランザクションで削除される（C-027 修正の再現）ことを確認する。
+// current_tenant_id に持つ session が purge トランザクションで削除されることを確認する。
 func TestPurgeArchivedTenants_InvalidatesStaleSessions(t *testing.T) {
 	dbPath, _, _, _, staleSession := seedArchivedTenant(t)
 
@@ -154,7 +154,7 @@ func TestPurgeArchivedTenants_InvalidatesStaleSessions(t *testing.T) {
 
 // TestPurgeArchivedTenants_RemovesOrphanedUsers は、purge 対象テナントにしか所属していない
 // 一般ユーザーは users 行ごと削除され、他テナント所属ユーザー / is_super=true のユーザーは
-// 残ること（C-038 修正による暗黙の権限昇格防止）を確認する。
+// 残ること（暗黙の権限昇格の防止）を確認する。
 func TestPurgeArchivedTenants_RemovesOrphanedUsers(t *testing.T) {
 	dbPath, soleUserID, multiUserID, superUserID, _ := seedArchivedTenant(t)
 

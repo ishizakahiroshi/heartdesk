@@ -8,7 +8,7 @@ import (
 // NoCacheHTML は HTML レスポンスをブラウザにキャッシュさせないためのヘッダーを付与する。
 //
 // Monitor / Vendor / Auth ハンドラ chain の最も内側に挟む想定。
-// `/static/` には適用しないこと（C4 で長期キャッシュ済み）。
+// `/static/` には適用しないこと（長期キャッシュ対象）。
 //
 // `skipPrefixes` に該当するパスは無視する（例: `/monitor/avatar/<user>` のように
 // ハンドラ側で独自の Cache-Control を返したいエンドポイント向け）。

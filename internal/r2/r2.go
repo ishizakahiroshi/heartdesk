@@ -168,7 +168,7 @@ func GetMetrics(cfg Config) MetricsData {
 // Analytics API から取得する。accountIDSafe は AccountIDSafe 済みの値を渡すこと
 // （英数字のみにサニタイズ済みのため query 文字列への埋め込みに注入余地はない）。
 //
-// C3（r2-logic-duplicated-drift）: monitor 用 GetMetrics と agent collector で重複していた
+// monitor 用 GetMetrics と agent collector で重複していた
 // GraphQL 取得ロジックの正準実装。手動 JSON 連結をやめ json.Marshal で組み立て、レスポンスは
 // io.LimitReader で上限（5MiB）を設ける（暴走レスポンスでのメモリ枯渇防止）。
 func CollectOperations(accountIDSafe, apiToken string) (*OperationsInfo, error) {

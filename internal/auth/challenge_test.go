@@ -15,7 +15,7 @@ func newTestChallengeManager() *LoginChallengeManager {
 }
 
 // TestChallengeSweepRemovesExpired は expired entry が sweep で一括 delete される
-// （C-029: lazy eviction のみで OOM 攻撃可能だった問題）ことを確認する。
+// （lazy eviction のみで OOM 攻撃が可能になる問題を避ける）ことを確認する。
 func TestChallengeSweepRemovesExpired(t *testing.T) {
 	m := newTestChallengeManager()
 	// 期限切れ entry を 100 件手動で投入。

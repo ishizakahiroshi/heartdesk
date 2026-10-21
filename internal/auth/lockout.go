@@ -46,7 +46,7 @@ func DefaultLockoutManager() *LockoutManager {
 
 // IsLocked は現在ロック中かを返す。
 //
-// C3（trust-xff-ip-spoofing）: 複合キー（username+ip）に加えてユーザー単独キーの
+// 複合キー（username+ip）に加えてユーザー単独キーの
 // フォールバックも判定する。IP が trustedProxy 経由で偽装されても（あるいは
 // 取得できなくても）ユーザー単独キーでロックが成立するため、IP 単独依存をやめる。
 func (m *LockoutManager) IsLocked(username, ip string, now time.Time) bool {
@@ -81,7 +81,7 @@ func (m *LockoutManager) lockedLocked(key string, now time.Time) bool {
 
 // RegisterFailure は失敗を記録し、ロック状態を返す。
 //
-// C3（trust-xff-ip-spoofing）: 複合キー（username+ip）とユーザー単独キーの両方に
+// 複合キー（username+ip）とユーザー単独キーの両方に
 // 失敗を記録する。返り値はいずれかがロック済みなら locked=true、remaining は
 // 全キー中で最小の残回数とする。
 func (m *LockoutManager) RegisterFailure(username, ip string, now time.Time) (locked bool, remaining int) {
@@ -173,7 +173,7 @@ func lockoutKey(username, ip string) string {
 
 // lockoutKeys は失敗カウントに使うキー一覧を返す。
 //
-// C3（trust-xff-ip-spoofing）: 複合キー（username+ip）に加え、username が判明している
+// 複合キー（username+ip）に加え、username が判明している
 // 場合はユーザー単独キーも返す。IP が偽装/欠落しても username 単独でロックが成立し、
 // IP 単独依存をやめる。ユーザー単独キーは複合キー（ip 空時の "u\x00"）と衝突しないよう
 // 別サフィックスを付ける。

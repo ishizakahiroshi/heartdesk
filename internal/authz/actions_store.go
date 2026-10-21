@@ -75,7 +75,7 @@ func LoadActionsUser() (ActionsUserFile, error) {
 	return doc, nil
 }
 
-// --- キャッシュ付き読み込み（API 呼び出し判定時に使う想定。C5 で接続予定） ---
+// --- キャッシュ付き読み込み（API 呼び出し判定時に使う想定） ---
 
 var (
 	actionsCacheMu         sync.RWMutex

@@ -4,7 +4,7 @@ import (
 	"sync"
 )
 
-// C3（per-request-config-reload）: AppConfig のプロセス内キャッシュ Provider。
+// AppConfig のプロセス内キャッシュ Provider。
 //
 // 従来 AgentReportHandler 等の高頻度経路が毎リクエストで LoadAppConfigForTenant を呼び、
 // config.toml / secrets.toml / tenant config / tenant secrets を最大 4 回 DecodeFile し、

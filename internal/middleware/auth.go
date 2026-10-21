@@ -35,7 +35,7 @@ func RequireScreen(screen auth.Screen) func(http.Handler) http.Handler {
 				return
 			}
 
-			// C-007: 未知 method は CSRF 検証以前に 405 で reject。
+			// 未知 method は CSRF 検証以前に 405 で reject。
 			// 既知の安全 method（GET/HEAD/OPTIONS）と既知の state-changing method
 			// （POST/PUT/PATCH/DELETE）のみ通過させ、それ以外（TRACE/CONNECT/独自動詞）は
 			// middleware 層で早期に弾く。
@@ -47,7 +47,7 @@ func RequireScreen(screen auth.Screen) func(http.Handler) http.Handler {
 
 			// ダブルサブミット法の CSRF トークンを保持（GET で初回発行）
 			auth.EnsureCSRFCookie(w, r)
-			// C-007: POST のみではなく、すべての state-changing method（POST/PUT/PATCH/DELETE）で
+			// POST のみではなく、すべての state-changing method（POST/PUT/PATCH/DELETE）で
 			// CSRF を検証する。middleware が CSRF enforcement の single source of truth であるため、
 			// 将来 PUT/DELETE 系エンドポイントが追加されても silent bypass しないよう
 			// safe method 以外を一律検証対象にする。
@@ -134,7 +134,7 @@ func isSafeMethod(method string) bool {
 }
 
 // isStateChangingMethod は CSRF 検証対象の state-changing HTTP method を判定する。
-// 既知の動詞のみを許可し、未知 method は呼び出し側で 405 reject する（C-007）。
+// 既知の動詞のみを許可し、未知 method は呼び出し側で 405 reject する。
 func isStateChangingMethod(method string) bool {
 	switch method {
 	case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:

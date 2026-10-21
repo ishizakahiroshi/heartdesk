@@ -36,12 +36,10 @@ type Session struct {
 	UserAgent         string
 	CreatedAt         time.Time
 	ExpiresAt         time.Time
-	// CSRFToken はこのセッションに束縛された CSRF トークン（C4:
-	// csrf-token-not-bound-to-session）。ダブルサブミットの Cookie 値はこの値と
+	// CSRFToken はこのセッションに束縛された CSRF トークン。ダブルサブミットの Cookie 値はこの値と
 	// 一致しなければならず、別セッションのトークンは VerifyCSRF で拒否される。
 	CSRFToken string
-	// TenantID はログイン時に解決したテナント ID（C8:
-	// audit-vendor-staff-only-tenant-admin-no-audit）。tenant_admin の監査ログ閲覧で
+	// TenantID はログイン時に解決したテナント ID。tenant_admin の監査ログ閲覧で
 	// テナント境界をサーバー側強制するために使う（クライアント指定は信用しない）。
 	TenantID string
 }
@@ -54,7 +52,7 @@ type SessionManager struct {
 	ttl        time.Duration
 }
 
-// sessionUserLookup は Get 時の Disabled / 削除再評価フック（C-005）。
+// sessionUserLookup は Get 時の Disabled / 削除再評価フック。
 // 戻り値: exists=false なら「削除済みなので破棄」、disabled=true なら「停止中なので破棄」。
 // 既定実装は UserStore.GetUser を引き、テストでは安全に上書きできるようにしてある。
 var sessionUserLookup = func(username string) (exists bool, disabled bool) {
@@ -155,11 +153,10 @@ func roleDefaultActions(role string) map[string]bool {
 
 // Get は sessionID の有効セッションを取得し、スライディング延長する。
 //
-// C-005（session-not-invalidated-on-user-disable）対応:
 // users.toml 側で Disabled=true / ユーザー削除が反映された直後でも Cookie ベース
 // 継続セッションが生き続けてしまう問題を防ぐため、毎回 UserStore.GetUser(...) を
 // 引いて Disabled / 不在を再評価する。UserStore は内部で 30s キャッシュを持つため
-// ホットパスでも低コスト（C-013 / C-030 と同じ usersCacheTTL に吸収される）。
+// ホットパスでも低コスト（usersCacheTTL のキャッシュに吸収される）。
 func (m *SessionManager) Get(sessionID string) (Session, bool) {
 	if strings.TrimSpace(sessionID) == "" {
 		return Session{}, false
@@ -178,7 +175,7 @@ func (m *SessionManager) Get(sessionID string) (Session, bool) {
 		return Session{}, false
 	}
 
-	// C-005: ユーザーが Disabled / 削除されたら即時無効化。lookup フック経由で
+	// ユーザーが Disabled / 削除されたら即時無効化。lookup フック経由で
 	// UserStore.GetUser を引く。username 空セッションは保護的に拒否。
 	if strings.TrimSpace(s.Username) == "" {
 		delete(m.sessions, sessionID)
@@ -209,8 +206,6 @@ func (m *SessionManager) Delete(sessionID string) {
 // exceptID が非空のとき、その ID のセッションだけは残す（自端末でのパスワード
 // 変更時に「他端末だけログアウトさせたい」用途）。戻り値は削除件数。
 //
-// C-005（session-not-invalidated-on-user-disable）/ C-028
-// （password-change-does-not-revoke-other-sessions）対応:
 // admin の Disable / DeleteUser / role 変更 / access_screens 変更 / TOTP リセットや、
 // 本人のパスワード変更直後に呼び、権限変更・盗難疑いを即時セッションへ反映する。
 func (m *SessionManager) DeleteByUsername(username, exceptID string) int {
@@ -244,7 +239,7 @@ func (m *SessionManager) SessionFromRequest(r *http.Request) (Session, bool) {
 }
 
 // CSRFTokenForRequest はリクエストのセッションに束縛された CSRF トークンを返す。
-// セッションが無い（未ログイン）場合は ("", false) を返す。C4 で VerifyCSRF /
+// セッションが無い（未ログイン）場合は ("", false) を返す。VerifyCSRF /
 // EnsureCSRFCookie がセッション束縛を判定するために使う。
 func (m *SessionManager) CSRFTokenForRequest(r *http.Request) (string, bool) {
 	s, ok := m.SessionFromRequest(r)
@@ -300,7 +295,7 @@ func isSecureRequest(r *http.Request) bool {
 
 // ClientIP は Nginx プロキシ環境を考慮してクライアントIPを返す。
 //
-// C3（trust-xff-ip-spoofing）対応で trustedProxy 層（TrustedClientIP）経由に変更。
+// trustedProxy 層（TrustedClientIP）経由で解決する。
 // RemoteAddr が信頼プロキシ（loopback / 登録 nginx）のときのみ X-Real-IP を採用し、
 // :8765 直結時はヘッダを無視して RemoteAddr を使う。
 func ClientIP(r *http.Request) string {

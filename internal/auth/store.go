@@ -44,7 +44,7 @@ var (
 	defaultStore     *UserStore
 )
 
-// dummyBcryptHash はユーザー列挙タイミング攻撃対策（C5: username-enum-timing）用の
+// dummyBcryptHash はユーザー列挙タイミング攻撃対策用の
 // 固定 bcrypt ハッシュ。ユーザー不在/Disabled 時にこのハッシュへ
 // CompareHashAndPassword を実行し、存在ユーザーと計算時間を揃える。
 // パッケージ初期化時に 1 度だけ生成して使い回す。
@@ -92,7 +92,7 @@ func (s *UserStore) Authenticate(username, password string) (User, error) {
 	users := s.loadUsers()
 	u, ok := users[username]
 	if !ok || u.Disabled {
-		// C5（username-enum-timing）: 不在/Disabled でもダミー bcrypt 比較を実行して
+		// 不在/Disabled でもダミー bcrypt 比較を実行して
 		// 存在ユーザーとの応答時間差を消す（タイミングによるユーザー列挙を防ぐ）。
 		runDummyPasswordCompare(password)
 		return User{}, errUserNotFound
@@ -311,7 +311,7 @@ type rawUser struct {
 	AccessOKRoles interface{} `toml:"access_ok_roles,omitempty"`
 	Permissions   interface{} `toml:"permissions,omitempty"`
 	Denies        interface{} `toml:"denies,omitempty"`
-	Policy        interface{} `toml:"policy,omitempty"` // C5 で cards_user.toml / actions_user.toml に分離
+	Policy        interface{} `toml:"policy,omitempty"` // cards_user.toml / actions_user.toml に分離済み
 }
 
 type usersFile struct {
@@ -324,7 +324,7 @@ type usersFile struct {
 // log.Fatalf 等でプロセスを落としてはならない。起動時の fail-fast 検証は
 // ValidateAllOrFatal を main から明示的に呼ぶことで実現する。
 //
-// C-013 / C-030: 旧フィールド名が users.toml に紛れ込んだだけで稼働中の
+// 旧フィールド名が users.toml に紛れ込んだだけで稼働中の
 // heartdesk プロセスが exit する foot-gun を取り除く。
 func validateAndConvertRaw(raw rawUser) (User, error) {
 	key := strings.TrimSpace(strings.ToLower(raw.Username))
@@ -407,7 +407,7 @@ func validateAndConvertRaw(raw rawUser) (User, error) {
 // ValidateAllOrFatal は users.toml 全体を読み込み、旧スキーマ・無効 role を
 // 1 件でも検出したら log.Fatalf で起動を中断する。起動時の fail-fast 用。
 // main.go から **一度だけ** 呼び出すこと。ホットパス（Authenticate / GetUser /
-// ListUsers / loadUsers）からは絶対に呼ばないこと（C-013 / C-030）。
+// ListUsers / loadUsers）からは絶対に呼ばないこと。
 func (s *UserStore) ValidateAllOrFatal() {
 	raw, err := os.ReadFile(s.path)
 	if err != nil {
@@ -465,7 +465,7 @@ func (s *UserStore) loadUsers() map[string]User {
 		}
 		u, err := validateAndConvertRaw(row)
 		if err != nil {
-			// C-013 / C-030: ホットパスから到達するため fatal にしない。
+			// ホットパスから到達するため fatal にしない。
 			// 該当行をスキップし、可能ならキャッシュ済みユーザーを温存する。
 			log.Printf("auth: users.toml の行をスキップ user=%q err=%v", userKey, err)
 			if cached, ok := s.users[userKey]; ok {
@@ -519,7 +519,7 @@ func (s *UserStore) loadUsersNoLock() (map[string]User, error) {
 		}
 		u, err := validateAndConvertRaw(row)
 		if err != nil {
-			// C-013 / C-030: ホットパスからの mutate でも fatal は禁止。
+			// ホットパスからの mutate でも fatal は禁止。
 			// 既存キャッシュにあれば温存し、無ければ単にスキップ。
 			log.Printf("auth: users.toml の行をスキップ user=%q err=%v", key, err)
 			if cached, ok := s.users[key]; ok {

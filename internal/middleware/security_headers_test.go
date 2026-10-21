@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// TestSetHTMLSecurityHeaders は C2（no-csp-security-headers）の enforce ヘッダと
+// TestSetHTMLSecurityHeaders は enforce ヘッダと
 // Report-Only CSP 雛形が付与されることを確認する。
 func TestSetHTMLSecurityHeaders(t *testing.T) {
 	w := httptest.NewRecorder()

@@ -728,7 +728,7 @@ func TestNCFileAccess_RotationDecisionMatrix(t *testing.T) {
 
 		env.run(ncFARules(), newAlertState(), now)
 		// id=100 の残り 200 件は .2 にあって読めない。.1（id=150）は先頭の指紋が前回のファイルと
-		// 違うので読まない（F11: 指紋が一致する .1 だけを読む）。新しいファイルは 0 から。
+		// 違うので読まない（指紋が一致する .1 だけを読む）。新しいファイルは 0 から。
 		if got := ncFAUserCount(t, env, alice); got != 50+100 {
 			t.Fatalf("got %d, want %d", got, 50+100)
 		}
@@ -1124,7 +1124,7 @@ func TestNCFAParsers(t *testing.T) {
 			t.Fatalf("public link line %q: ok=%v tok=%q owner=%q", line, ok, tok, owner)
 		}
 	}
-	// 実機に無い形・行の途中に文言があるだけの行は受けない（F1）。
+	// 実機に無い形・行の途中に文言があるだけの行は受けない。
 	for _, line := range []string{
 		`The shared folder with the token "Zq7XbN3pLm9KsT2" has been accessed.`,
 		`Login attempt: "The shared folder with the token FAKEtok by x has been accessed"`,
@@ -1153,7 +1153,7 @@ func TestNCFAIPUnit(t *testing.T) {
 	}
 }
 
-// F11: 状態に先頭の指紋（512 バイトまでの SHA-256 と長さ）が残る。短いファイルは育つと伸ばす。
+// 状態に先頭の指紋（512 バイトまでの SHA-256 と長さ）が残る。短いファイルは育つと伸ばす。
 func TestNCFileAccess_HeadFingerprintIsSaved(t *testing.T) {
 	env := newNCFATestEnv(t)
 	now := ncFABaseNow

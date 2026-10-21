@@ -12,7 +12,7 @@ import (
 // その session_id Cookie を持つリクエストを返す（テスト補助）。
 func injectSession(t *testing.T, csrfToken string) (sessionID string) {
 	t.Helper()
-	// C-005 で Get が UserStore へ Disabled 再評価を行うため、テスト用 lookup を
+	// Get が UserStore へ Disabled 再評価を行うため、テスト用 lookup を
 	// 上書きして "tester" を常に有効ユーザーとして見せる。
 	stubSessionUserLookup(t, map[string]userStub{
 		"tester": {Exists: true, Disabled: false},
@@ -77,7 +77,7 @@ func reqWithCookies(sessionID, csrfCookie, csrfHeader string) *http.Request {
 	return r
 }
 
-// TestVerifyCSRFSessionBinding は C4（csrf-token-not-bound-to-session）を確認する。
+// TestVerifyCSRFSessionBinding はセッションへの CSRF トークン束縛を確認する。
 func TestVerifyCSRFSessionBinding(t *testing.T) {
 	boundToken, _ := newCSRFToken()
 	otherToken, _ := newCSRFToken()

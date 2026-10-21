@@ -63,7 +63,7 @@ func (s *sqliteUserStore) GetUserByEmail(ctx context.Context, tenantID, email st
 }
 
 // UpdateUserPassword はテナント境界内でユーザーのパスワードを更新する。
-// tenantID が空文字の場合はエラーを返す（ζ1: tenantID 第1引数必須）。
+// tenantID が空文字の場合はエラーを返す（tenantID 第1引数必須）。
 // CLI 横断操作で使う場合は UpdateUserPasswordAcrossTenants を呼ぶこと。
 func (s *sqliteUserStore) UpdateUserPassword(ctx context.Context, tenantID string, userID int64, passwordHash string) error {
 	if tenantID == "" {

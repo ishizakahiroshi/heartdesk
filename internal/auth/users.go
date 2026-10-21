@@ -1,7 +1,7 @@
 package auth
 
 // User は users.toml のユーザー定義。
-// カード表示ポリシー / 操作可否ポリシーは cards_user.toml / actions_user.toml に分離済み（C5）。
+// カード表示ポリシー / 操作可否ポリシーは cards_user.toml / actions_user.toml に分離済み。
 type User struct {
 	ID            string   `json:"id" toml:"id"`
 	Username      string   `json:"username" toml:"username"`

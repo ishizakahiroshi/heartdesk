@@ -410,7 +410,7 @@ function loadSection(apiName, sectionId, renderFn) {
 }
 
 // ========================================
-// loadJsonCard — JSON を直接返す API 用の薄い fetch ラッパー（C9-C4）。
+// loadJsonCard — JSON を直接返す API 用の薄い fetch ラッパー。
 // vendor_*/ssl/resource_graph が各自で再発明していたローカル doFetch を一本化する。
 //   el       : 描画先要素（loadSection の section とは異なり content 要素を直接渡す）
 //   apiName  : ?api= に渡す値
@@ -3119,14 +3119,14 @@ function renderSsl(container, data) {
 	// Bind renewal button
 	var renewBtn = document.getElementById('ssl-renew-btn');
 	if (renewBtn) {
-		// C9-C6: ssl-renew-btn に状態クラス基盤（.ssl-renew-btn.is-*）を適用。inline hex を撤去。
+		// ssl-renew-btn に状態クラス基盤（.ssl-renew-btn.is-*）を適用。inline hex を撤去。
 		renewBtn.classList.add('ssl-renew-btn', 'is-idle');
 		function sslBtnState(cls) {
 			renewBtn.classList.remove('is-idle', 'is-busy', 'is-ok', 'is-err');
 			renewBtn.classList.add(cls);
 		}
 		renewBtn.onclick = function() {
-			// C9-C5: 破壊的操作（SSL 手動更新）の確認は共通 confirmModal 経由。確認後に doRenew() を発火。
+			// 破壊的操作（SSL 手動更新）の確認は共通 confirmModal 経由。確認後に doRenew() を発火。
 			var sslRenewMsg = 'SSL証明書を手動で更新します。よろしいですか？\n（処理に1〜2分かかる場合があります）';
 			if (typeof window.confirmModal === 'function') {
 				window.confirmModal(sslRenewMsg).then(function(ok) { if (ok) doRenew(); });
@@ -5189,7 +5189,7 @@ if (typeof document !== 'undefined') {
 }
 
 // =============================================================================
-// 汎用モーダル基盤（C9-C5）: openModal / closeModal / confirmModal
+// 汎用モーダル基盤: openModal / closeModal / confirmModal
 //   - 開いた要素を記憶し、閉じたらフォーカスを復帰する
 //   - 開いた時の初期フォーカスを .modal-close（無ければ最初の可フォーカス要素）へ移す
 //   - Tab/Shift+Tab をモーダル内に拘束（フォーカストラップ）
@@ -5414,7 +5414,7 @@ var showFlashModal;
 })();
 
 // =============================================================================
-// showToast — 軽量通知 API（C9-C2）。
+// showToast — 軽量通知 API。
 // 多数のカードが showToast(msg, kind) を呼ぶが定義が無く、
 // typeof ガードで握り潰されて成功通知が消えていた。showFlashModal をラップして1本化する。
 // kind: 'success'(既定) / 'error' / 'warning' / 'info' を flash-type-* へマップする。
@@ -5432,7 +5432,7 @@ window.showToast = function(msg, kind) {
 };
 
 // =============================================================================
-// C4 カードレンダラー — resources / fail2ban / ip_mgmt
+// カードレンダラー — resources / fail2ban / ip_mgmt
 // =============================================================================
 
 // ---- Resources ----
@@ -6574,7 +6574,7 @@ function openIpModal(ip) {
 	if (!modal) return;
 	title.textContent = ip + ' の履歴';
 	body.innerHTML = '<p class="section-loading">読み込み中...</p>';
-	// C9-C5: 共通 openModal 経由（フォーカス管理・Escape・トラップを共有）。フォールバックで従来の display 切替。
+	// 共通 openModal 経由（フォーカス管理・Escape・トラップを共有）。フォールバックで従来の display 切替。
 	if (typeof window.openModal === 'function') { window.openModal('ip-search-modal'); }
 	else { modal.style.display = 'flex'; }
 
@@ -6644,7 +6644,7 @@ function openIpModal(ip) {
 }
 
 function closeIpModal() {
-	// C9-C5: 共通 closeModal 経由（フォーカス復帰を共有）。フォールバックで従来の display 切替。
+	// 共通 closeModal 経由（フォーカス復帰を共有）。フォールバックで従来の display 切替。
 	if (typeof window.closeModal === 'function') { window.closeModal('ip-search-modal'); return; }
 	var modal = document.getElementById('ip-search-modal');
 	if (modal) modal.style.display = 'none';
@@ -6755,7 +6755,7 @@ function setupIpModalBanEvents(ip) {
 }
 
 // ============================================================
-// C7 ハニーポット アクセス一覧レンダラー
+// ハニーポット アクセス一覧レンダラー
 // (renderHoneypotAccess / Summary / Detail / toggleHpPostBody)
 // ============================================================
 
@@ -7194,7 +7194,7 @@ function toggleHpPostBody(btn, body) {
 }
 
 // ============================================================
-// C7 NC 4xx アクセスレンダラー
+// NC 4xx アクセスレンダラー
 // (renderNC4xxAccess / renderNc4xxSummary / renderNc4xxDetail / nc4xxChangeDays)
 // ============================================================
 
@@ -7626,7 +7626,7 @@ function authzOpenEditPanel(container, user, catalog, usersData) {
 
 	var currentScreens = user.access_screens || defaultScreensFor(user.role);
 	var currentPolicy = user.policy || {};
-	// C5: actions_user.toml の deny リスト（追加禁止）。チェック外しで deny、チェックは role 既定値を尊重。
+	// actions_user.toml の deny リスト（追加禁止）。チェック外しで deny、チェックは role 既定値を尊重。
 	var currentDenySet = {};
 	var currentDenyList = (currentPolicy && currentPolicy.deny) || [];
 	for (var di = 0; di < currentDenyList.length; di++) {
@@ -7686,7 +7686,7 @@ function authzOpenEditPanel(container, user, catalog, usersData) {
 		panelHtml += '<div class="authz-panel-label authz-collapsible-toggle">アクション制御（詳細）<span class="authz-toggle-icon">▶</span></div>';
 		panelHtml += '<div class="authz-collapsible-body" style="display:none">';
 
-		// C5: チェック外し = actions_user.toml の deny（追加禁止）。
+		// チェック外し = actions_user.toml の deny（追加禁止）。
 		//     チェックのまま = role/tenant 既定値を尊重（復活はできない）。
 		if (destructiveActions.length > 0) {
 			panelHtml += '<div class="authz-action-group-label">破壊的アクション（チェック外しでこのユーザーに対し禁止）</div>';
@@ -7791,7 +7791,7 @@ function authzOpenEditPanel(container, user, catalog, usersData) {
 				if (cb.checked) screens.push(cb.value);
 			});
 
-			// C5: チェック外しのアクションのみ deny リストに入れる（actions_user.toml）。
+			// チェック外しのアクションのみ deny リストに入れる（actions_user.toml）。
 			var deny = [];
 			panel.querySelectorAll('.authz-action-check').forEach(function(cb) {
 				if (!cb.checked) deny.push(cb.value);
@@ -8054,7 +8054,7 @@ function authzUpdateRow(container, username, newRole, newScreens) {
 	}
 }
 
-// ---- C5: バックアップ実行 ----
+// ---- バックアップ実行 ----
 
 function runBackupNow(btn) {
 	if (btn) btn.disabled = true;

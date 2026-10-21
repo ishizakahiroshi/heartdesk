@@ -11,7 +11,7 @@ import (
 
 // TenantAuditLog は tenant_admin 向けの監査ログ閲覧エンドポイント。
 //
-// C8（audit-vendor-staff-only-tenant-admin-no-audit）: auditdb.Query を呼ぶが、
+// auditdb.Query を呼ぶが、
 // Tenant はセッションの TenantID をサーバー側で強制注入し、クライアント指定の
 // tenant パラメータは一切信用しない（リクエスト改ざんで他テナントを指定しても無視）。
 // これにより tenant_admin は自テナントの監査ログのみ閲覧でき、テナント境界を強制する。

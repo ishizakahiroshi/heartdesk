@@ -1,5 +1,5 @@
 // heartdesk カード: Nginxアクセスログ (sec-nginx-log)
-// Phase 2c (C4): monitor_page.js から切り出したカード単位モジュール。
+// monitor_page.js から切り出したカード単位モジュール。
 // 依存: shared.js の escHtml / ipBadges / isWhitelisted / addRowNumbers /
 //       renderRateStatsGrid / cardViewToggle / getCsrfToken / getCardOptions /
 //       createFilterHeaderRow / buildIpFilterCell / setupCardFilter /

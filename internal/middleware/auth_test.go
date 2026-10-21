@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// TestCSRFMethodClassification は C-007（CSRF middleware coverage）の修正を確認する。
+// TestCSRFMethodClassification は CSRF 検証対象の method 分類を確認する。
 // safe method（GET/HEAD/OPTIONS）は CSRF 検証対象外、
 // state-changing method（POST/PUT/PATCH/DELETE）は CSRF 検証対象、
 // 未知 method はどちらにも該当しない（呼び出し側で 405 reject）。

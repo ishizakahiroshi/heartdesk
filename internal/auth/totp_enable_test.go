@@ -24,7 +24,7 @@ func codeFor(t *testing.T, secret string, now time.Time) string {
 	return hotpCode(key, now.Unix()/totpPeriod)
 }
 
-// TestEnableAfterVerifyRecordsLastCounter は C5（totp-enable-no-replay-counter）の
+// TestEnableAfterVerifyRecordsLastCounter は
 // 「有効化に使ったコードが直後のログインで再利用できない」を確認する。
 func TestEnableAfterVerifyRecordsLastCounter(t *testing.T) {
 	m := newTestTOTPManager(t)

@@ -1,5 +1,5 @@
 // Package user は /module/nextcloud/user/ の HTTP ハンドラを提供する。
-// C10 で本格実装する。C2 はスケルトンのみ。
+// 現状はスケルトンのみ。
 package user
 
 import (
@@ -20,7 +20,7 @@ func NewHandler() *Handler {
 
 // ServeHTTP は /module/nextcloud/user/ 配下のリクエストをディスパッチする (http.Handler 実装)
 //
-// C9-C3: 旧実装は middleware.GetUser（認証セッションの Username）を html/template を介さず
+// 旧実装は middleware.GetUser（認証セッションの Username）を html/template を介さず
 // 素の Fprintf で text/html へ %s 埋め込みしており、ユーザー名に <script> 等が含まれると
 // 反射型 XSS が成立した。html.EscapeString で必ずエスケープしてから埋め込むことで止血する
 // （main.go が import するのは module/nextcloud/user 側だが、内容同一の重複ファイルとして

@@ -8,8 +8,7 @@ import (
 )
 
 // ResourceLogColumns は resource CSV の列順（単一情報源）。
-// collect.go（package daemon）はこの定数を import して参照する
-// （C4: alerts-resource-mem-disk-coupling のフォーマット定数共有）。
+// collect.go（package daemon）はこの定数を import して参照する。
 // import 方向は daemon -> alerts に統一する。daemon/alerts.go が既に
 // internal/alerts を import しているため、alerts 側に const を置き daemon が
 // import することで循環（daemon -> alerts -> daemon）を避ける。

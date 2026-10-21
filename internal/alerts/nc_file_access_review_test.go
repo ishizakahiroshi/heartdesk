@@ -1,6 +1,6 @@
 package alerts
 
-// レビュー（4e8b6b7 を崩しにいくレビュー）の指摘 F1〜F11 の再現テスト。
+// レビューで指摘された点の再現テスト。
 // fixture はすべて合成値（example.com・文書用 IP・2001:db8::/32）。
 
 import (
@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// F1: 公開リンクの文言を含むだけの行（ログイン名・ファイル名・user 付き）は公開リンクとして数えない。
+// 公開リンクの文言を含むだけの行（ログイン名・ファイル名・user 付き）は公開リンクとして数えない。
 func TestNCFileAccess_F1_PublicLinkRequiresExactLine(t *testing.T) {
 	env := newNCFATestEnv(t)
 	now := ncFABaseNow
@@ -61,7 +61,7 @@ func TestNCFileAccess_F1_PublicLinkRequiresExactLine(t *testing.T) {
 	}
 }
 
-// F2: 1 回の評価で出す通知は、ルールごとに 5 件＋まとめ 1 件まで。
+// 1 回の評価で出す通知は、ルールごとに 5 件＋まとめ 1 件まで。
 func TestNCFileAccess_F2_CapsAlertsPerRule(t *testing.T) {
 	t.Run("public links", func(t *testing.T) {
 		env := newNCFATestEnv(t)
@@ -117,7 +117,7 @@ func TestNCFileAccess_F2_CapsAlertsPerRule(t *testing.T) {
 	})
 }
 
-// F3: audit.log が読めない（無い以外の理由）ときは毎回ログに 1 行出す。
+// audit.log が読めない（無い以外の理由）ときは毎回ログに 1 行出す。
 func TestNCFileAccess_F3_UnreadableAuditLogIsLogged(t *testing.T) {
 	env := newNCFATestEnv(t)
 	logs := captureLog(t)
@@ -146,7 +146,7 @@ func TestNCFileAccess_F3_UnreadableAuditLogIsLogged(t *testing.T) {
 	}
 }
 
-// F4: 評価時刻より 5 分以上先の行は数えない（窓に残り続けて発報し続けるのを防ぐ）。
+// 評価時刻より 5 分以上先の行は数えない（窓に残り続けて発報し続けるのを防ぐ）。
 func TestNCFileAccess_F4_FutureLinesAreDropped(t *testing.T) {
 	env := newNCFATestEnv(t)
 	logs := captureLog(t)
@@ -172,7 +172,7 @@ func TestNCFileAccess_F4_FutureLinesAreDropped(t *testing.T) {
 	}
 }
 
-// F5: 窓の開始より前に始まる 1 分刻みは数えない（窓が 61 分にならない）。
+// 窓の開始より前に始まる 1 分刻みは数えない（窓が 61 分にならない）。
 func TestNCFileAccess_F5_WindowIsAtMost60Minutes(t *testing.T) {
 	env := newNCFATestEnv(t)
 	t0 := time.Date(2026, 10, 14, 4, 10, 0, 0, time.UTC)
@@ -201,7 +201,7 @@ func TestNCFileAccess_F5_WindowIsAtMost60Minutes(t *testing.T) {
 	}
 }
 
-// F6: 行区切り・段落区切り・書式制御（RLO 等）も通知文から除く。
+// 行区切り・段落区切り・書式制御（RLO 等）も通知文から除く。
 func TestNCFASanitize_F6_StripsLineAndFormatChars(t *testing.T) {
 	got := ncFASanitize("a\u2028b\u2029c\u202Ed\u200Be\x07f", 100)
 	if got != "a?b?c?d?e?f" {
@@ -209,7 +209,7 @@ func TestNCFASanitize_F6_StripsLineAndFormatChars(t *testing.T) {
 	}
 }
 
-// F7: 「初めての接続元」は IPv6 を /64、IPv4 をアドレスそのもので見る。
+// 「初めての接続元」は IPv6 を /64、IPv4 をアドレスそのもので見る。
 func TestNCFileAccess_F7_NewIPUsesIPv6Slash64(t *testing.T) {
 	env := newNCFATestEnv(t)
 	t0 := ncFABaseNow
@@ -250,7 +250,7 @@ func TestNCFileAccess_F7_NewIPUsesIPv6Slash64(t *testing.T) {
 	}
 }
 
-// F8: alert_state.json の cooldown キーに利用者 ID・接続元を生で入れない。
+// alert_state.json の cooldown キーに利用者 ID・接続元を生で入れない。
 func TestNCFileAccess_F8_CooldownKeysAreHashed(t *testing.T) {
 	env := newNCFATestEnv(t)
 	t0 := ncFABaseNow
@@ -296,7 +296,7 @@ func TestNCFileAccess_F8_CooldownKeysAreHashed(t *testing.T) {
 	}
 }
 
-// F11: ローテーションの端のケース（inode の使い回し・手の切り詰め・inode が取れない・別物の .1）。
+// ローテーションの端のケース（inode の使い回し・手の切り詰め・inode が取れない・別物の .1）。
 func TestNCFileAccess_F11_RotationEdgeCases(t *testing.T) {
 	const alice = "alice@example.com"
 	now := ncFABaseNow

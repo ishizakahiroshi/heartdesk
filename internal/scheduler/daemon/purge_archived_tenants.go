@@ -71,9 +71,9 @@ func CountArchivedTenants(ctx context.Context, db *sql.DB) (int, error) {
 // （外部キー制約: tenants.id 参照テーブルを先に削除）。
 // 途中で失敗した場合は Rollback し、部分削除を残さない（次回反復でリトライ）。
 //
-// C-027 対策: 当該テナントを `current_tenant_id` に持つ session を先頭で無効化し、
+// 当該テナントを `current_tenant_id` に持つ session を先頭で無効化し、
 // purge 後にステイル session で `current_tenant_id` が消滅済みテナントを指したまま残るのを防ぐ。
-// C-038 対策: user_tenants 削除前に当該テナントへ所属するユーザーを記録し、削除後に
+// user_tenants 削除前に当該テナントへ所属するユーザーを記録し、削除後に
 // `user_tenants` 0 件かつ `is_super = 0` のユーザーを users から削除する。
 // schema コメント上 `user_tenants` 0 件 = 運営扱いとなるため、テナント物理削除に伴って
 // 暗黙に運営権限へ昇格してしまう経路を塞ぐ。
@@ -85,7 +85,7 @@ func purgeOneTenant(ctx context.Context, db *sql.DB, tenantID string) error {
 	// Commit 成功後の Rollback は no-op。失敗時はここで巻き戻す。
 	defer func() { _ = tx.Rollback() }()
 
-	// (1) ステイル session の無効化（C-027）。
+	// (1) ステイル session の無効化。
 	// sessions.current_tenant_id は TEXT のみ・FK 無しのため、テナント削除で自動消去されない。
 	// このテナントを「現在テナント」として保持している session を即時無効化する。
 	if _, err := tx.ExecContext(ctx,
@@ -93,7 +93,7 @@ func purgeOneTenant(ctx context.Context, db *sql.DB, tenantID string) error {
 		return fmt.Errorf("DELETE sessions: %w", err)
 	}
 
-	// (2) 当該テナントに所属するユーザー ID を収集（C-038）。
+	// (2) 当該テナントに所属するユーザー ID を収集。
 	// user_tenants 削除後の「孤児ユーザー（0 件所属）」検出に使う。
 	affectedUserIDs, err := collectTenantUserIDs(ctx, tx, tenantID)
 	if err != nil {
@@ -118,7 +118,7 @@ func purgeOneTenant(ctx context.Context, db *sql.DB, tenantID string) error {
 		}
 	}
 
-	// (3) 孤児ユーザーの削除（C-038）。
+	// (3) 孤児ユーザーの削除。
 	// user_tenants 0 件かつ is_super = 0 のユーザー = 「このテナント以外にどこにも所属していない一般ユーザー」。
 	// schema コメント上 user_tenants 0 件 = 運営扱いとなるため、削除せず残すと暗黙の権限昇格になる。
 	// users への CASCADE で残りの sessions / user_tenants も連鎖削除される。

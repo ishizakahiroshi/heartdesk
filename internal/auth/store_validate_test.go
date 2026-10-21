@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// TestValidateAndConvertRawReturnsErrorOnLegacyFields は C-013 / C-030 の回帰テスト。
+// TestValidateAndConvertRawReturnsErrorOnLegacyFields の回帰テスト。
 // 旧フィールド（access_ok_roles / permissions / denies / policy）や無効 role が
 // 来た場合に log.Fatalf でプロセスを落とさず、error を返すことを確認する。
 func TestValidateAndConvertRawReturnsErrorOnLegacyFields(t *testing.T) {
@@ -80,7 +80,7 @@ func TestValidateAndConvertRawReturnsErrorOnLegacyFields(t *testing.T) {
 	}
 }
 
-// TestLoadUsersSkipsBadRowAndKeepsCachedValue は C-013 / C-030 の回帰テスト。
+// TestLoadUsersSkipsBadRowAndKeepsCachedValue の回帰テスト。
 // users.toml に旧フィールドが混入しても (1) プロセスが exit せず、(2) 以前に
 // 読み込めた行はキャッシュから温存されることを確認する。
 func TestLoadUsersSkipsBadRowAndKeepsCachedValue(t *testing.T) {
@@ -142,7 +142,7 @@ access_ok_roles = ["monitor"]
 	store.mu.Unlock()
 
 	users = store.loadUsers()
-	// プロセスが exit せず到達できれば C-013 / C-030 の根本回避は OK。
+	// プロセスが exit せず到達できれば OK。
 	if _, ok := users["alice"]; !ok {
 		t.Fatalf("alice missing after corrupt reload (should still load)")
 	}

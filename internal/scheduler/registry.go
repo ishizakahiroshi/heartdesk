@@ -189,7 +189,7 @@ func init() {
 			DefaultCronSchedule: "0 3 * * *",
 			RunOnStartup:        false,
 		},
-		// C8（alerts-never-invoked）: alerts を別バイナリ（exec.Command）ではなく
+		// alerts を別バイナリ（exec.Command）ではなく
 		// daemon ジョブとして登録。Interval は ToSchedulerConfig の AlertsInterval を
 		// NewScheduler が反映する（cfg.AlertsInterval > 0 のとき上書き）。
 		"alerts": {
@@ -202,7 +202,7 @@ func init() {
 			DefaultCronSchedule: "*/5 * * * *",
 			RunOnStartup:        false,
 		},
-		// C8（purge-jobs-unregistered）: 実装済みだが未登録だった purge ジョブを
+		// purge ジョブを
 		// CategoryDaemon・24h 既定で登録。VendorPurgeIntervalHours / VendorDBPath が
 		// 未設定なら NewScheduler が purge ジョブを無効化する（既存ロジックを活かす）。
 		"purge_old_reports": {
@@ -319,7 +319,7 @@ func (s *Scheduler) setState(id string, state RuntimeState) {
 	s.jobState[id] = state
 	s.stateMu.Unlock()
 
-	// C8（state-file-cross-process-clobber）: 全 jobState スナップショットを丸ごと
+	// 全 jobState スナップショットを丸ごと
 	// 書き戻すと、monitor プロセス（jobState がゼロ値起点）が daemon の記録した
 	// 他ジョブの LastFinished/LastError を消してしまう。これを防ぐため
 	// 「ファイルから現状ロード → 該当ジョブのみ更新 → 保存」の read-modify-write にする。

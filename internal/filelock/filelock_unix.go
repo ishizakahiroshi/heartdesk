@@ -12,7 +12,7 @@ import (
 // ErrLocked はロックが他プロセス／他スレッドに保持されており取得できなかったことを表す
 // sentinel error（flock の EWOULDBLOCK 由来）。open 失敗（権限不足・パス不正）とは区別する。
 // 呼び出し側は errors.Is(err, ErrLocked) で「実行中スキップ」を判定し、それ以外の error は
-// 本物の I/O/権限エラーとして伝播させる（C4: ondemand-apt-lock-silent-skip）。
+// 本物の I/O/権限エラーとして伝播させる。
 var ErrLocked = errors.New("filelock: already locked")
 
 // Acquire はロックファイルに排他 flock を取得する（非ブロッキング）。

@@ -2,7 +2,7 @@
 // （メール gateway / 組織同期 / チャット添付 gateway）へ
 // プロキシする際の共通 HTTP クライアントを提供する。
 //
-// C3（monitor-internal-proxy-clients-duplicated）: 以前は mail_gateway / nc_org_sync /
+// 以前は mail_gateway / nc_org_sync /
 // chat_gateway がそれぞれ独自の client factory・GET/POST ヘルパを持ち、特にメール gateway は
 // リクエスト毎に http.Transport を新規生成し CA ファイルを毎回ディスクから読んでいた。
 // 本パッケージで以下を一元化する:

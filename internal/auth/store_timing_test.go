@@ -6,7 +6,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// TestDummyBcryptHashValid は C5（username-enum-timing）のダミーハッシュが
+// TestDummyBcryptHashValid はユーザー列挙タイミング攻撃対策のダミーハッシュが
 // 有効な bcrypt ハッシュとして生成されていることを確認する。
 // これにより不在/Disabled ユーザーでも実ユーザーと同等の bcrypt 計算が走る。
 func TestDummyBcryptHashValid(t *testing.T) {

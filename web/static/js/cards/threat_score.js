@@ -1,5 +1,5 @@
 // heartdesk カード: 脅威スコア (sec-threat-score)
-// Phase 2b (C3): monitor_page.js から切り出したカード単位モジュール。
+// monitor_page.js から切り出したカード単位モジュール。
 // 依存: shared.js の escHtml / isWhitelisted / ipBadges / openIpModal /
 //       getCsrfToken / createFilterHeaderRow / buildIpFilterCell /
 //       setupCardFilter / initBulkBan / autoInitCardFromDataset /

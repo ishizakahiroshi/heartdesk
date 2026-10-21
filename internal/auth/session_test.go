@@ -6,8 +6,7 @@ import (
 	"time"
 )
 
-// TestSessionGetRejectsDisabledUser は C-005
-// （session-not-invalidated-on-user-disable）の回帰テスト。
+// TestSessionGetRejectsDisabledUser の回帰テスト。
 // Disabled=true になったユーザーの既存セッションが Get で即時失効することを確認する。
 func TestSessionGetRejectsDisabledUser(t *testing.T) {
 	stubSessionUserLookup(t, map[string]userStub{
@@ -34,7 +33,7 @@ func TestSessionGetRejectsDisabledUser(t *testing.T) {
 	}
 }
 
-// TestSessionGetRejectsDeletedUser は C-005 の派生。Disabled だけでなく
+// TestSessionGetRejectsDeletedUser は、Disabled だけでなく
 // users.toml から削除されたユーザーのセッションも失効することを確認する。
 func TestSessionGetRejectsDeletedUser(t *testing.T) {
 	stubSessionUserLookup(t, map[string]userStub{
@@ -48,7 +47,7 @@ func TestSessionGetRejectsDeletedUser(t *testing.T) {
 	}
 }
 
-// TestSessionDeleteByUsernameAll は C-005 / C-028 の回帰テスト（exceptID 無し）。
+// TestSessionDeleteByUsernameAll の回帰テスト（exceptID 無し）。
 // 同一ユーザーの複数セッションが一括失効し、他ユーザーは影響を受けないことを確認する。
 func TestSessionDeleteByUsernameAll(t *testing.T) {
 	stubSessionUserLookup(t, map[string]userStub{
@@ -76,7 +75,7 @@ func TestSessionDeleteByUsernameAll(t *testing.T) {
 	}
 }
 
-// TestSessionDeleteByUsernameExceptCurrent は C-028 の回帰テスト。
+// TestSessionDeleteByUsernameExceptCurrent の回帰テスト。
 // パスワード変更時に「自端末（現セッション）だけ残す」ユースケースを確認する。
 func TestSessionDeleteByUsernameExceptCurrent(t *testing.T) {
 	stubSessionUserLookup(t, map[string]userStub{

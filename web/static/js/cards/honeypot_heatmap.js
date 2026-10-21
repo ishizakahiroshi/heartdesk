@@ -1,5 +1,5 @@
 // heartdesk カード: ハニーポットヒートマップ (sec-honeypot-heatmap)
-// Phase 2b (C3): monitor_page.js から切り出したカード単位モジュール。
+// monitor_page.js から切り出したカード単位モジュール。
 // 依存: shared.js の escHtml / HM_DAYS / buildHeatmapTable / HP_TRIGGER_LABELS /
 //       isWhitelisted / ipBadges / openIpModal / addRowNumbers、
 //       card_runtime.js の CardRegistry。

@@ -30,7 +30,7 @@ var HD_AGENT_TYPE = {{.AgentType | js}};
 <script src="{{.StaticBase}}/js/card_runtime.js?v={{.AssetVersion}}"></script>
 <script src="{{.StaticBase}}/js/card_refresh.js?v={{.AssetVersion}}"></script>
 <script src="{{.StaticBase}}/js/card_jump.js?v={{.AssetVersion}}"></script>
-<!-- カード単位モジュール（Phase 3 / C5: navmeta.MonitorCardMeta.JSModule から自動出力） -->
+<!-- カード単位モジュール（navmeta.MonitorCardMeta.JSModule から自動出力） -->
 {{range .CardJSModules}}<script src="{{$.StaticBase}}/js/{{.}}?v={{$.AssetVersion}}"></script>
 {{end}}
 <script src="{{.StaticBase}}/js/monitor_page.js?v={{.AssetVersion}}"></script>

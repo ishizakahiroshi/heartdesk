@@ -12,7 +12,7 @@ import (
 
 // GenerateLicenseKey は HMAC ライセンスキーを生成して返す。
 // vendorSec が未設定の場合は空文字を返す。署名計算は license.ComputeLicenseSig に
-// 委譲し、license.Verify と同一ロジックを経由させる（C7-C2: hmac-sign-logic-quadruplicated）。
+// 委譲し、license.Verify と同一ロジックを経由させる。
 func GenerateLicenseKey(cfg *config.AppConfig, agentID, tenantID string) string {
 	vendorSec := ""
 	if cfg != nil {

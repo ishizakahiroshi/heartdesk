@@ -14,7 +14,7 @@ import (
 )
 
 // ncSessionTimeout は Nextcloud OCS API への問い合わせのタイムアウト。
-// C3（退路確認）の要件により、応答が無くても数秒で打ち切ってログイン画面へ戻す。
+// 応答が無くても数秒で打ち切ってログイン画面へ戻す。
 const ncSessionTimeout = 5 * time.Second
 
 // ncSessionEntryPath は「Nextcloud のログインで入る」の入口。nginx がこの 1 本だけを
@@ -74,7 +74,7 @@ type ocsUserResponse struct {
 
 // LoginNC は Nextcloud のログイン状態を使ったログインを処理する。
 // 受け取った Cookie をそのまま Nextcloud の OCS API へ転送し、返ってきた uid を
-// heartdesk の登録ユーザーと突き合わせる。未登録・無効ユーザーは拒否し、自動作成しない（C3）。
+// heartdesk の登録ユーザーと突き合わせる。未登録・無効ユーザーは拒否し、自動作成しない。
 func (h *HTTPHandler) LoginNC(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "405 Method Not Allowed", http.StatusMethodNotAllowed)
@@ -113,7 +113,7 @@ func (h *HTTPHandler) loginNCWithBase(w http.ResponseWriter, r *http.Request, ba
 		return
 	}
 	req.Header.Set("OCS-APIRequest", "true")
-	// C2 要件: 受け取った Cookie をそのまま転送するだけで、保存・ログ出力はしない。
+	// 受け取った Cookie をそのまま転送するだけで、保存・ログ出力はしない。
 	req.Header.Set("Cookie", cookieHeader)
 
 	client := &http.Client{Timeout: ncSessionTimeout}

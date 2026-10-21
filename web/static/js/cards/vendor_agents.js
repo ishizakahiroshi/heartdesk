@@ -8,10 +8,10 @@
 	var sortKey = 'agent_id';
 	var sortAsc = true;
 
-	// C9-C1: ローカル esc は廃止し正準 escHtml に統一。
+	// ローカル esc は廃止し正準 escHtml に統一。
 	var esc = (typeof window !== 'undefined' && window.escHtml) ? window.escHtml : function(s) { return String(s == null ? '' : s); };
 
-	// C9-C4: ローカル doFetch を撤去し共通 loadJsonCard に統一。
+	// ローカル doFetch を撤去し共通 loadJsonCard に統一。
 	function load(el) {
 		window.loadJsonCard(el, 'vendor_agents', renderVendorAgents, { includeAgent: false });
 	}

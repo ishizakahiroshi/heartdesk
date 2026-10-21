@@ -113,7 +113,7 @@ var monitorCardRegistry = []MonitorCardMeta{
 }
 
 // cardNav はカードの既定ナビ分類（グループ・表示順）を保持する。
-// C3（nav-meta-triple-definition）: グループ/順序の真実源をここに一元化した。
+// グループ/順序の真実源をここに一元化している。
 // 以前は core/monitor/views.go の defaultMonitorCardNavMetaByID に二重定義されていた。
 type cardNav struct {
 	Group string

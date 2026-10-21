@@ -7,7 +7,7 @@
 //   - heartdesk Monitor (heartdesk バイナリ): /api/agent/report で collector_id="audit_log" 受信時に Insert
 //   - heartdesk Scheduler (heartdesk-scheduler バイナリ): audit_aggregated_cleanup ジョブで retention_years 超過分を削除
 //
-// CGO 不要の modernc.org/sqlite を使うので Windows ローカルクロスビルドでも問題なし（A6）。
+// CGO 不要の modernc.org/sqlite を使うので Windows ローカルクロスビルドでも問題なし。
 package auditdb
 
 import (

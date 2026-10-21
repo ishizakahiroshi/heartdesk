@@ -40,7 +40,7 @@ func GenerateTOTPSecret() (string, error) {
 
 // verifyTOTP は TOTP コードを検証する（±window ステップ許容）。
 //
-// C5（totp-enable-no-replay-counter）でパッケージ内限定（package-private）に変更。
+// パッケージ内限定（package-private）。
 // 外部はリプレイ防止カウンタを記録する Manager 経由（Verify / EnableAfterVerify）を使う。
 // 本関数はカウンタを記録しないため、auth パッケージ内の補助用途に限定する。
 //
@@ -302,7 +302,7 @@ func (m *TOTPManager) Verify(username, code string, now time.Time) bool {
 
 // EnableAfterVerify は 2FA 有効化フロー専用の検証＋有効化を 1 操作で行う。
 //
-// C5（totp-enable-no-replay-counter）: 有効化はまだ Enabled=false の秘密鍵に対して
+// 有効化はまだ Enabled=false の秘密鍵に対して
 // 行うため Verify（Enabled 必須）は使えない。本メソッドは未有効の秘密鍵に対して
 // verifyTOTPCounter で検証し、成功時に消費カウンタを LastCounter へ記録したうえで
 // Enabled=true にする。これにより有効化に使ったコードが直後のログインで再利用できない。

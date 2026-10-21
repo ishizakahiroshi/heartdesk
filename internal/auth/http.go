@@ -63,7 +63,7 @@ type LoginPageData struct {
 	Error         string
 	Info          string
 	StaticBase    string
-	AssetVersion  string // 静的アセットのキャッシュバスティング用ビルドID（C2/C3）
+	AssetVersion  string // 静的アセットのキャッシュバスティング用ビルドID
 	IconPath      string
 	LoginPath     string
 	NCSessionPath string
@@ -76,7 +76,7 @@ type LoginPageData struct {
 type PasswordPageData struct {
 	CSRFToken            string
 	StaticBase           string
-	AssetVersion         string // 静的アセットのキャッシュバスティング用ビルドID（C2/C3）
+	AssetVersion         string // 静的アセットのキャッシュバスティング用ビルドID
 	Path                 string
 	CurrentUser          string
 	Message              string
@@ -89,7 +89,7 @@ type PasswordPageData struct {
 type TwoFASettingsPageData struct {
 	CSRFToken            string
 	StaticBase           string
-	AssetVersion         string // 静的アセットのキャッシュバスティング用ビルドID（C2/C3）
+	AssetVersion         string // 静的アセットのキャッシュバスティング用ビルドID
 	Path                 string
 	CurrentUser          string
 	Enabled              bool
@@ -104,7 +104,7 @@ type TwoFASettingsPageData struct {
 
 type AuditLogPageData struct {
 	StaticBase           string
-	AssetVersion         string // 静的アセットのキャッシュバスティング用ビルドID（C2/C3）
+	AssetVersion         string // 静的アセットのキャッシュバスティング用ビルドID
 	CurrentUser          string
 	BackURL              string
 	Settings2FAPath      string
@@ -166,7 +166,7 @@ func (h *HTTPHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 	sessionMgr.ClearCookie(w, r)
 	clearChallengeCookie(w, r)
-	// C4（session-fixation-no-regenerate）: ログアウト時は heartdesk_csrf を再発行せず明示クリアし、
+	// ログアウト時は heartdesk_csrf を再発行せず明示クリアし、
 	// セッション束縛トークンを残さない。次のログイン画面表示で新規発行される。
 	ClearCSRFCookie(w, r)
 	http.Redirect(w, r, h.routes.LoginPath, http.StatusFound)
@@ -357,7 +357,7 @@ func (h *HTTPHandler) completeLogin(w http.ResponseWriter, r *http.Request, user
 		return err
 	}
 	sessionMgr.SetCookie(w, r, s.ID)
-	// C4（session-fixation-no-regenerate）: 新セッションに束縛された CSRF トークンを
+	// 新セッションに束縛された CSRF トークンを
 	// 明示的に再発行し、ログイン前の使い回しトークンを無効化する。新セッション Cookie は
 	// まだ r から読めないため、束縛トークンを直接渡して Cookie へ書く。
 	setCSRFCookie(w, r, s.CSRFToken)
@@ -475,7 +475,6 @@ func (h *HTTPHandler) SettingsPassword(w http.ResponseWriter, r *http.Request) {
 			h.renderPasswordPage(w, r, sess, "", "パスワード更新に失敗しました。")
 			return
 		}
-		// C-028（password-change-does-not-revoke-other-sessions）対応:
 		// パスワード変更後、他端末・他ブラウザの既存セッションを強制無効化する。
 		// 自端末（現セッション）は exceptID で残し、操作中ユーザーをログアウトさせない。
 		DefaultSessionManager().DeleteByUsername(sess.Username, sess.ID)
@@ -551,7 +550,7 @@ func (h *HTTPHandler) Settings2FA(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			code := strings.TrimSpace(r.FormValue("totp_code"))
-			// C5（totp-enable-no-replay-counter）: 検証＋有効化を TOTPManager に一本化し、
+			// 検証＋有効化を TOTPManager に一本化し、
 			// 有効化に使った消費カウンタを LastCounter へ記録する（直後のログインで再利用不可）。
 			if !mgr.EnableAfterVerify(sess.Username, code, time.Now()) {
 				h.render2FASettingsPage(w, r, sess, "", "認証コードが正しくありません。")
@@ -679,7 +678,7 @@ func (h *HTTPHandler) Settings2FAReset(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	DefaultTOTPManager().Reset(username)
-	// C-005 / C-028: 管理者による TOTP リセットは「漏洩懸念で 2FA を打ち直す」
+	// 管理者による TOTP リセットは「漏洩懸念で 2FA を打ち直す」
 	// 典型シナリオなので、対象ユーザーの全セッションを強制無効化する。
 	// 実行者自身を含めて全消し（exceptID="" ）。
 	DefaultSessionManager().DeleteByUsername(username, "")

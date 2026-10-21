@@ -9,7 +9,7 @@ import (
 	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
-// jobLockPath は per-job filelock のパスを返す（C8: 二重起動防止）。
+// jobLockPath は per-job filelock のパスを返す（二重起動防止用）。
 // 本番（Linux）は /var/lock/heartdesk-job-<id>.lock。非 Unix では filelock 側が no-op。
 func jobLockPath(jobID string) string {
 	return filepath.Join("/var/lock", "heartdesk-job-"+jobID+".lock")

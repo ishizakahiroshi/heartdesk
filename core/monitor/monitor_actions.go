@@ -243,7 +243,7 @@ func (h *Handler) actionHighScoreBan(w http.ResponseWriter, r *http.Request) {
 
 // isValidIP は fail2ban.go で定義済み
 
-// ---- コアカード Phase2 アクション ----
+// ---- アラート設定の保存アクション ----
 
 func (h *Handler) actionSaveAlertRules(w http.ResponseWriter, r *http.Request) {
 	if err := parseActionForm(r); err != nil {
@@ -515,7 +515,7 @@ func (h *Handler) actionReboot(w http.ResponseWriter, r *http.Request) {
 	writeActionOK(w, "サーバー再起動を開始しました")
 }
 
-// ---- Updates アクション（P5） ----
+// ---- Updates アクション ----
 
 func (h *Handler) actionAptUpdate(w http.ResponseWriter, r *http.Request) {
 	RunAptUpdate()

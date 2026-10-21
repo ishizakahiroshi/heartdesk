@@ -101,7 +101,7 @@ func configDir() string {
 	return "/var/lib/heartdesk/config"
 }
 
-// --- キャッシュ付き読み込み（session 生成時に使う想定。C5 で接続予定） ---
+// --- キャッシュ付き読み込み（session 生成時に使う想定） ---
 
 var (
 	cardsCacheMu         sync.RWMutex

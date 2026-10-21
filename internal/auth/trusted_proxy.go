@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-// trustedProxy 層（C3: trust-xff-ip-spoofing / x-real-ip-trusted-unconditionally）。
+// trustedProxy 層。
 //
 // X-Real-IP / X-Forwarded-For は、直接の TCP 接続元（RemoteAddr）が信頼できる
 // リバースプロキシ（nginx 等）であるときに限り採用する。:8765 へ nginx を迂回して

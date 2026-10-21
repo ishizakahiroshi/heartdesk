@@ -28,7 +28,7 @@ const (
 // 突き合わせをあきらめて破棄する（未ログインのまま無期限に増え続けるのを防ぐ）。
 const ncPendingUserTTL = 30 * 24 * time.Hour
 
-// ncAgentIDPattern は agent_id 全体の厳格バリデータ（C7: agentid-path-no-sanitize）。
+// ncAgentIDPattern は agent_id 全体の厳格バリデータ。
 // internal/agentstore.agentIDPattern / core/monitor.agentIDPattern と同一規則
 // （"<テナント ID>-<以降>"。例: alpha-vps-host1）。
 // internal/alerts は core/monitor を import できない（依存方向の都合）ため自前で保持する。

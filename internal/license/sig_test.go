@@ -22,7 +22,7 @@ func TestComputeLicenseSigDeterministic(t *testing.T) {
 // TestLicenseKeyIssueVerifyGolden は「発行 → 検証」が通るゴールデンテスト。
 // GenerateLicenseKey (vendor_console/exports.go) と Verify (verifier.go) は同じ
 // ComputeLicenseSig を経由するため、ここで発行ロジックを再現し、verifierImpl.Verify が
-// 受理することを確認する（C7-C2: hmac-sign-logic-quadruplicated）。
+// 受理することを確認する。
 // vendorSecret はビルド注入の package 変数なので、テスト中だけ一時的に設定して復元する。
 func TestLicenseKeyIssueVerifyGolden(t *testing.T) {
 	orig := vendorSecret

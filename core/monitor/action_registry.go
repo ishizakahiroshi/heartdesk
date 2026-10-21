@@ -139,12 +139,12 @@ func (h *Handler) dispatchAction(w http.ResponseWriter, r *http.Request, api str
 	}
 
 	switch api {
-	// --- コアカード Phase2 アクション ---
+	// --- アラート設定の保存アクション ---
 	case "save_alert_rules":
 		h.actionSaveAlertRules(aw, r)
 	case "save_alert_recipients":
 		h.actionSaveAlertRecipients(aw, r)
-	// --- Services アクション（P4） ---
+	// --- Services アクション ---
 	case "maintenance_on":
 		h.actionSetMaintenance(aw, r, true)
 	case "maintenance_off":
@@ -155,7 +155,7 @@ func (h *Handler) dispatchAction(w http.ResponseWriter, r *http.Request, api str
 		h.actionRestartHeartdesk(aw, r)
 	case "reboot":
 		h.actionReboot(aw, r)
-	// --- Updates アクション（P5） ---
+	// --- Updates アクション ---
 	case "apt_update":
 		h.actionAptUpdate(aw, r)
 	case "apt_upgrade":
@@ -164,7 +164,7 @@ func (h *Handler) dispatchAction(w http.ResponseWriter, r *http.Request, api str
 		h.actionAptFullUpgrade(aw, r)
 	case "toggle_auto_update":
 		h.actionToggleAutoUpdate(aw, r)
-	// --- コアカード Phase1 アクション ---
+	// --- fail2ban・IP・ユーザー管理・ホワイトリストのアクション ---
 	case "fail2ban_ban":
 		h.actionFail2banBan(aw, r)
 	case "fail2ban_unban":

@@ -138,7 +138,7 @@
 	};
 
 	function canUseDisabledCardPicker() {
-		// C7: disabled_cards 手動列挙を廃止し capability ベースへ移行したため UI を停止。
+		// disabled_cards の手動列挙は廃止し capability ベースへ移行したため、UI は停止している。
 		return false;
 	}
 

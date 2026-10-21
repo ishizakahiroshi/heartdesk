@@ -89,8 +89,7 @@ func (v *verifierImpl) Verify(agentID, licenseKey string) error {
 // HMAC-SHA256(key, tenantID + "." + agentID) を 16 進数で返す。
 // Verify / ComputeVendorLicenseSig はビルド注入 vendorSecret を、Vendor Console の
 // GenerateLicenseKey は cfg.VendorLicense.LicenseKey / cfg.AgentKeys[agentID] を鍵に渡す。
-// 鍵が異なるだけで計算式は同一のため、発行側と検証側でロジックを 1 箇所に集約する
-// （C7-C2: hmac-sign-logic-quadruplicated）。
+// 鍵が異なるだけで計算式は同一のため、発行側と検証側でロジックを 1 箇所に集約する。
 func ComputeLicenseSig(key, tenantID, agentID string) string {
 	mac := hmac.New(sha256.New, []byte(key))
 	mac.Write([]byte(tenantID + "." + agentID))

@@ -30,7 +30,7 @@
 		return parts.join('&');
 	}
 
-	// C9-C4: ローカル doFetch を fetchData に改名し、エラー class を section-error に統一。
+	// ローカル doFetch を fetchData に改名し、エラー class を section-error に統一。
 	// クエリパラメータ付き API のため loadJsonCard ではなく専用 fetch を維持する。
 	function fetchData(el, params) {
 		el.innerHTML = '<p class="section-loading">読み込み中...</p>';
@@ -40,7 +40,7 @@
 			.catch(function(e) { el.innerHTML = '<p class="section-error">読み込みに失敗しました: ' + esc(e.message) + '</p>'; });
 	}
 
-	// C9-C1: ローカル esc は廃止し正準 escHtml に統一。
+	// ローカル esc は廃止し正準 escHtml に統一。
 	var esc = (typeof window !== 'undefined' && window.escHtml) ? window.escHtml : function(s) { return String(s == null ? '' : s); };
 
 	function renderVendorAuditLog(el, data) {

@@ -11,7 +11,7 @@ import (
 
 // RunAlerts は alerts 評価を daemon ジョブとして 1 回実行する。
 // 旧 cmd/alerts バイナリの exec.Command 起動を置き換え、scheduler の Interval
-// （AlertsInterval）で in-process 実行する（plan C1: alerts-never-invoked）。
+// （AlertsInterval）で in-process 実行する。
 //
 // 評価ロジックの正本は internal/alerts。AppConfig はテナント設定込みで読み直す
 // （SchedulerConfig には Alerts.RulesFile / StateFile が含まれないため）。

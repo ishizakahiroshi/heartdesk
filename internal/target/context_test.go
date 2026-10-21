@@ -52,7 +52,7 @@ func TestResolve_TenantBoundary_Match(t *testing.T) {
 	}
 }
 
-// C-039 回帰テスト: 他テナントの agent_id を渡したらエラーになること。
+// 回帰テスト: 他テナントの agent_id を渡したらエラーになること。
 func TestResolve_TenantBoundary_Mismatch(t *testing.T) {
 	cfg := newTestCfg("", map[string]config.AgentConfig{
 		"beta-vps-host2": {AgentID: "beta-vps-host2", AgentType: "vps"},
@@ -66,7 +66,7 @@ func TestResolve_TenantBoundary_Mismatch(t *testing.T) {
 	}
 }
 
-// C-039 回帰テスト: tenant プレフィックスのない agent_id は明確に拒否すること。
+// 回帰テスト: tenant プレフィックスのない agent_id は明確に拒否すること。
 func TestResolve_TenantBoundary_NoPrefix(t *testing.T) {
 	cfg := newTestCfg("", map[string]config.AgentConfig{
 		"localagent": {AgentID: "localagent", AgentType: "vps"},

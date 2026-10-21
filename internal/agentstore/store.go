@@ -8,7 +8,7 @@ import (
 	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
-// agentIDPattern は agent_id 全体の厳格バリデータ（C7: agentid-path-no-sanitize）。
+// agentIDPattern は agent_id 全体の厳格バリデータ。
 // 形式は "<テナント ID>-<以降>"。テナント ID は小文字英数字とアンダースコア（ハイフンを含まない）、
 // 以降は小文字英数字・ハイフン・アンダースコア（先頭はハイフン不可）。
 // 例: alpha-vps-host1 / t101-vps-host1 / tenant_b-rental-host-2。
@@ -18,7 +18,7 @@ var agentIDPattern = regexp.MustCompile(`^[a-z0-9_]+-[a-z0-9_][a-z0-9_-]*$`)
 
 // EventJSONL は agent イベントの JSONL ファイルパスを返す。
 //
-// C7（agentid-path-no-sanitize）: agent_id を厳格パターンで検証し、合致しない場合は
+// agent_id を厳格パターンで検証し、合致しない場合は
 // base 配下の "events__invalid.jsonl" へ隔離する（パストラバーサルで base 外へ抜けることを防ぐ）。
 // さらに filepath.Clean + base 接頭辞チェックで base 配下に収まることを保証する。
 func EventJSONL(agentID string) string {

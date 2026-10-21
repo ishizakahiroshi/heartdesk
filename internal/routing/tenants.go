@@ -12,7 +12,7 @@ import (
 )
 
 // TenantConfig は tenants.toml の各テナントエントリ。
-// カード表示ポリシーは config/cards_tenants.toml 側に集約済み（C5 で分離）。
+// カード表示ポリシーは config/cards_tenants.toml 側に集約済み。
 type TenantConfig struct {
 	TenantID    string `toml:"tenant_id"`
 	Name        string `toml:"name"`

@@ -1,5 +1,5 @@
 // Package store は heartdesk Vendor 集約 DB の repository interface と型定義を提供する。
-// 全 store 関数の第1引数は tenantID string 必須（ζ1）。
+// 全 store 関数の第1引数は tenantID string 必須。
 // 運営横断クエリは *AcrossTenants サフィックスで明示分離。
 // SessionStore のみ tenantID 第1引数例外（ログイン直後はテナント未確定のため）。
 package store
@@ -66,7 +66,7 @@ type AuditEntry struct {
 }
 
 // LedgerEntry はライセンス台帳行を表す。
-// 既存 vendorconsole.LedgerEntry と互換フィールド名を維持（C13 移行時の単純コピー用）。
+// 既存 vendorconsole.LedgerEntry と互換フィールド名を維持（移行時の単純コピー用）。
 type LedgerEntry struct {
 	ID               int64
 	TenantID         string
@@ -79,7 +79,7 @@ type LedgerEntry struct {
 	Reason           *string
 	VendorSecretHash *string
 	IssuedAt         time.Time
-	// 既存 vendorconsole.LedgerEntry 互換フィールド（C13 移行用）
+	// 既存 vendorconsole.LedgerEntry 互換フィールド（移行用）
 	Timestamp time.Time // IssuedAt と同値
 }
 
@@ -180,7 +180,7 @@ type ReportStore interface {
 	PurgeHourlyOlderThan(ctx context.Context, tenantID string, before time.Time) (int64, error)
 	PurgeDailyOlderThan(ctx context.Context, tenantID string, before time.Time) (int64, error)
 
-	// 運営横断（C12 全テナント横断ダッシュボード用）
+	// 運営横断（全テナント横断ダッシュボード用）
 	ListLatestReportsAcrossTenants(ctx context.Context, limit int) ([]RawReport, error)
 }
 
@@ -207,7 +207,7 @@ type LedgerStore interface {
 
 // SessionStore はセッションを担う。
 // tenantID は current_tenant_id として session 内に持つため、第1引数ではなく内部フィールドで管理する。
-// これは ζ1（tenantID 第1引数必須）の唯一の例外。middleware 側で current_tenant_id を取り出し以降の store 呼び出しに渡す。
+// これは「tenantID 第1引数必須」の唯一の例外。middleware 側で current_tenant_id を取り出し以降の store 呼び出しに渡す。
 type SessionStore interface {
 	CreateSession(ctx context.Context, s Session) error
 	GetSession(ctx context.Context, sessionID string) (*Session, error)

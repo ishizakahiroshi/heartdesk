@@ -2,7 +2,7 @@ package config
 
 import "testing"
 
-// TestStrictLicenseDefault は C3（agent-report-hmac-no-jwt-default）の
+// TestStrictLicenseDefault は strict_license の
 // 「未設定時の既定は strict（true）」「明示 false は尊重」を確認する。
 func TestStrictLicenseDefault(t *testing.T) {
 	t.Run("unset defaults to true", func(t *testing.T) {

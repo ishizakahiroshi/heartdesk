@@ -59,8 +59,7 @@ func NewScheduler(cfg *config.SchedulerConfig, logger *log.Logger) *Scheduler {
 		if job, ok := s.jobs["update_geoip_db"]; ok && cfg.UpdateGeoIPDBInterval > 0 {
 			job.Interval = cfg.UpdateGeoIPDBInterval
 		}
-		// C8（alerts-never-invoked）: AlertsInterval を実際に alerts ジョブへ反映する
-		// （これまで定義・parse のみで未使用の dead config だった）。
+		// AlertsInterval を実際に alerts ジョブへ反映する。
 		if job, ok := s.jobs["alerts"]; ok && cfg.AlertsInterval > 0 {
 			job.Interval = cfg.AlertsInterval
 		}
@@ -119,7 +118,7 @@ func (s *Scheduler) daemonJobs() []*JobDef {
 }
 
 func (s *Scheduler) runDaemonJob(ctx context.Context, def *JobDef) {
-	// C8: DefaultCronSchedule が時刻指定（"0 1 * * *" 等）なら壁時計アラインで
+	// DefaultCronSchedule が時刻指定（"0 1 * * *" 等）なら壁時計アラインで
 	// 発火させる。これにより daemon の起動時刻に関係なく backup(01:00) /
 	// collect_r2(02:00) / update_geoip(04:45) 等が確実にその時刻に走る。interval/分間隔ジョブは従来通り
 	// ticker で回す。
@@ -174,7 +173,7 @@ func (s *Scheduler) execute(ctx context.Context, def *JobDef) (err error) {
 		return fmt.Errorf("handler is nil: %s", def.ID)
 	}
 
-	// C8（ondemand-no-concurrency-guard）: per-job filelock でプロセス跨ぎの二重起動を防ぐ。
+	// per-job filelock でプロセス跨ぎの二重起動を防ぐ。
 	// daemon ループ・monitor の on-demand 実行・全 on-demand ジョブを一律カバーする。
 	// メモリ内 st.Running はプロセス内ガードに留まるためプロセス間排他には flock が必須。
 	// 競合（ErrLocked）は「実行中」エラーとして返し、open 失敗等の本物のエラーとは区別する。

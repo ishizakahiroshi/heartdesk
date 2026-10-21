@@ -1,5 +1,5 @@
 // heartdesk カードランタイム: CardRegistry
-// Phase 2a (C2): 各カードの loadSection 呼び出しを宣言的に登録し、
+// 各カードの loadSection 呼び出しを宣言的に登録し、
 // DOMContentLoaded で一括実行するための土台。
 //
 // 利用例:
