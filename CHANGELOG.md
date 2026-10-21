@@ -25,7 +25,15 @@ It was split out of an internal server-monitoring tool; see the Status section o
 - Source release only. The server refuses to start unless you inject your own `vendorSecret` at build time
   (see "Build" in `README.md`), so there are no prebuilt binaries.
 - Everything heartdesk itself writes lives under `HEARTDESK_BASE_DIR`.
-- Checked so far: start-up, login, the main screens and a signed report on Windows and on Ubuntu (WSL) with
-  synthetic data, plus the build, vet and tests on Ubuntu and Windows in CI.
-- Not checked yet: Nextcloud login, GeoIP, notifications, operations that change a monitored host (apt, systemd,
-  fail2ban), and the scheduler against a real Nextcloud.
+- Checked so far, on Windows and on Ubuntu (WSL) with synthetic data only: start-up, login, account lockout, the
+  main screens in the dark and light themes, signed agent reports, alert mail through a local test SMTP server,
+  GeoIP lookups with a synthetic database, the Nextcloud login button, and the refusal of host-changing operations
+  for remote agents; plus the build, vet and tests on Ubuntu and Windows in CI.
+- Found and fixed during that review, before this release: the account lockout never triggered; a mismatch between
+  the configured and the reported agent type gave inconsistent screens and alert thresholds; saving alert rules in
+  the UI erased the SMTP settings; a failed alert mail was never retried; disabled alert recipients still received
+  mail; failed fail2ban / apt operations were reported as successful; the GeoIP database was never reloaded after
+  an update.
+- Not checked yet: host-changing operations on a real host (apt, systemd, fail2ban), the Nextcloud login against a
+  real Nextcloud, lookups with a real GeoIP database or the IPinfo API, and mail through a real mail server.
+- Known limitations are listed in `README.md`.

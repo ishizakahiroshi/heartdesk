@@ -14,13 +14,29 @@ License: Apache-2.0 (see `LICENSE`).
 
 ## Status
 
-**Work in progress. Not released yet.**
+**Pre-release (v0.1.0). Source only, no prebuilt binaries. Use at your own risk.**
 
 - This code was split out of an internal server-monitoring tool that is still in use. The split is not finished.
 - Features that were specific to one deployment (customer-facing integrations) are not included. Where such a feature used to plug in, there may be no replacement yet.
 - The old internal names have been replaced by heartdesk names: environment variables are `HEARTDESK_*`, the root is `HEARTDESK_BASE_DIR` (for example `/var/lib/heartdesk`), with `config/`, `data/`, `log/` and `bin/` under it, and the commands are `heartdesk-doctor` and `heartdesk-scheduler`. Old names are not supported.
 - Many comments are in Japanese.
-- **Only a small part has been tried end to end.** On 2026-10-21 the server was started on Windows with a synthetic setup (no real servers). Login, the main screens, and receiving a signed synthetic report from an agent were checked in a browser. **Not checked yet:** normal operation on Linux, write operations (anything that changes a monitored server), Nextcloud login, notifications, and the scheduler. Do not rely on any behavior not listed here as verified.
+- **What has been checked.** On 2026-10-21 the server and the scheduler were run on Windows and on Linux (Ubuntu in WSL) with a synthetic setup, never against real servers: start-up, login, account lockout, the main screens in dark and light themes, receiving signed reports from an agent, alert mail through a local test SMTP server, GeoIP lookups with a synthetic database (and with a missing or broken one), the Nextcloud login button for nine tenant configurations, and the refusal of host-changing operations for remote agents. The commands that host-changing operations would run were checked with fake executables, not on a real host. `go build`, `go vet` and `go test ./...` pass on Windows and Ubuntu in CI; the main packages' tests were also run on Linux.
+- **Not checked yet:** host-changing operations on a real host (apt, systemd, fail2ban), the Nextcloud login against a real Nextcloud (the OCS call), lookups with a real GeoIP database or the IPinfo API, mail through a real mail server, and the reverse-proxy rules. Do not rely on any behavior not listed here as verified.
+- Known limitations are listed in [Known limitations](#known-limitations).
+
+## Known limitations
+
+These are known and not fixed in v0.1.0.
+
+- **Sessions are kept in memory.** Restarting the server signs everyone out.
+- **Alerts evaluate the machine heartdesk itself runs on.** The scheduler's `alerts` job reads `data/csv/resource_log.csv`, which `collect_resources` writes on that machine, so memory and disk rules are not evaluated per monitored agent. The alert mail has a fixed Japanese one-line body and no server name. The "recovery value" field of a rule is not used. Several settings in `config.toml` (`[scheduler] alert_rules_path` / `alert_state_path`, and most `[alerts]` keys except `rules_file` and `state_file`) are not read by the alerting code.
+- **Alert mail** is sent over SMTP with STARTTLS on port 587 or 25 and requires a user name and password; a server without STARTTLS is refused. SMTP settings live in `data/json/alert_rules.json` and are not editable in the UI. That file holds the SMTP password in plain text and is written with mode 0600, so the scheduler must run as the same user as the server.
+- **Saving alert recipients in the UI** does not keep the per-recipient "rules" selection (everyone receives every rule again).
+- **`cmd/alerts`** is an older copy of the alert logic that keeps its state in a fixed temporary path. Use the scheduler's `alerts` job.
+- **GeoIP** is configured with `[paths].geoip_db` (an absolute path to a MaxMind-format database, also for the optional update job) and, for lookups through the API, the IPinfo token. Without them no country is shown. With an IPinfo API that answers slowly, every lookup of the same address waits up to 3 seconds.
+- **Host-changing operations** (Monitor action buttons) run only on the machine heartdesk runs on (the agent configured with `is_primary = true`); remote agents are refused. `apt_update` and the `apt_upgrade` family report "started" even if the command later fails; read `data/json/apt_update_state.json` and `data/log/apt_update_*.log`. `fail2ban_ban` does not refuse your own or a loopback address, and "unban" works only for the four built-in jails. These operations use `sudo -n` and need a matching sudoers entry.
+- **Login failures** are logged with the length and character kinds of the typed password (not the password itself).
+- The server expects a single instance; there is no shared session or lockout store between instances.
 
 ## Check that it compiles
 
@@ -31,7 +47,7 @@ go build ./...
 
 `go build ./...` does not write a binary when several packages are built. To build the server, run `go build .` in the repository root (this writes an executable).
 
-Tests: `go test ./...` (not all packages have tests; the full result has not been recorded yet).
+Tests: `go test ./...` (not all packages have tests).
 
 ## Build
 
