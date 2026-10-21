@@ -3,6 +3,7 @@ package alerts
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 )
@@ -156,14 +157,24 @@ func evaluateResourceAlerts(logPath string, rules AlertRules, state *AlertState)
 		key := m.ruleID
 		active := m.value >= th
 		if active {
+			snap := snapshotAlertKey(key, state)
 			if !state.Active[key] && shouldAlert(key, rule.SustainSec, rule.CooldownSec, state, now) {
-				out = append(out, fire(rules, m.ruleID, m.breached(m.value, th)))
-				state.Active[key] = true
+				// メールが全宛先で失敗したら Active / LastAlertTime を更新せず、次の評価で再試行する。
+				if msg, ok := fireTracked(rules, m.ruleID, key, state, snap, m.breached(m.value, th)); ok {
+					out = append(out, msg)
+					state.Active[key] = true
+				}
 			}
 		} else {
 			clearBreach(key, state)
 			if state.Active[key] && rule.NotifyRecovery {
-				out = append(out, fire(rules, m.ruleID, m.recovery))
+				msg, ok := fireDelivered(rules, m.ruleID, m.recovery)
+				if !ok {
+					// 復旧通知が届かなかったので Active を残し、次の評価で再試行する。
+					log.Printf("alerts: recovery delivery failed for %s; will retry on next evaluation", m.ruleID)
+					continue
+				}
+				out = append(out, msg)
 			}
 			state.Active[key] = false
 		}

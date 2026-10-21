@@ -23,11 +23,21 @@ func alertRulesPath(cfg *config.AppConfig) string {
 	return heartdesk.Path("data/json/alert_rules.json")
 }
 
+// alertStatePath はスケジューラ（internal/alerts）が書く state ファイルと同じパスを返す。
+// 画面が別のパスを読むと「発報中」の表示が実際の状態と食い違うため、パスの決め方は共有する。
 func alertStatePath(cfg *config.AppConfig) string {
-	if cfg != nil && strings.TrimSpace(cfg.Alerts.StateFile) != "" {
-		return strings.TrimSpace(cfg.Alerts.StateFile)
+	return alerts.StatePath(cfg)
+}
+
+// loadAlertRuntimeStates はスケジューラの state ファイルから、ルールごとの「発報中」を取り出す。
+// 読めない・旧形式の場合は空（何も評価されていない扱い）を返す。
+func loadAlertRuntimeStates(cfg *config.AppConfig) map[string]AlertRuleRuntime {
+	runtime := map[string]AlertRuleRuntime{}
+	st := alerts.ReadState(alertStatePath(cfg))
+	for ruleID, active := range st.Active {
+		runtime[ruleID] = AlertRuleRuntime{Active: active, Evaluated: true}
 	}
-	return "/tmp/heartdesk_alert_state.json"
+	return runtime
 }
 
 var alertRulesMu sync.RWMutex
@@ -151,7 +161,34 @@ func saveAlertRulesFile(cfg *config.AppConfig, f AlertRulesFile) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(alertRulesPath(cfg), data, 0644)
+	// smtp_pass（平文のパスワード）を含むので、所有者だけが読み書きできる権限にする。
+	// WriteFile の権限指定は新規作成時にしか効かないため、既存の 0644 のファイルは Chmod で締め直す。
+	path := alertRulesPath(cfg)
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		return err
+	}
+	return os.Chmod(path, 0o600)
+}
+
+// loadAlertRulesFileForUpdate は保存前に既存の alert_rules.json を読む（書き込みロック済みで呼ぶこと）。
+// ファイルが無い・空のときは空の構造体を返す。読めるが JSON として壊れているときは error を返す
+// （黙って空から作り直すと、画面が扱わない smtp などの設定を失うため）。
+func loadAlertRulesFileForUpdate(cfg *config.AppConfig) (AlertRulesFile, error) {
+	var f AlertRulesFile
+	raw, err := os.ReadFile(alertRulesPath(cfg))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return f, nil
+		}
+		return f, err
+	}
+	if strings.TrimSpace(string(raw)) == "" {
+		return f, nil
+	}
+	if err := json.Unmarshal(raw, &f); err != nil {
+		return AlertRulesFile{}, fmt.Errorf("既存の設定ファイルを解析できません: %w", err)
+	}
+	return f, nil
 }
 
 // SaveAlertRules はアラートルール設定を保存する
@@ -159,16 +196,20 @@ func SaveAlertRules(cfg *config.AppConfig, payload map[string]map[string]string)
 	alertRulesMu.Lock()
 	defer alertRulesMu.Unlock()
 
-	raw, _ := os.ReadFile(alertRulesPath(cfg))
-	var f AlertRulesFile
-	if raw != nil {
-		json.Unmarshal(raw, &f)
+	f, loadErr := loadAlertRulesFileForUpdate(cfg)
+	if loadErr != nil {
+		return false, []string{"保存に失敗しました: " + loadErr.Error()}
 	}
 	if f.Rules == nil {
 		f.Rules = map[string]AlertRuleConfig{}
 	}
 
-	newRules := map[string]AlertRuleConfig{}
+	// 画面が扱わないルール（account_lockout など internal/alerts だけが読むもの）を消さないよう、
+	// 既存のルールを引き継いだうえで、画面が扱うルールだけを上書きする。
+	newRules := make(map[string]AlertRuleConfig, len(f.Rules))
+	for id, r := range f.Rules {
+		newRules[id] = r
+	}
 	for _, ruleID := range AlertRuleDefOrder {
 		def := AlertRuleDefs[ruleID]
 		vals, sent := payload[ruleID]
@@ -239,10 +280,9 @@ func SaveAlertRecipients(cfg *config.AppConfig, recipients []AlertRecipient) (ok
 	alertRulesMu.Lock()
 	defer alertRulesMu.Unlock()
 
-	raw, _ := os.ReadFile(alertRulesPath(cfg))
-	var f AlertRulesFile
-	if raw != nil {
-		json.Unmarshal(raw, &f)
+	f, loadErr := loadAlertRulesFileForUpdate(cfg)
+	if loadErr != nil {
+		return false, []string{"保存に失敗しました: " + loadErr.Error()}
 	}
 
 	reEmail := regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
@@ -295,20 +335,7 @@ func GetNotificationRulesAPIData(cfg *config.AppConfig) NotificationRulesAPIData
 	f := LoadAlertRules(cfg)
 
 	// アラート状態ファイルを読む
-	runtime := map[string]AlertRuleRuntime{}
-	if stateRaw, err := os.ReadFile(alertStatePath(cfg)); err == nil {
-		var stateData map[string]map[string]interface{}
-		if json.Unmarshal(stateRaw, &stateData) == nil {
-			for ruleID, st := range stateData {
-				rt := AlertRuleRuntime{}
-				if v, ok := st["active"].(bool); ok {
-					rt.Active = v
-					rt.Evaluated = true
-				}
-				runtime[ruleID] = rt
-			}
-		}
-	}
+	runtime := loadAlertRuntimeStates(cfg)
 
 	// メモリ
 	memRaw := heartdesk.Run("free -b 2>/dev/null")

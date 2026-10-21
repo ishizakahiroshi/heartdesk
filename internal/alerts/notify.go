@@ -77,33 +77,60 @@ func prepareNotifiers(cfg *config.AppConfig) {
 // sendAlert はルールに紐づく受信者全員へ通知する。メールと追加の通知経路は互いに独立して
 // 試みる。片方の設定が無い／失敗しても、もう片方の送信を妨げない
 // （メールの SMTP 未設定環境でも追加の通知経路は届く必要がある）。
-func sendAlert(rules AlertRules, ruleID, message string) {
-	sendAlertMail(rules, ruleID, message)
+//
+// 戻り値は「届けられたか」で、メールを試みた全宛先で失敗したときだけ false。
+// 追加の通知経路（Notifier）はこの結果と無関係に必ず呼ぶ。
+func sendAlert(rules AlertRules, ruleID, message string) bool {
+	delivered := sendAlertMail(rules, ruleID, message)
 	for _, n := range registeredNotifiers() {
 		n.Notify(ruleID, message)
 	}
+	return delivered
+}
+
+// mailSendFn は 1 通送る処理（テストで差し替え可能）。
+var mailSendFn = sendMail
+
+// mailRecipients は ruleID のメールを受け取る宛先を返す。無効にした宛先、受け取るルールを
+// 指定していてその中に ruleID が無い宛先、メールアドレスが空の宛先は含めない。
+func mailRecipients(rules AlertRules, ruleID string) []Recipient {
+	var out []Recipient
+	for _, r := range rules.Recipients {
+		if strings.TrimSpace(r.Email) == "" || !r.wants(ruleID) {
+			continue
+		}
+		out = append(out, r)
+	}
+	return out
 }
 
 // sendAlertMail はルールに紐づく受信者全員へメール送信する。
 // SMTP/recipients が未設定なら何もせずログだけ残す（crash しない）。
-func sendAlertMail(rules AlertRules, ruleID, message string) {
+//
+// 戻り値は「届けられたか」。送信を試みた宛先が 1 件以上あり、その全部で失敗したときだけ false。
+// 一部の宛先にでも届いたなら true にする: 発報済みにしないと次の評価で届いた宛先へ同じ通知を
+// 重複して送ってしまい、失敗した宛先のために全員へ再送することになるため。
+// 試みた宛先が無い（SMTP 未設定・宛先なし・全員が無効など）場合も、再試行しても結果が変わらないので true。
+func sendAlertMail(rules AlertRules, ruleID, message string) bool {
 	if len(rules.SMTP) == 0 {
 		log.Printf("alerts: SMTP not configured, skip mail for %s: %s", ruleID, message)
-		return
+		return true
 	}
 	if len(rules.Recipients) == 0 {
 		log.Printf("alerts: no recipients configured, skip mail for %s: %s", ruleID, message)
-		return
+		return true
 	}
 	subject := "【アラート】" + ruleID
-	for _, r := range rules.Recipients {
-		if strings.TrimSpace(r.Email) == "" {
+	attempted, succeeded := 0, 0
+	for _, r := range mailRecipients(rules, ruleID) {
+		attempted++
+		if err := mailSendFn(rules.SMTP, r.Email, subject, message); err != nil {
+			log.Printf("alerts: send mail to %s failed: %v", r.Email, err)
 			continue
 		}
-		if err := sendMail(rules.SMTP, r.Email, subject, message); err != nil {
-			log.Printf("alerts: send mail to %s failed: %v", r.Email, err)
-		}
+		succeeded++
 	}
+	return attempted == 0 || succeeded > 0
 }
 
 // sendMail は net/smtp で 1 通送信する。
@@ -235,14 +262,23 @@ func evaluateServiceAlerts(rules AlertRules, state *AlertState) []string {
 		key := ruleID
 		isDown := status != "active"
 		if isDown {
+			snap := snapshotAlertKey(key, state)
 			if !state.Active[key] && shouldAlert(key, rule.SustainSec, rule.CooldownSec, state, now) {
-				out = append(out, fire(rules, ruleID, fmt.Sprintf("%s がダウンしています", svc)))
-				state.Active[key] = true
+				if msg, ok := fireTracked(rules, ruleID, key, state, snap, fmt.Sprintf("%s がダウンしています", svc)); ok {
+					out = append(out, msg)
+					state.Active[key] = true
+				}
 			}
 		} else {
 			clearBreach(key, state)
 			if state.Active[key] && rule.NotifyRecovery {
-				out = append(out, fire(rules, ruleID, fmt.Sprintf("%s が復帰しました", svc)))
+				msg, ok := fireDelivered(rules, ruleID, fmt.Sprintf("%s が復帰しました", svc))
+				if !ok {
+					// 復旧通知が届かなかったので Active を残し、次の評価で再試行する。
+					log.Printf("alerts: recovery delivery failed for %s; will retry on next evaluation", ruleID)
+					continue
+				}
+				out = append(out, msg)
 			}
 			state.Active[key] = false
 		}
@@ -275,20 +311,33 @@ func evaluateThreatScore(scoreCSV, ipListPath string, rules AlertRules, state *A
 	var out []string
 	active := float64(maxScore) >= th
 	if active {
+		snap := snapshotAlertKey(key, state)
 		if !state.Active[key] && shouldAlert(key, rule.SustainSec, rule.CooldownSec, state, now) {
 			msg := fmt.Sprintf("脅威スコアが %d に達しました (IP: %s)", maxScore, topIP)
 			if label := knownNames[topIP]; label != "" {
 				msg += fmt.Sprintf(" (%s)", label)
 			}
-			out = append(out, fire(rules, ruleID, msg))
-			state.Active[key] = true
+			if sent, ok := fireTracked(rules, ruleID, key, state, snap, msg); ok {
+				out = append(out, sent)
+				state.Active[key] = true
+			}
 		}
 	} else {
 		clearBreach(key, state)
+		recovered := true
 		if state.Active[key] && rule.NotifyRecovery {
-			out = append(out, fire(rules, ruleID, "脅威スコアが低下しました"))
+			msg, ok := fireDelivered(rules, ruleID, "脅威スコアが低下しました")
+			if ok {
+				out = append(out, msg)
+			} else {
+				// 復旧通知が届かなかったので Active を残し、次の評価で再試行する。
+				log.Printf("alerts: recovery delivery failed for %s; will retry on next evaluation", ruleID)
+				recovered = false
+			}
 		}
-		state.Active[key] = false
+		if recovered {
+			state.Active[key] = false
+		}
 	}
 	return out
 }

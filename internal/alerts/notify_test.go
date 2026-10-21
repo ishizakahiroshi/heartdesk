@@ -16,7 +16,10 @@ func withStubs(t *testing.T, now time.Time, status func(string) string) *[]strin
 	origNow, origSender, origSvc := nowFn, sender, serviceStatusFn
 	captured := &[]string{}
 	nowFn = fixedNow(now)
-	sender = func(_ AlertRules, ruleID, msg string) { *captured = append(*captured, ruleID+"|"+msg) }
+	sender = func(_ AlertRules, ruleID, msg string) bool {
+		*captured = append(*captured, ruleID+"|"+msg)
+		return true
+	}
 	if status != nil {
 		serviceStatusFn = status
 	}

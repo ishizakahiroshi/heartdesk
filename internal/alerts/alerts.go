@@ -18,6 +18,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/ishizakahiroshi/heartdesk/internal"
@@ -35,10 +36,25 @@ type AlertRule struct {
 	NotifyRecovery bool    `json:"notify_recovery"`
 }
 
-// Recipient は通知先。
+// Recipient は通知先。画面（core/monitor の AlertRecipient）の enabled / rules と同じ意味を持つ。
+//   - Enabled: false の宛先には送らない。キーが無い（nil）古い alert_rules.json は有効として扱う。
+//   - Rules:   空でなければ、値が true のルールだけを受け取る。空なら全ルールを受け取る。
 type Recipient struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	Name    string          `json:"name"`
+	Email   string          `json:"email"`
+	Enabled *bool           `json:"enabled,omitempty"`
+	Rules   map[string]bool `json:"rules,omitempty"`
+}
+
+// wants は、この宛先が ruleID のメールを受け取るかを返す。
+func (r Recipient) wants(ruleID string) bool {
+	if r.Enabled != nil && !*r.Enabled {
+		return false
+	}
+	if len(r.Rules) > 0 {
+		return r.Rules[ruleID]
+	}
+	return true
 }
 
 // AlertRules は alert_rules.json のスキーマ（UI 保存・alerts 読込で共有）。
@@ -69,6 +85,8 @@ type AlertState struct {
 var nowFn = time.Now
 
 // sender はアラート発報の実体（テストで差し替え可能）。本番では sendAlert。
+// 戻り値は「届けられたか」。メール送信を試みた全宛先で失敗したときだけ false
+// （送信先が無い・SMTP 未設定で試みなかった場合は true）。
 var sender = sendAlert
 
 // rulesPath は alert ルールファイルのパスを config 駆動で解決する。
@@ -83,10 +101,29 @@ func rulesPath(cfg *config.AppConfig) string {
 // statePath は alert state ファイルのパスを config 駆動で解決する。
 // 旧 /tmp/heartdesk_alert_state.json をやめ、data/json 配下（reboot で消えない）に置く。
 func statePath(cfg *config.AppConfig) string {
-	if cfg != nil && cfg.Alerts.StateFile != "" {
-		return cfg.Alerts.StateFile
+	return StatePath(cfg)
+}
+
+// StatePath は alert state ファイルのパスを返す。スケジューラ（Run）と、状態を画面に出す
+// core/monitor が同じ関数でパスを決めるために公開している。cfg.Alerts.StateFile があればそれ、
+// 無ければ HEARTDESK_BASE_DIR 基準の data/json/alert_state.json（BASE_DIR 未設定でも止まらない）。
+func StatePath(cfg *config.AppConfig) string {
+	if cfg != nil {
+		if p := strings.TrimSpace(cfg.Alerts.StateFile); p != "" {
+			return p
+		}
 	}
-	return heartdesk.Path("data/json/alert_state.json")
+	return heartdesk.PathOrDefault("data/json/alert_state.json")
+}
+
+// ReadState は state ファイルを読んで返す（画面表示用）。ファイルが無い・壊れている・
+// 旧形式（ルール ID をキーにした形）で読めない場合は、落とさずに空の state を返す。
+func ReadState(path string) *AlertState {
+	st, err := loadAlertState(path)
+	if err != nil || st == nil {
+		return newAlertState()
+	}
+	return st
 }
 
 // resourceLogPath は resource CSV のパスを config 駆動で解決する。
@@ -278,4 +315,52 @@ func clearBreach(key string, state *AlertState) {
 func fire(rules AlertRules, ruleID, message string) string {
 	sender(rules, ruleID, message)
 	return message
+}
+
+// fireDelivered は fire と同じく 1 件を発報し、メールが届けられたかも返す。
+// 呼び出し側は false のとき「発報済み」の状態を残さず、次回の評価で再試行する。
+func fireDelivered(rules AlertRules, ruleID, message string) (string, bool) {
+	return message, sender(rules, ruleID, message)
+}
+
+// alertKeyState は 1 つのルールキーについて shouldAlert が書き換える値の控え。
+// 送信に失敗したとき、shouldAlert を呼ぶ前の状態へ戻して次回の評価で再試行できるようにする。
+type alertKeyState struct {
+	first    time.Time
+	hasFirst bool
+	last     time.Time
+	hasLast  bool
+}
+
+func snapshotAlertKey(key string, state *AlertState) alertKeyState {
+	var s alertKeyState
+	s.first, s.hasFirst = state.FirstBreach[key]
+	s.last, s.hasLast = state.LastAlertTime[key]
+	return s
+}
+
+func (s alertKeyState) restore(key string, state *AlertState) {
+	if s.hasFirst {
+		state.FirstBreach[key] = s.first
+	} else {
+		delete(state.FirstBreach, key)
+	}
+	if s.hasLast {
+		state.LastAlertTime[key] = s.last
+	} else {
+		delete(state.LastAlertTime, key)
+	}
+}
+
+// fireTracked は shouldAlert が true を返した後の発報を行う。メールが全宛先で失敗したときは
+// shouldAlert が進めた FirstBreach / LastAlertTime を snap の時点へ戻し、false を返す
+// （呼び出し側は Active を立てない）。再試行は評価ごと（Run 1 回につき 1 回）で、
+// 無限ループにはならない。
+func fireTracked(rules AlertRules, ruleID, key string, state *AlertState, snap alertKeyState, message string) (string, bool) {
+	msg, delivered := fireDelivered(rules, ruleID, message)
+	if !delivered {
+		snap.restore(key, state)
+		log.Printf("alerts: delivery failed for %s (mail to every recipient failed); state not updated, will retry on next evaluation", ruleID)
+	}
+	return msg, delivered
 }

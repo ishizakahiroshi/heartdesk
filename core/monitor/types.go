@@ -472,6 +472,9 @@ type AlertRecipient struct {
 type AlertRulesFile struct {
 	Rules      map[string]AlertRuleConfig `json:"rules"`
 	Recipients []AlertRecipient           `json:"recipients"`
+	// SMTP は internal/alerts が読む送信設定（smtp_host / smtp_pass 等）。画面では編集しないが、
+	// 画面からの保存で消えないよう構造体に持つ（保存のたびに既存の値をそのまま書き戻す）。
+	SMTP map[string]string `json:"smtp,omitempty"`
 }
 
 // AlertRuleRuntime は各ルールのライブ実行時状態
