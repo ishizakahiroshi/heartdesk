@@ -18,16 +18,23 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
-const (
-	resourceLogPath = "/var/lib/heartdesk/data/csv/resource_log.csv"
-	scoreLogPath    = "/var/lib/heartdesk/data/csv/threat_score.csv"
-	alertRulesPath  = "/var/lib/heartdesk/data/json/alert_rules.json"
-	alertStatePath  = "/tmp/heartdesk_alert_state.json"
-	lastCheckPath   = "/var/lib/heartdesk/data/json/alert_check_last.csv"
-	sshIPListPath   = "/var/lib/heartdesk/config/managed_ips.toml"
-)
+// heartdesk 自身のデータ・設定の置き場所。HEARTDESK_BASE_DIR 配下（未設定なら /var/lib/heartdesk）。
+// 起動後に環境変数が決まる場合に備え、定数ではなく呼び出し時に解決する。
+func resourceLogPath() string { return heartdesk.PathOrDefault("data/csv/resource_log.csv") }
+func scoreLogPath() string    { return heartdesk.PathOrDefault("data/csv/threat_score.csv") }
+func alertRulesPath() string  { return heartdesk.PathOrDefault("data/json/alert_rules.json") }
+func lastCheckPath() string   { return heartdesk.PathOrDefault("data/json/alert_check_last.csv") }
+func lockoutLogPath() string  { return heartdesk.PathOrDefault("data/nc_extract/lockout_events.jsonl") }
+
+// sshIPListPath は管理 IP 一覧。HEARTDESK_CONFIG_DIR 優先、無ければ BASE_DIR/config（既定 /var/lib/heartdesk/config）。
+func sshIPListPath() string { return filepath.Join(heartdesk.ConfigDir(), "managed_ips.toml") }
+
+// alertStatePath は core/monitor と共有する一時ファイルのため固定。
+const alertStatePath = "/tmp/heartdesk_alert_state.json"
 
 type AlertRules struct {
 	Rules      map[string]AlertRule `json:"rules"`
@@ -94,11 +101,11 @@ func main() {
 	}
 
 	// 4. アカウントロックアウト
-	checkAccountLockoutAlert(rules, state, "/var/lib/heartdesk/data/nc_extract/lockout_events.jsonl")
+	checkAccountLockoutAlert(rules, state, lockoutLogPath())
 
 	// 5. 実行スタンプ
-	os.MkdirAll(filepath.Dir(lastCheckPath), 0770)
-	os.WriteFile(lastCheckPath, []byte(time.Now().Format("2006-01-02T15:04:05-07:00")+"\n"), 0644)
+	os.MkdirAll(filepath.Dir(lastCheckPath()), 0770)
+	os.WriteFile(lastCheckPath(), []byte(time.Now().Format("2006-01-02T15:04:05-07:00")+"\n"), 0644)
 
 	// 6. テストメール
 	if *testMode {
@@ -110,7 +117,7 @@ func main() {
 }
 
 func loadAlertRules() AlertRules {
-	data, err := os.ReadFile(alertRulesPath)
+	data, err := os.ReadFile(alertRulesPath())
 	if err != nil {
 		return AlertRules{Rules: map[string]AlertRule{}, Recipients: []Recipient{}}
 	}
@@ -148,7 +155,7 @@ func saveAlertState(state AlertState) {
 }
 
 func readResourceLog() (float64, float64) {
-	file, err := os.Open(resourceLogPath)
+	file, err := os.Open(resourceLogPath())
 	if err != nil {
 		return 0, 0
 	}
@@ -174,7 +181,7 @@ func readResourceLog() (float64, float64) {
 }
 
 func readThreatScore() (int, string) {
-	file, err := os.Open(scoreLogPath)
+	file, err := os.Open(scoreLogPath())
 	if err != nil {
 		return 0, ""
 	}
@@ -244,13 +251,13 @@ func loadExcludedIPs() map[string]bool {
 
 func loadSSHIPEntries() ([]SSHEntry, error) {
 	var file sshEntryFile
-	if _, err := toml.DecodeFile(sshIPListPath, &file); err == nil {
+	if _, err := toml.DecodeFile(sshIPListPath(), &file); err == nil {
 		return file.IPs, nil
 	} else if !os.IsNotExist(err) {
 		return nil, err
 	}
 
-	legacyPath := strings.TrimSuffix(sshIPListPath, ".toml") + ".json"
+	legacyPath := strings.TrimSuffix(sshIPListPath(), ".toml") + ".json"
 	data, err := os.ReadFile(legacyPath)
 	if err != nil {
 		return nil, err

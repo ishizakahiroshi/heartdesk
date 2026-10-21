@@ -18,7 +18,7 @@ License: Apache-2.0 (see `LICENSE`).
 
 - This code was split out of an internal server-monitoring tool that is still in use. The split is not finished.
 - Features that were specific to one deployment (customer-facing integrations) are not included. Where such a feature used to plug in, there may be no replacement yet.
-- The old internal names have been replaced by heartdesk names: environment variables are `HEARTDESK_*`, the default root is `/var/lib/heartdesk`, with `config/`, `data/`, `log/` and `bin/` under it (the same layout as `HEARTDESK_BASE_DIR`), and the commands are `heartdesk-doctor` and `heartdesk-scheduler`. Old names are not supported.
+- The old internal names have been replaced by heartdesk names: environment variables are `HEARTDESK_*`, the root is `HEARTDESK_BASE_DIR` (for example `/var/lib/heartdesk`), with `config/`, `data/`, `log/` and `bin/` under it, and the commands are `heartdesk-doctor` and `heartdesk-scheduler`. Old names are not supported.
 - Many comments are in Japanese.
 - **Only a small part has been tried end to end.** On 2026-10-21 the server was started on Windows with a synthetic setup (no real servers). Login, the main screens, and receiving a signed synthetic report from an agent were checked in a browser. **Not checked yet:** normal operation on Linux, write operations (anything that changes a monitored server), Nextcloud login, notifications, and the scheduler. Do not rely on any behavior not listed here as verified.
 
@@ -52,10 +52,10 @@ This is based on the setup used for the 2026-10-21 start-up check; sections that
 
 **1. Environment variables**
 
-- `HEARTDESK_CONFIG_DIR`: directory with `config.toml` and `secrets.toml`. If unset, the code falls back to `/var/lib/heartdesk/config`; set it explicitly for a setup outside a system install.
-- `HEARTDESK_BASE_DIR`: base directory for data and for `config/users.toml`. **Required**: the process exits if it is unset. heartdesk writes under `$HEARTDESK_BASE_DIR/data/` (observed: `data/vendor/`, `data/json/agent_reports/`, `data/audit/`).
+- `HEARTDESK_CONFIG_DIR`: directory with `config.toml` and `secrets.toml`. If unset, `$HEARTDESK_BASE_DIR/config` is used (or `/var/lib/heartdesk/config` when `HEARTDESK_BASE_DIR` is not set either).
+- `HEARTDESK_BASE_DIR`: base directory for data and for `config/users.toml`. **Required** for the server: the process exits if it is unset. Everything heartdesk itself writes goes under it: `data/` (for example `data/vendor/`, `data/json/`, `data/audit/`, `data/nc_extract/`, `data/avatars/`), `data/logs/` (the scheduler's job logs, such as `collect_resources.log`), `log/` (the login event log) and `bin/`. The scheduler and the other commands use the same root; only code paths that run without `HEARTDESK_BASE_DIR` fall back to `/var/lib/heartdesk`. Places on the monitored host (Nextcloud under `/var/www/nextcloud`, `/var/log/nginx`, `/var/log/fail2ban.log*`, `/var/backups/mariadb`, `/etc/...`) and lock files in `/var/lock` are not moved.
 - `HEARTDESK_TENANT_ID`: optional. Unset means the tenant `default`, which this minimal setup uses.
-- `HEARTDESK_LOGIN_LOG_PATH`: optional. By default the login event log goes to `/var/lib/heartdesk/log/heartdesk_login_events.jsonl`. If that directory does not exist, a line is logged at each login and login still works; set this variable to a writable file path to avoid it.
+- `HEARTDESK_LOGIN_LOG_PATH`: optional. By default the login event log goes to `$HEARTDESK_BASE_DIR/log/heartdesk_login_events.jsonl`. If that directory does not exist, a line is logged at each login and login still works; create it or set this variable to a writable file path to avoid it.
 
 **2. `config.toml`** (in `HEARTDESK_CONFIG_DIR`; sample: `examples/config/config.toml.example`)
 

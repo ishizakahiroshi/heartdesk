@@ -11,19 +11,27 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 )
 
-// GetNcStorage は Nextcloud OCS API からユーザー/グループフォルダの容量情報を取得する
-// ファイルキャッシュ ([nextcloud_cache]) を使用して API 呼び出しを削減する
-func GetNcStorage(cfg *config.AppConfig) NcStorageData {
+// ncStorageCacheFile は容量キャッシュの保存先を返す。設定 [nextcloud_cache] の値があればそれを優先し、
+// 無ければ HEARTDESK_BASE_DIR 基準の既定（未設定なら /var/lib/heartdesk/data/json/nc_storage_summary.json）。
+func ncStorageCacheFile(cfg *config.AppConfig) string {
 	cacheFile := ""
 	if cfg != nil {
 		cacheFile = strings.TrimSpace(cfg.NextcloudCache.StorageCacheFile)
 	}
 	if cacheFile == "" {
-		cacheFile = "/var/lib/heartdesk/data/json/nc_storage_summary.json"
+		cacheFile = heartdesk.PathOrDefault("data/json/nc_storage_summary.json")
 	}
+	return cacheFile
+}
+
+// GetNcStorage は Nextcloud OCS API からユーザー/グループフォルダの容量情報を取得する
+// ファイルキャッシュ ([nextcloud_cache]) を使用して API 呼び出しを削減する
+func GetNcStorage(cfg *config.AppConfig) NcStorageData {
+	cacheFile := ncStorageCacheFile(cfg)
 	cacheTTL := 300
 	if cfg != nil && cfg.NextcloudCache.StorageCacheTTL >= 0 {
 		cacheTTL = cfg.NextcloudCache.StorageCacheTTL

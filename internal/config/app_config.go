@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
 type AppConfig struct {
@@ -540,12 +542,10 @@ func normalizeCapabilities(src []string) []string {
 }
 
 // LoadAppConfig は config.toml と secrets.toml を読み込む
-// HEARTDESK_CONFIG_DIR 環境変数で設定ディレクトリを指定可能（デフォルト: /var/lib/heartdesk/config）
+// 設定ディレクトリは HEARTDESK_CONFIG_DIR（優先）、無ければ HEARTDESK_BASE_DIR/config、
+// それも無ければ /var/lib/heartdesk/config（heartdesk.ConfigDir）。
 func LoadAppConfig() (*AppConfig, error) {
-	configDir := os.Getenv("HEARTDESK_CONFIG_DIR")
-	if configDir == "" {
-		configDir = "/var/lib/heartdesk/config"
-	}
+	configDir := heartdesk.ConfigDir()
 
 	cfg := &AppConfig{}
 
@@ -568,14 +568,12 @@ func LoadAppConfig() (*AppConfig, error) {
 
 // LoadAppConfigForTenant はインフラ共通設定にテナント固有設定をマージして返す
 // 優先度: テナント固有secrets > テナント固有config > インフラ共通secrets > インフラ共通config
-// HEARTDESK_CONFIG_DIR 環境変数で設定ディレクトリを指定可能（デフォルト: /var/lib/heartdesk/config）
+// 設定ディレクトリは HEARTDESK_CONFIG_DIR（優先）、無ければ HEARTDESK_BASE_DIR/config、
+// それも無ければ /var/lib/heartdesk/config（heartdesk.ConfigDir）。
 // tenantID が空の場合は DefaultTenantID をデフォルトとして使用する
 func LoadAppConfigForTenant(tenantID string) (*AppConfig, error) {
 	tenantID = ResolveTenantID(tenantID)
-	configDir := os.Getenv("HEARTDESK_CONFIG_DIR")
-	if configDir == "" {
-		configDir = "/var/lib/heartdesk/config"
-	}
+	configDir := heartdesk.ConfigDir()
 
 	cfg := &AppConfig{TenantID: tenantID}
 

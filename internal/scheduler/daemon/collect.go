@@ -20,15 +20,19 @@ import (
 
 const (
 	defaultResourceLogPath  = "data/csv/resource_log.csv"
-	defaultCollectLogPath   = "/var/log/collect_resources.log"
 	defaultCollectHeartbeat = "data/csv/resource_check_last.csv"
 	defaultMaxLines         = 2016
 )
 
+// defaultCollectLogPath は HEARTDESK_BASE_DIR 基準の既定のログ出力先。未設定なら従来の /var/lib/heartdesk 配下。
+func defaultCollectLogPath() string {
+	return heartdesk.PathOrDefault("data/logs/collect_resources.log")
+}
+
 // CollectResources は collect_resources.sh 相当のリソース監視CSV追記を実行する。
 func CollectResources(ctx context.Context, cfg *config.SchedulerConfig) error {
 	resourceLogPath := heartdesk.Path(defaultResourceLogPath)
-	collectLogPath := defaultCollectLogPath
+	collectLogPath := defaultCollectLogPath()
 	heartbeatPath := heartdesk.Path(defaultCollectHeartbeat)
 	if cfg != nil && strings.TrimSpace(cfg.ResourceLogPath) != "" {
 		resourceLogPath = strings.TrimSpace(cfg.ResourceLogPath)

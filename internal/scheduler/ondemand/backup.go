@@ -33,12 +33,17 @@ const (
 	defaultHeartbeatPath     = "data/csv/mariadb_backup_last.csv"
 )
 
+// defaultBackupLogPath は HEARTDESK_BASE_DIR 基準の既定のログ出力先。
+func defaultBackupLogPath() string {
+	return heartdesk.PathOrDefault("data/logs/mariadb-backup.log")
+}
+
 // BackupMariaDB は backup_mariadb.sh 相当の処理を Go で実行する。
 func BackupMariaDB(ctx context.Context, cfg *config.SchedulerConfig) error {
 	now := time.Now()
 	stamp := now.Format("20060102_1504")
 	backupDir := defaultBackupDir
-	logPath := "/var/log/mariadb-backup.log"
+	logPath := defaultBackupLogPath()
 	heartbeatPath := heartdesk.Path(defaultHeartbeatPath)
 	if cfg != nil && strings.TrimSpace(cfg.BackupOutputDir) != "" {
 		backupDir = strings.TrimSpace(cfg.BackupOutputDir)
@@ -50,6 +55,10 @@ func BackupMariaDB(ctx context.Context, cfg *config.SchedulerConfig) error {
 		heartbeatPath = strings.TrimSpace(cfg.BackupHeartbeatPath)
 	}
 
+	// 既定のログ置き場（HEARTDESK_BASE_DIR 配下）は初回実行時に存在しないことがあるため作る。
+	if err := os.MkdirAll(filepath.Dir(logPath), 0o770); err != nil {
+		return fmt.Errorf("backup log dir create failed: %w", err)
+	}
 	logf, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o660)
 	if err != nil {
 		return fmt.Errorf("open backup log failed: %w", err)

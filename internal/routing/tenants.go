@@ -64,7 +64,7 @@ func AllTenants() []TenantConfig {
 func loadTenants() []TenantConfig {
 	dir := strings.TrimSpace(heartdesk.Env("HEARTDESK_CONFIG_DIR"))
 	if dir == "" {
-		dir = "/var/lib/heartdesk/config"
+		dir = heartdesk.PathOrDefault("config")
 	}
 	path := filepath.Join(dir, "tenants.toml")
 

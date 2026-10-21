@@ -1,7 +1,7 @@
 // Package auditdb は Vendor Console 用の監査ログ集約 SQLite を管理する。
 //
 // 仕様:
-//   - DB ファイル: config.toml [audit_aggregated].db_path（既定 /var/lib/heartdesk/data/audit_aggregated.db）
+//   - DB ファイル: config.toml [audit_aggregated].db_path（既定は HEARTDESK_BASE_DIR 配下の data/audit_aggregated.db。BASE_DIR 未設定なら /var/lib/heartdesk/data/audit_aggregated.db）
 //   - スキーマ: audit_log_aggregated（agent_id / tenant_id / ts / event_type / user / ip_address / result / details / received_at）
 //   - 利用元:
 //   - heartdesk Monitor (heartdesk バイナリ): /api/agent/report で collector_id="audit_log" 受信時に Insert

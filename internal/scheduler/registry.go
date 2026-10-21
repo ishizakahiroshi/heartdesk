@@ -10,13 +10,17 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 	"github.com/ishizakahiroshi/heartdesk/internal/filelock"
 	schedulerdaemon "github.com/ishizakahiroshi/heartdesk/internal/scheduler/daemon"
 	"github.com/ishizakahiroshi/heartdesk/internal/scheduler/ondemand"
 )
 
-const defaultStateFilePath = "/var/lib/heartdesk/data/json/scheduler_state.json"
+// defaultStateFilePath は HEARTDESK_BASE_DIR 基準の既定の状態ファイル。未設定なら従来の /var/lib/heartdesk 配下。
+func defaultStateFilePath() string {
+	return heartdesk.PathOrDefault("data/json/scheduler_state.json")
+}
 
 func resolveStateFilePath(configured string) string {
 	if v := strings.TrimSpace(os.Getenv("SCHED_STATE_FILE")); v != "" {
@@ -25,7 +29,7 @@ func resolveStateFilePath(configured string) string {
 	if configured != "" {
 		return configured
 	}
-	return defaultStateFilePath
+	return defaultStateFilePath()
 }
 
 type persistedState struct {

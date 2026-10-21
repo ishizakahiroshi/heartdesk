@@ -12,18 +12,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 	"github.com/ishizakahiroshi/heartdesk/internal/filelock"
 )
 
 const (
-	defaultAptStateDir  = "/var/lib/heartdesk/data/json"
-	defaultAptStatePath = "/var/lib/heartdesk/data/json/apt_update_state.json"
-	defaultAptLogDir    = "/var/lib/heartdesk/data/log"
-	defaultAptLockPath  = "/var/lock/heartdesk-apt-update.lock"
-	defaultOCCBin       = "/usr/bin/php"
-	defaultOCCScript    = "/var/www/nextcloud/occ"
-	aptLogKeep          = 10
+	defaultAptLockPath = "/var/lock/heartdesk-apt-update.lock"
+	defaultOCCBin      = "/usr/bin/php"
+	defaultOCCScript   = "/var/www/nextcloud/occ"
+	aptLogKeep         = 10
 )
 
 type aptState struct {
@@ -37,6 +35,11 @@ type aptState struct {
 	MaintenanceLeft bool    `json:"maintenance_left_on"`
 }
 
+// apt 管理ジョブの状態ファイル・ログの置き場所。HEARTDESK_BASE_DIR 基準（未設定なら /var/lib/heartdesk 配下）。
+func defaultAptStateDir() string  { return heartdesk.PathOrDefault("data/json") }
+func defaultAptStatePath() string { return heartdesk.PathOrDefault("data/json/apt_update_state.json") }
+func defaultAptLogDir() string    { return heartdesk.PathOrDefault("data/log") }
+
 // RunAptUpgradeManaged は apt_update_runner.sh 相当の処理を Go で実行する。
 // mode は "upgrade" または "full-upgrade"。
 func RunAptUpgradeManaged(ctx context.Context, _ *config.SchedulerConfig, mode string) error {
@@ -44,8 +47,8 @@ func RunAptUpgradeManaged(ctx context.Context, _ *config.SchedulerConfig, mode s
 		return fmt.Errorf("invalid apt mode: %s", mode)
 	}
 
-	statePath := defaultAptStatePath
-	logDir := defaultAptLogDir
+	statePath := defaultAptStatePath()
+	logDir := defaultAptLogDir()
 	lockPath := defaultAptLockPath
 
 	if err := os.MkdirAll(filepath.Dir(statePath), 0o770); err != nil {

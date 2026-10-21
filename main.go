@@ -81,6 +81,15 @@ func assetVersionString() string {
 	return strconv.FormatInt(time.Now().Unix(), 10)
 }
 
+// resolveDataDir はデータディレクトリを返す。HEARTDESK_DATA_DIR が最優先で、
+// 無ければ HEARTDESK_BASE_DIR 基準（未設定なら /var/lib/heartdesk/data）。
+func resolveDataDir() string {
+	if dataDir := os.Getenv("HEARTDESK_DATA_DIR"); dataDir != "" {
+		return dataDir
+	}
+	return heartdesk.PathOrDefault("data")
+}
+
 func main() {
 	// TOML 設定読み込み（HEARTDESK_TENANT_ID 未設定時は config.DefaultTenantID を使用）
 	// 既定値は config.DefaultTenantID に集約。
@@ -345,10 +354,7 @@ func main() {
 
 		// 旧 JSON ライセンス台帳（vendor_license_ledger.json）を license_ledger へ一度だけ取り込む。
 		// license_ledger に既存行があれば no-op（冪等）。元 JSON はバックアップとして残す。
-		dataDir := os.Getenv("HEARTDESK_DATA_DIR")
-		if dataDir == "" {
-			dataDir = "/var/lib/heartdesk/data"
-		}
+		dataDir := resolveDataDir()
 		legacyLedgerPath := filepath.Join(dataDir, "vendor_license_ledger.json")
 		if n, mErr := store.MigrateLedgerFromJSONFile(context.Background(), db, legacyLedgerPath); mErr != nil {
 			log.Printf("WARN: license ledger migration failed: %v", mErr)

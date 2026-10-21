@@ -9,14 +9,17 @@ import (
 	"sort"
 	"time"
 
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 	"github.com/ishizakahiroshi/heartdesk/internal/r2"
 )
 
-const (
-	defaultR2MetricsOutputPath = "/var/lib/heartdesk/data/json/r2_metrics.json"
-	r2MetricsMonthlyKeep       = 3
-)
+const r2MetricsMonthlyKeep = 3
+
+// defaultR2MetricsOutputPath は HEARTDESK_BASE_DIR 基準の既定の出力先。
+func defaultR2MetricsOutputPath() string {
+	return heartdesk.PathOrDefault("data/json/r2_metrics.json")
+}
 
 type r2MetricsFile struct {
 	Current r2MetricsCurrent   `json:"current"`
@@ -44,7 +47,7 @@ type r2MetricsMonthly struct {
 
 // CollectR2Metrics は collect_r2_metrics.sh 相当の R2 メトリクス収集・JSON永続化を実行する。
 func CollectR2Metrics(ctx context.Context, cfg *config.SchedulerConfig) error {
-	outputPath := defaultR2MetricsOutputPath
+	outputPath := defaultR2MetricsOutputPath()
 
 	r2Cfg := r2.Config{}
 	if cfg != nil {

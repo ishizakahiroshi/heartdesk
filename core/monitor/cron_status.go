@@ -32,7 +32,7 @@ func cronJobSpecsList() []cronJobSpec {
 		{
 			key: "check_alerts", label: "heartdesk-alerts",
 			summary: "アラート判定・メール通知",
-			script:  scriptCheckAlerts,
+			script:  scriptCheckAlerts(),
 			kind:    "csv", csvFile: heartdesk.Path("data/json/alert_check_last.csv"),
 		},
 	}

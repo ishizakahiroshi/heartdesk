@@ -65,6 +65,29 @@ func Path(rel string) string {
 	return filepath.Join(BaseDir(), rel)
 }
 
+// DefaultRoot は HEARTDESK_BASE_DIR が未設定のときの既定の置き場所。
+const DefaultRoot = "/var/lib/heartdesk"
+
+// PathOrDefault は heartdesk 自身のデータ・ログ・設定の既定の置き場所を返す。
+// HEARTDESK_BASE_DIR があればその下、無ければ DefaultRoot の下。BaseDir と違い、未設定でも起動を止めない
+// （単体テストや、BASE_DIR を後から決める起動処理から使うため）。
+func PathOrDefault(rel string) string {
+	root := Env("HEARTDESK_BASE_DIR")
+	if root == "" {
+		root = DefaultRoot
+	}
+	return filepath.Join(root, rel)
+}
+
+// ConfigDir は設定ディレクトリを返す。HEARTDESK_CONFIG_DIR を優先し、無ければ HEARTDESK_BASE_DIR/config、
+// それも無ければ DefaultRoot/config。
+func ConfigDir() string {
+	if v := Env("HEARTDESK_CONFIG_DIR"); v != "" {
+		return v
+	}
+	return PathOrDefault("config")
+}
+
 var weekdays = []string{"日", "月", "火", "水", "木", "金", "土"}
 
 // JST は日本標準時のロケーションを返す

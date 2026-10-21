@@ -93,12 +93,12 @@ func LoadCardsUser() (CardsUserFile, error) {
 	return doc, nil
 }
 
-// configDir は HEARTDESK_CONFIG_DIR を返す。未設定時は /var/lib/heartdesk/config。
+// configDir は HEARTDESK_CONFIG_DIR を返す。未設定時は HEARTDESK_BASE_DIR/config（既定 /var/lib/heartdesk/config）。
 func configDir() string {
 	if v := strings.TrimSpace(heartdesk.Env("HEARTDESK_CONFIG_DIR")); v != "" {
 		return v
 	}
-	return "/var/lib/heartdesk/config"
+	return heartdesk.PathOrDefault("config")
 }
 
 // --- キャッシュ付き読み込み（session 生成時に使う想定） ---

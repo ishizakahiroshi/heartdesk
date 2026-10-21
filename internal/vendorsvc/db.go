@@ -12,7 +12,7 @@ import (
 )
 
 // OpenDB は SQLite DB を開き WAL モード・PRAGMA 設定・マイグレーションを実施して返す。
-// dbPath はファイルパス（例: "/var/lib/heartdesk/data/vendor/vendor.db"）。
+// dbPath はファイルパス（例: HEARTDESK_BASE_DIR 配下の "data/vendor/vendor.db"。BASE_DIR 未設定の既定は "/var/lib/heartdesk/data/vendor/vendor.db"）。
 // 呼び出し元は返った *sql.DB を Close する責任を持つ。
 func OpenDB(dbPath string) (*sql.DB, error) {
 	// 親ディレクトリを作成（権限 0750 = heartdesk:heartdesk）

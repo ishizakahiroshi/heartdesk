@@ -7,11 +7,16 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
-// LoginLogPath は既定のログイン監査ログパス。
+// LoginLogPath は既定のログイン監査ログパスを返す。HEARTDESK_BASE_DIR/log/heartdesk_login_events.jsonl
+// （BASE_DIR 未設定なら /var/lib/heartdesk/log/heartdesk_login_events.jsonl）。
 // 環境変数 HEARTDESK_LOGIN_LOG_PATH で上書きできる（LoginLogResolvedPath を参照）。
-const LoginLogPath = "/var/lib/heartdesk/log/heartdesk_login_events.jsonl"
+func LoginLogPath() string {
+	return heartdesk.PathOrDefault("log/heartdesk_login_events.jsonl")
+}
 
 // LoginLogResolvedPath は実際に読み書きするログインログのパスを返す。
 // HEARTDESK_LOGIN_LOG_PATH が設定されていればそれを、無ければ LoginLogPath を使う。
@@ -19,7 +24,7 @@ func LoginLogResolvedPath() string {
 	if p := strings.TrimSpace(os.Getenv("HEARTDESK_LOGIN_LOG_PATH")); p != "" {
 		return p
 	}
-	return LoginLogPath
+	return LoginLogPath()
 }
 
 // LoginLogEntry は1件のログインイベント記録

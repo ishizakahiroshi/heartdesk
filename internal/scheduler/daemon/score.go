@@ -35,7 +35,7 @@ const (
 	defaultHoneypotDir        = "data/json/honeypot"
 	defaultNC4xxDir           = "data/json/nc4xx"
 	defaultSSHIPListPath      = "config/managed_ips.toml"
-	defaultLoginEventsPath    = "/var/lib/heartdesk/data/nc_extract/login_events.jsonl"
+	defaultLoginEventsPath    = "data/nc_extract/login_events.jsonl"
 	defaultNextcloudLogPath   = "/var/www/nextcloud/data/nextcloud.log"
 	defaultNginxAccessLogPath = "/var/log/nginx/access.log"
 	defaultScoreLogPath       = "data/logs/score_engine.log"
@@ -290,7 +290,7 @@ func resolveScorePaths(cfg *config.SchedulerConfig) scorePaths {
 		HoneypotDir:        heartdesk.Path(defaultHoneypotDir),
 		NC4xxDir:           heartdesk.Path(defaultNC4xxDir),
 		SSHIPListPath:      heartdesk.Path(defaultSSHIPListPath),
-		LoginEventsPath:    defaultLoginEventsPath,
+		LoginEventsPath:    heartdesk.PathOrDefault(defaultLoginEventsPath),
 		NextcloudLogPath:   defaultNextcloudLogPath,
 		NginxAccessLogPath: defaultNginxAccessLogPath,
 		ScoreLogPath:       heartdesk.Path(defaultScoreLogPath),

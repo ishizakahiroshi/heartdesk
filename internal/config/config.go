@@ -7,9 +7,16 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
-const defaultDaemonEnvPath = "/var/lib/heartdesk/daemon.env"
+// defaultDaemonEnvPath は daemon.env の既定の場所。HEARTDESK_BASE_DIR が環境変数で先に分かっているときは
+// BASE_DIR/daemon.env、無ければ従来の /var/lib/heartdesk/daemon.env。
+// （daemon.env を読んで BASE_DIR を知る流れのため、daemon.env 側の値は参照しない。HEARTDESK_DAEMON_ENV_PATH が最優先）
+func defaultDaemonEnvPath() string {
+	return heartdesk.PathOrDefault("daemon.env")
+}
 
 // DefaultTenantID は HEARTDESK_TENANT_ID 未設定時に使用するデフォルトテナントID。
 // 既定値を 1 箇所に集約する。BuildSystemInfo の表示も LoadAppConfigForTenant も
@@ -145,7 +152,7 @@ func TryLoadSchedulerConfig() (_ *SchedulerConfig, err error) {
 func LoadDaemonEnvOptional() error {
 	envPath := strings.TrimSpace(os.Getenv("HEARTDESK_DAEMON_ENV_PATH"))
 	if envPath == "" {
-		envPath = defaultDaemonEnvPath
+		envPath = defaultDaemonEnvPath()
 	}
 	if err := loadEnvFile(envPath); err != nil && !os.IsNotExist(err) {
 		return err

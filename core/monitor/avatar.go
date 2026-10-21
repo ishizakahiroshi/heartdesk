@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/auth"
 	"github.com/ishizakahiroshi/heartdesk/internal/middleware"
 )
@@ -25,9 +26,9 @@ var avatarAllowedExts = map[string]string{
 }
 
 func avatarDir() string {
-	// heartdesk ユーザーが書き込める /var/lib/heartdesk/data/avatars/ を使用
-	// BASE_DIR とは別に固定パスを指定する
-	return "/var/lib/heartdesk/data/avatars"
+	// heartdesk ユーザーが書き込める data/avatars/ を使用する。
+	// HEARTDESK_BASE_DIR 基準（未設定なら /var/lib/heartdesk/data/avatars）
+	return heartdesk.PathOrDefault("data/avatars")
 }
 
 func avatarSafeName(username string) (string, bool) {

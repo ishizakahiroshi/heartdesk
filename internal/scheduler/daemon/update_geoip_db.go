@@ -11,18 +11,23 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 )
 
 const (
 	defaultGeoIPDBURL             = "https://ipinfo.io/data/ipinfo_lite.mmdb"
 	defaultGeoIPDBDownloadTimeout = 180 * time.Second
-	defaultGeoIPDBLogPath         = "/var/lib/heartdesk/data/logs/update-geoip-db.log"
 	// geoIPDBLogPathEnv はログ出力先の差し替え口。本番の systemd unit では設定しないので
-	// defaultGeoIPDBLogPath が使われる。テストは本番パス（/var/lib/heartdesk 配下）へ書けないため必須。
+	// defaultGeoIPDBLogPath（HEARTDESK_BASE_DIR 基準）が使われる。テストは本番パスへ書けないため必須。
 	geoIPDBLogPathEnv         = "UPDATE_GEOIP_DB_LOG_PATH"
 	minGeoIPDBSizeBytes int64 = 1024 * 1024
 )
+
+// defaultGeoIPDBLogPath は HEARTDESK_BASE_DIR 基準の既定のログ出力先。
+func defaultGeoIPDBLogPath() string {
+	return heartdesk.PathOrDefault("data/logs/update-geoip-db.log")
+}
 
 var geoIPDBHTTPClient = &http.Client{Timeout: defaultGeoIPDBDownloadTimeout}
 
@@ -52,7 +57,7 @@ func UpdateGeoIPDB(ctx context.Context, cfg *config.SchedulerConfig) error {
 		downloadURL = defaultGeoIPDBURL
 	}
 
-	logPath := defaultGeoIPDBLogPath
+	logPath := defaultGeoIPDBLogPath()
 	if v := strings.TrimSpace(os.Getenv(geoIPDBLogPathEnv)); v != "" {
 		logPath = v
 	}
