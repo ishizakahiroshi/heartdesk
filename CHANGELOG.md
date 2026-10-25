@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.2] - 2026-10-26
+
+### Fixed
+
+- The legacy R2 metrics query now applies the same card and component access
+  checks as the API endpoint. Existing query URLs, metric payloads, agent tenant
+  boundaries, local requests and method/CSRF behavior are preserved.
+
 ## [0.3.1] - 2026-10-26
 
 ### Fixed
