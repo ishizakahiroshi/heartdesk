@@ -183,9 +183,9 @@ func extractNextcloudEventsAt(ctx context.Context, cfg *config.SchedulerConfig, 
 	nc4xxCount := 0
 	nc4xxInode := state.NC4xxInode
 	{
-		if err := os.MkdirAll(nc4xxDir, 0o770); err != nil {
-			return fmt.Errorf("create access event directory: %w", err)
-		}
+		// Optional access-log output remains best effort: an unavailable
+		// directory must not prevent main-event checkpoints and heartbeat.
+		_ = os.MkdirAll(nc4xxDir, 0o770)
 
 		if fhA, err := os.Open(accessLog); err == nil {
 			stA, _ := fhA.Stat()

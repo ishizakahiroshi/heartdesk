@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.2.3] - 2026-10-25
+
+### Fixed
+
+- Failure to create the optional access-event directory no longer aborts primary
+  Nextcloud event extraction, checkpoint updates or its heartbeat. Configured
+  output paths remain honored, and primary source errors remain fatal.
+
 ## [0.2.2] - 2026-10-25
 
 ### Fixed

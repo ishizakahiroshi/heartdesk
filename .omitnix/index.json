@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "generated": {
-    "commit": "b08fd4059ed70b70c92c0a4088302fee96997a7f",
+    "commit": "d3e00de48d99165e55723be2471b5bdd5ccd283f",
     "dirty": true,
     "tool": "omitnix 0.1.4",
     "partial": false,
@@ -138,8 +138,8 @@
     "discovery_note": ""
   },
   "coverage": {
-    "discovered": 387,
-    "analyzed": 331,
+    "discovered": 388,
+    "analyzed": 332,
     "unresolved": 21,
     "unknown": 3,
     "unclaimed": 32,
@@ -7626,6 +7626,35 @@
     },
     {
       "path": "internal/scheduler/daemon/extract_inode_other.go",
+      "adapter": "go",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "none_observed",
+          "value": null
+        },
+        "authentication": {
+          "state": "not_configured"
+        },
+        "authorization": {
+          "state": "not_configured"
+        },
+        "reads": {
+          "state": "none_observed",
+          "value": []
+        },
+        "writes": {
+          "state": "none_observed",
+          "value": []
+        },
+        "screen_to_api": {
+          "state": "out_of_scope"
+        }
+      },
+      "unresolved": []
+    },
+    {
+      "path": "internal/scheduler/daemon/extract_optional_access_test.go",
       "adapter": "go",
       "status": "analyzed",
       "fields": {
