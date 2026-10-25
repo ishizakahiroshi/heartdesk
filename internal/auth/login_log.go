@@ -21,7 +21,7 @@ func LoginLogPath() string {
 // LoginLogResolvedPath は実際に読み書きするログインログのパスを返す。
 // HEARTDESK_LOGIN_LOG_PATH が設定されていればそれを、無ければ LoginLogPath を使う。
 func LoginLogResolvedPath() string {
-	if p := strings.TrimSpace(os.Getenv("HEARTDESK_LOGIN_LOG_PATH")); p != "" {
+	if p := strings.TrimSpace(heartdesk.Env("HEARTDESK_LOGIN_LOG_PATH")); p != "" {
 		return p
 	}
 	return LoginLogPath()

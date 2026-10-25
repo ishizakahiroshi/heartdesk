@@ -33,6 +33,24 @@ func ncCronDangerSec(cfg *config.AppConfig) int {
 
 var serviceNames = []string{"nginx", "php8.3-fpm", "mariadb", "redis-server", "fail2ban", "heartdesk"}
 
+var selfServiceName = "heartdesk"
+var restartSelf = func(script string) error { return exec.Command("bash", "-c", script).Start() }
+
+func ValidateSelfServiceName(name string) error {
+	if !regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_-]*$`).MatchString(name) {
+		return fmt.Errorf("invalid self service name")
+	}
+	return nil
+}
+
+// ConfigureSelfServiceName is called once by app.New, before requests run.
+func ConfigureSelfServiceName(name string) {
+	delete(procNames, selfServiceName)
+	selfServiceName = name
+	serviceNames[len(serviceNames)-1] = name
+	procNames[name] = "bin/" + name
+}
+
 var procNames = map[string]string{
 	"nginx":        "nginx",
 	"php8.3-fpm":   "php-fpm",
@@ -52,7 +70,7 @@ func getVersions() map[string]string {
 		`echo '##mariadb##'; mariadb --version 2>/dev/null; ` +
 		`echo '##redis-server##'; redis-server --version 2>/dev/null; ` +
 		`echo '##fail2ban##'; fail2ban-client --version 2>/dev/null; ` +
-		`echo '##heartdesk##'; go version ` + heartdesk.Path("bin/heartdesk") + ` 2>/dev/null`
+		`echo '##` + selfServiceName + `##'; go version '` + strings.ReplaceAll(heartdesk.Path("bin/"+selfServiceName), "'", "'\\''") + `' 2>/dev/null`
 
 	result := make(map[string]string)
 	curKey := ""
@@ -428,5 +446,5 @@ func Reboot() {
 // RestartHeartdesk は heartdesk サービスを再起動する（バックグラウンド実行）
 func RestartHeartdesk() {
 	// 実行中プロセス自身を再起動対象に含むため、応答返却後に再起動されるよう遅延実行する。
-	_ = exec.Command("bash", "-c", "( sleep 1; sudo /usr/bin/systemctl restart heartdesk ) >/dev/null 2>&1 &").Start()
+	_ = restartSelf("( sleep 1; sudo /usr/bin/systemctl restart " + selfServiceName + " ) >/dev/null 2>&1 &")
 }

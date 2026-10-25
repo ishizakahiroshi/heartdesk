@@ -21,7 +21,7 @@ func defaultDaemonEnvPath() string {
 // DefaultTenantID は HEARTDESK_TENANT_ID 未設定時に使用するデフォルトテナントID。
 // 既定値を 1 箇所に集約する。BuildSystemInfo の表示も LoadAppConfigForTenant も
 // この値を既定とする。
-const DefaultTenantID = "default"
+var DefaultTenantID = "default"
 
 // ResolveTenantID は空文字を DefaultTenantID へ寄せる。LoadAppConfigForTenant と
 // env フォールバック経路で既定値の解釈がずれないよう 1 箇所に集約する。
@@ -97,7 +97,7 @@ type SchedulerConfig struct {
 func LoadSchedulerConfig() (*SchedulerConfig, error) {
 	// TOML を試す（テナント対応）。HEARTDESK_TENANT_ID 未設定時は LoadAppConfigForTenant 内で
 	// DefaultTenantID が適用される。
-	appCfg, err := LoadAppConfigForTenant(os.Getenv("HEARTDESK_TENANT_ID"))
+	appCfg, err := LoadAppConfigForTenant(heartdesk.Env("HEARTDESK_TENANT_ID"))
 	if err == nil {
 		return appCfg.ToSchedulerConfig(), nil
 	}
@@ -122,9 +122,9 @@ func LoadSchedulerConfig() (*SchedulerConfig, error) {
 		AlertRulesPath:          mustGetEnv("ALERT_RULES_PATH"),
 		AlertStatePath:          mustGetEnv("ALERT_STATE_PATH"),
 		SSHIPListPath:           mustGetEnv("SSH_IP_LIST_PATH"),
-		GeoIPDBPath:             strings.TrimSpace(os.Getenv("HEARTDESK_GEOIP_DB")),
-		GeoIPToken:              strings.TrimSpace(os.Getenv("HEARTDESK_IPINFO_TOKEN")),
-		GeoIPDBURL:              strings.TrimSpace(os.Getenv("HEARTDESK_GEOIP_DB_URL")),
+		GeoIPDBPath:             strings.TrimSpace(heartdesk.Env("HEARTDESK_GEOIP_DB")),
+		GeoIPToken:              strings.TrimSpace(heartdesk.Env("HEARTDESK_IPINFO_TOKEN")),
+		GeoIPDBURL:              strings.TrimSpace(heartdesk.Env("HEARTDESK_GEOIP_DB_URL")),
 		GeoIPRefreshHours:       parseIntEnv("HEARTDESK_GEOIP_DB_REFRESH_HOURS", 24),
 		GeoIPDownloadTimeoutSec: parseIntEnv("HEARTDESK_GEOIP_DB_DOWNLOAD_TIMEOUT_SEC", 180),
 		CollectInterval:         parseDurationEnv("SCHED_COLLECT_INTERVAL", 5*time.Minute),
@@ -132,8 +132,8 @@ func LoadSchedulerConfig() (*SchedulerConfig, error) {
 		ExtractInterval:         parseDurationEnv("SCHED_EXTRACT_INTERVAL", 1*time.Minute),
 		AlertsInterval:          parseDurationEnv("SCHED_ALERTS_INTERVAL", 5*time.Minute),
 		UpdateGeoIPDBInterval:   parseDurationEnv("SCHED_UPDATE_GEOIP_DB_INTERVAL", 24*time.Hour),
-		APIRunMap:               parseAPIRunMap(os.Getenv("SCHED_API_RUN_MAP")),
-		TenantID:                ResolveTenantID(os.Getenv("HEARTDESK_TENANT_ID")),
+		APIRunMap:               parseAPIRunMap(heartdesk.Env("SCHED_API_RUN_MAP")),
+		TenantID:                ResolveTenantID(heartdesk.Env("HEARTDESK_TENANT_ID")),
 	}
 	return cfg, nil
 }
@@ -150,7 +150,7 @@ func TryLoadSchedulerConfig() (_ *SchedulerConfig, err error) {
 
 // LoadDaemonEnvOptional は daemon.env を読み込み、未存在は許容する。
 func LoadDaemonEnvOptional() error {
-	envPath := strings.TrimSpace(os.Getenv("HEARTDESK_DAEMON_ENV_PATH"))
+	envPath := strings.TrimSpace(heartdesk.Env("HEARTDESK_DAEMON_ENV_PATH"))
 	if envPath == "" {
 		envPath = defaultDaemonEnvPath()
 	}
@@ -161,7 +161,7 @@ func LoadDaemonEnvOptional() error {
 }
 
 func mustGetEnv(key string) string {
-	val := strings.TrimSpace(os.Getenv(key))
+	val := strings.TrimSpace(heartdesk.Env(key))
 	if val == "" {
 		panic(fmt.Sprintf("required env var %s is not set", key))
 	}
@@ -194,16 +194,17 @@ func loadEnvFile(path string) error {
 		if key == "" {
 			continue
 		}
-		if _, exists := os.LookupEnv(key); exists {
-			continue
+		if heartdesk.EnvironmentConfigured() {
+			heartdesk.SetEnvironmentDefault(key, val)
+		} else if _, exists := os.LookupEnv(key); !exists {
+			_ = os.Setenv(key, val)
 		}
-		_ = os.Setenv(key, val)
 	}
 	return scanner.Err()
 }
 
 func parseDurationEnv(key string, fallback time.Duration) time.Duration {
-	raw := strings.TrimSpace(os.Getenv(key))
+	raw := strings.TrimSpace(heartdesk.Env(key))
 	if raw == "" {
 		return fallback
 	}
@@ -215,7 +216,7 @@ func parseDurationEnv(key string, fallback time.Duration) time.Duration {
 }
 
 func parseIntEnv(key string, fallback int) int {
-	raw := strings.TrimSpace(os.Getenv(key))
+	raw := strings.TrimSpace(heartdesk.Env(key))
 	if raw == "" {
 		return fallback
 	}

@@ -409,25 +409,33 @@ func validateAndConvertRaw(raw rawUser) (User, error) {
 // main.go から **一度だけ** 呼び出すこと。ホットパス（Authenticate / GetUser /
 // ListUsers / loadUsers）からは絶対に呼ばないこと。
 func (s *UserStore) ValidateAllOrFatal() {
+	if err := s.ValidateAll(); err != nil {
+		log.Fatalf("[FATAL] %v", err)
+	}
+}
+
+// ValidateAll performs startup validation without terminating the caller.
+func (s *UserStore) ValidateAll() error {
 	raw, err := os.ReadFile(s.path)
+	if os.IsNotExist(err) {
+		return nil
+	}
 	if err != nil {
-		// 起動時にファイルが無い構成も許容する（後で配布される運用想定）。
-		// 警告のみ出して継続する。
-		log.Printf("auth: users.toml の読込に失敗（起動時検証スキップ） path=%s err=%v", s.path, err)
-		return
+		return fmt.Errorf("read users configuration: %w", err)
 	}
 	rows, err := decodeUsersFile(raw)
 	if err != nil {
-		log.Fatalf("[FATAL] users.toml: TOML 解析失敗: %v", err)
+		return fmt.Errorf("users.toml: TOML 解析失敗: %w", err)
 	}
 	for _, row := range rows {
 		if strings.TrimSpace(row.Username) == "" {
 			continue
 		}
 		if _, err := validateAndConvertRaw(row); err != nil {
-			log.Fatalf("[FATAL] %v", err)
+			return err
 		}
 	}
+	return nil
 }
 
 func (s *UserStore) loadUsers() map[string]User {

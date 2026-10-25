@@ -15,6 +15,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	// ?export=xxx → ファイルダウンロード
 	if exportType := r.URL.Query().Get("export"); exportType != "" {
+		if endpoint, ok := endpointByName(extensionRegistry.Exports, exportType); ok {
+			if r.Method != http.MethodGet {
+				http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			h.dispatchExtension(w, r, endpoint)
+			return
+		}
 		dispatchExport(w, r, exportType)
 		return
 	}

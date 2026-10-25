@@ -98,6 +98,11 @@ var actionClasses = map[string]ActionClass{
 	"search_ip":             ActionReadOnly,
 }
 
+// RegisterActionClass is startup-only, before any session is created.
+func RegisterActionClass(action string, class ActionClass) {
+	actionClasses[action] = class
+}
+
 // NormalizeRole は有効なロール値のみ返す。無効値は空文字を返す。
 func NormalizeRole(raw string) string {
 	r := Role(raw)

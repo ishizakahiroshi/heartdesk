@@ -89,6 +89,9 @@ var exportHandlers = map[string]func(http.ResponseWriter){
 }
 
 func hasExportHandler(exportType string) bool {
+	if _, ok := endpointByName(extensionRegistry.Exports, exportType); ok {
+		return true
+	}
 	_, ok := exportHandlers[exportType]
 	return ok
 }
@@ -97,6 +100,9 @@ func listExportKeys() []string {
 	keys := make([]string, 0, len(exportHandlers))
 	for key := range exportHandlers {
 		keys = append(keys, key)
+	}
+	for _, endpoint := range extensionRegistry.Exports {
+		keys = append(keys, endpoint.Name)
 	}
 	sort.Strings(keys)
 	return keys

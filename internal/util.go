@@ -48,7 +48,53 @@ const VendorName = "heartdesk"
 
 // Env は HEARTDESK_* 環境変数の値を返す（未設定なら空文字）。
 func Env(key string) string {
+	runtimeEnvMu.RLock()
+	v, ok := runtimeEnv[key]
+	configured := runtimeEnv != nil
+	runtimeEnvMu.RUnlock()
+	if ok || configured {
+		return v
+	}
 	return os.Getenv(key)
+}
+
+var runtimeEnvMu sync.RWMutex
+var runtimeEnv map[string]string
+
+func EnvironmentConfigured() bool {
+	runtimeEnvMu.RLock()
+	defer runtimeEnvMu.RUnlock()
+	return runtimeEnv != nil
+}
+
+// ConfigureEnvironment installs a private snapshot without changing process env.
+// app.New's process-lifetime gate is responsible for calling this once.
+func ConfigureEnvironment(values map[string]string) {
+	runtimeEnvMu.Lock()
+	defer runtimeEnvMu.Unlock()
+	runtimeEnv = make(map[string]string, len(values))
+	for _, entry := range os.Environ() {
+		if key, value, ok := strings.Cut(entry, "="); ok {
+			runtimeEnv[key] = value
+		}
+	}
+	for k, v := range values {
+		runtimeEnv[k] = v
+	}
+}
+
+// SetEnvironmentDefault adds a legacy daemon-file value only when neither the
+// explicit runtime snapshot nor the process environment already defines it.
+func SetEnvironmentDefault(key, value string) {
+	runtimeEnvMu.Lock()
+	defer runtimeEnvMu.Unlock()
+	if _, ok := runtimeEnv[key]; ok {
+		return
+	}
+	if runtimeEnv == nil {
+		runtimeEnv = map[string]string{}
+	}
+	runtimeEnv[key] = value
 }
 
 // BaseDir は HEARTDESK_BASE_DIR 環境変数を返す。未設定時は起動を中止する（サイレント誤動作防止）。
@@ -62,7 +108,25 @@ func BaseDir() string {
 
 // Path は HEARTDESK_BASE_DIR を起点とした絶対パスを返す
 func Path(rel string) string {
+	if value, ok := runtimePath(rel); ok {
+		return value
+	}
 	return filepath.Join(BaseDir(), rel)
+}
+
+func runtimePath(rel string) (string, bool) {
+	if !EnvironmentConfigured() {
+		return "", false
+	}
+	clean := filepath.ToSlash(filepath.Clean(rel))
+	for prefix, key := range map[string]string{"data": "HEARTDESK_DATA_DIR", "config": "HEARTDESK_CONFIG_DIR"} {
+		if clean == prefix || strings.HasPrefix(clean, prefix+"/") {
+			if root := Env(key); root != "" {
+				return filepath.Join(root, strings.TrimPrefix(strings.TrimPrefix(clean, prefix), "/")), true
+			}
+		}
+	}
+	return "", false
 }
 
 // DefaultRoot は HEARTDESK_BASE_DIR が未設定のときの既定の置き場所。
@@ -72,6 +136,9 @@ const DefaultRoot = "/var/lib/heartdesk"
 // HEARTDESK_BASE_DIR があればその下、無ければ DefaultRoot の下。BaseDir と違い、未設定でも起動を止めない
 // （単体テストや、BASE_DIR を後から決める起動処理から使うため）。
 func PathOrDefault(rel string) string {
+	if value, ok := runtimePath(rel); ok {
+		return value
+	}
 	root := Env("HEARTDESK_BASE_DIR")
 	if root == "" {
 		root = DefaultRoot

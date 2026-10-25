@@ -23,7 +23,7 @@ func defaultStateFilePath() string {
 }
 
 func resolveStateFilePath(configured string) string {
-	if v := strings.TrimSpace(os.Getenv("SCHED_STATE_FILE")); v != "" {
+	if v := strings.TrimSpace(heartdesk.Env("SCHED_STATE_FILE")); v != "" {
 		return v
 	}
 	if configured != "" {
@@ -245,6 +245,27 @@ func RegisterJob(def *JobDef) {
 	jobDefs[cloned.ID] = &cloned
 }
 
+var extractJobID = "heartdesk_extract"
+
+// ConfigureExtractJobID preserves the built-in handler while changing its public
+// identity for existing state, disabled-job, cron and API mappings. Startup only.
+func ConfigureExtractJobID(id string) error {
+	if id == "" || id == extractJobID {
+		return nil
+	}
+	registryMu.Lock()
+	defer registryMu.Unlock()
+	if _, exists := jobDefs[id]; exists {
+		return fmt.Errorf("job collision: %s", id)
+	}
+	def := *jobDefs[extractJobID]
+	delete(jobDefs, extractJobID)
+	def.ID = id
+	jobDefs[id] = &def
+	extractJobID = id
+	return nil
+}
+
 func GetJobDef(id string) (*JobDef, error) {
 	registryMu.RLock()
 	defer registryMu.RUnlock()
@@ -345,7 +366,8 @@ func (s *Scheduler) setState(id string, state RuntimeState) {
 }
 
 func buildAPIRunMap(configured map[string]string) map[string]string {
-	_ = config.LoadDaemonEnvOptional()
+	// Configuration is loaded explicitly before registration/dispatch. Resolving
+	// an API name must never import a daemon env file into the caller's process.
 	out := map[string]string{
 		"backup_run": "backup_mariadb",
 	}
@@ -354,7 +376,7 @@ func buildAPIRunMap(configured map[string]string) map[string]string {
 			out[key] = jobID
 		}
 	}
-	raw := strings.TrimSpace(os.Getenv("SCHED_API_RUN_MAP"))
+	raw := strings.TrimSpace(heartdesk.Env("SCHED_API_RUN_MAP"))
 	for _, pair := range strings.Split(raw, ",") {
 		pair = strings.TrimSpace(pair)
 		if pair == "" {

@@ -36,14 +36,21 @@ type sshEntryFile struct {
 	IPs []SSHEntry `toml:"ips"`
 }
 
+// DeliveryResult describes one notification path. A path that was not tried
+// returns its zero value. Delivered is considered only when Attempted is true.
+type DeliveryResult struct {
+	Attempted bool
+	Delivered bool
+}
+
 // Notifier はメール以外の追加の通知経路（チャット・ウェブフック等）。
 // RegisterNotifier で登録すると、Run の評価サイクルごとに Prepare、発報ごとに Notify が呼ばれる。
-// 通知の失敗で監視本体を止めないため、Notify はエラーを返さない（失敗はログに残すだけにする）。
+// Notify の結果は全経路の配信結果へ集約し、全経路で失敗した場合は次の評価で再試行する。
 type Notifier interface {
 	// Prepare は評価サイクルの開始時に 1 回呼ばれる。送信先の設定を cfg から取り出す。
 	Prepare(cfg *config.AppConfig)
 	// Notify は 1 件の発報を送る。
-	Notify(ruleID, message string)
+	Notify(ruleID, message string) DeliveryResult
 }
 
 var (
@@ -78,14 +85,16 @@ func prepareNotifiers(cfg *config.AppConfig) {
 // 試みる。片方の設定が無い／失敗しても、もう片方の送信を妨げない
 // （メールの SMTP 未設定環境でも追加の通知経路は届く必要がある）。
 //
-// 戻り値は「届けられたか」で、メールを試みた全宛先で失敗したときだけ false。
-// 追加の通知経路（Notifier）はこの結果と無関係に必ず呼ぶ。
+// 何も試みなかった場合、または試みた経路のどれか一つでも届いた場合は true。
+// 一つ以上を試み、すべて失敗した場合だけ false を返して再試行する。
 func sendAlert(rules AlertRules, ruleID, message string) bool {
-	delivered := sendAlertMail(rules, ruleID, message)
+	result := sendAlertMailResult(rules, ruleID, message)
 	for _, n := range registeredNotifiers() {
-		n.Notify(ruleID, message)
+		next := n.Notify(ruleID, message)
+		result.Attempted = result.Attempted || next.Attempted
+		result.Delivered = result.Delivered || (next.Attempted && next.Delivered)
 	}
-	return delivered
+	return !result.Attempted || result.Delivered
 }
 
 // mailSendFn は 1 通送る処理（テストで差し替え可能）。
@@ -104,33 +113,35 @@ func mailRecipients(rules AlertRules, ruleID string) []Recipient {
 	return out
 }
 
-// sendAlertMail はルールに紐づく受信者全員へメール送信する。
-// SMTP/recipients が未設定なら何もせずログだけ残す（crash しない）。
-//
-// 戻り値は「届けられたか」。送信を試みた宛先が 1 件以上あり、その全部で失敗したときだけ false。
-// 一部の宛先にでも届いたなら true にする: 発報済みにしないと次の評価で届いた宛先へ同じ通知を
-// 重複して送ってしまい、失敗した宛先のために全員へ再送することになるため。
-// 試みた宛先が無い（SMTP 未設定・宛先なし・全員が無効など）場合も、再試行しても結果が変わらないので true。
+// sendAlertMail retains the mail-only delivery decision used by existing callers.
 func sendAlertMail(rules AlertRules, ruleID, message string) bool {
+	result := sendAlertMailResult(rules, ruleID, message)
+	return !result.Attempted || result.Delivered
+}
+
+// sendAlertMailResult separates an unconfigured path from an attempted failure.
+// A partial recipient success counts as delivered to avoid retrying that path
+// indefinitely. Rule and recipient filtering is shared with the mail-only path.
+func sendAlertMailResult(rules AlertRules, ruleID, message string) DeliveryResult {
 	if len(rules.SMTP) == 0 {
 		log.Printf("alerts: SMTP not configured, skip mail for %s: %s", ruleID, message)
-		return true
+		return DeliveryResult{}
 	}
 	if len(rules.Recipients) == 0 {
 		log.Printf("alerts: no recipients configured, skip mail for %s: %s", ruleID, message)
-		return true
+		return DeliveryResult{}
 	}
 	subject := "【アラート】" + ruleID
-	attempted, succeeded := 0, 0
+	result := DeliveryResult{}
 	for _, r := range mailRecipients(rules, ruleID) {
-		attempted++
+		result.Attempted = true
 		if err := mailSendFn(rules.SMTP, r.Email, subject, message); err != nil {
 			log.Printf("alerts: send mail to %s failed: %v", r.Email, err)
 			continue
 		}
-		succeeded++
+		result.Delivered = true
 	}
-	return attempted == 0 || succeeded > 0
+	return result
 }
 
 // sendMail は net/smtp で 1 通送信する。

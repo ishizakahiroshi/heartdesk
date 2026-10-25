@@ -12,7 +12,10 @@ type fakeNotifier struct {
 }
 
 func (f *fakeNotifier) Prepare(cfg *config.AppConfig) { f.prepared++ }
-func (f *fakeNotifier) Notify(ruleID, message string) { f.sent = append(f.sent, ruleID+"|"+message) }
+func (f *fakeNotifier) Notify(ruleID, message string) DeliveryResult {
+	f.sent = append(f.sent, ruleID+"|"+message)
+	return DeliveryResult{} // This recorder does not attempt delivery.
+}
 
 // 追加の通知経路は、メールの設定が無くても発報ごとに呼ばれる。
 func TestRegisterNotifier_CalledIndependentlyOfMail(t *testing.T) {

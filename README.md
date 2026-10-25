@@ -14,10 +14,10 @@ License: Apache-2.0 (see `LICENSE`).
 
 ## Status
 
-**Pre-release (v0.1.0). Source only, no prebuilt binaries. Use at your own risk.**
+**Pre-release. Source only, no prebuilt binaries. Use at your own risk.**
 
 - This code was split out of an internal server-monitoring tool that is still in use. The split is not finished.
-- Features that were specific to one deployment (customer-facing integrations) are not included. Where such a feature used to plug in, there may be no replacement yet.
+- Features specific to one deployment (customer-facing integrations) are not included. The public `app` package provides extension points for applications that own those integrations; see [Embedding the application](#embedding-the-application).
 - The old internal names have been replaced by heartdesk names: environment variables are `HEARTDESK_*`, the root is `HEARTDESK_BASE_DIR` (for example `/var/lib/heartdesk`), with `config/`, `data/`, `log/` and `bin/` under it, and the commands are `heartdesk-doctor` and `heartdesk-scheduler`. Old names are not supported.
 - Many comments are in Japanese.
 - **What has been checked.** On 2026-10-21 the server and the scheduler were run on Windows and on Linux (Ubuntu in WSL) with a synthetic setup, never against real servers: start-up, login, account lockout, the main screens in dark and light themes, receiving signed reports from an agent, alert mail through a local test SMTP server, GeoIP lookups with a synthetic database (and with a missing or broken one), the Nextcloud login button for nine tenant configurations, and the refusal of host-changing operations for remote agents. The commands that host-changing operations would run were checked with fake executables, not on a real host. `go build`, `go vet` and `go test ./...` pass on Windows and Ubuntu in CI; the main packages' tests were also run on Linux.
@@ -26,7 +26,7 @@ License: Apache-2.0 (see `LICENSE`).
 
 ## Known limitations
 
-These are known and not fixed in v0.1.0.
+These limitations also apply to the embedding API.
 
 - **Sessions are kept in memory.** Restarting the server signs everyone out.
 - **Alerts evaluate the machine heartdesk itself runs on.** The scheduler's `alerts` job reads `data/csv/resource_log.csv`, which `collect_resources` writes on that machine, so memory and disk rules are not evaluated per monitored agent. The alert mail has a fixed Japanese one-line body and no server name. The "recovery value" field of a rule is not used. Several settings in `config.toml` (`[scheduler] alert_rules_path` / `alert_state_path`, and most `[alerts]` keys except `rules_file` and `state_file`) are not read by the alerting code.
@@ -181,6 +181,73 @@ web/                 HTML templates and static files (CSS, JS), embedded into th
 ## Configuration
 
 Settings are read from TOML files in the directory given by `HEARTDESK_CONFIG_DIR`, plus a few environment variables. `app.env.example` lists sample environment variables; see the note at the top of that file about which ones the current code reads. The tenant is chosen with `HEARTDESK_TENANT_ID` (default tenant ID: `default`). For a minimal working setup, see "Build" and "Run (minimal setup)" above.
+
+## Embedding the application
+
+The public `github.com/ishizakahiroshi/heartdesk/app` package assembles the same
+Monitor, authentication, report receiver and scheduler used by the standard CLIs.
+Pass an absolute `Options.BaseDir`, explicit `ConfigDir` / `DataDir` when needed,
+and either `Config`, `ConfigLoader`, or configuration files loaded with
+`app.LoadConfig(configDir, tenantID)`. `ConfigLoader` serves the shared tenant
+configuration cache as well as startup. A supplied `Config` and `Environment` map
+are copied; hook implementations and returned configuration must remain immutable.
+
+```go
+runtime, err := app.New(app.Options{BaseDir: root, Config: cfg})
+if err != nil {
+    return err
+}
+defer runtime.Close()
+return runtime.Run(ctx)
+```
+
+`New` validates and assembles the application. It does not listen, open application
+databases, run jobs, send notifications, or run privileged startup maintenance.
+`Prepare(ctx)` opens durable stores and restores report state and token revocations.
+`Handler()` returns HTTP 503 until preparation succeeds, including on `/healthz`.
+For an HTTP server owned by the caller, call `Prepare(ctx)` before serving
+`Handler()`. `Run(ctx)` calls `Prepare`, runs the normal startup maintenance, and
+serves HTTP. `RunScheduler(ctx)` calls `Prepare` and starts the configured jobs;
+`SchedulerOnly` supports a separate scheduler process. `Close` cancels work, waits
+for active requests and jobs, and closes databases owned by the runtime. Request
+handlers and jobs must honor context cancellation.
+
+The current stores and registries permit **one runtime per process lifetime**.
+After initialization has begun, another `New` fails with `ErrRuntimeInitialized`,
+including after failure or `Close`. A runtime may start the Monitor and scheduler
+once each. Preparation is idempotent; a failed preparation remains failed.
+SIGHUP / `app.ReloadConfigCache()` clears tenant configuration cache entries.
+Routing, environment snapshots, cookies, templates, extensions and startup config
+remain fixed until process restart.
+
+`Options.Extensions` registers additional cards, GET/HEAD APIs, POST actions and
+GET exports. Hooks receive a `RequestContext` with the shared configuration,
+routing, session, agent identity and template renderer. Screen, card, component,
+capability, tenant and agent checks remain in the shared dispatcher. `AllActions`
+adds required permissions, and `AnyActions` requires at least one listed permission.
+`Endpoint.ReadOnly` classifies an added action before session creation; it does
+not skip those permission checks or CSRF. `Endpoint.AliasFor` adds an action name
+for an existing standard action and checks both names' permissions.
+
+Additional `TemplateFS` and `StaticFS` assets cannot replace standard files or
+template definitions. Card IDs, API/action/export names, jobs and overlapping
+routes fail initialization on collision. `Routes` require shared screen
+authentication or an explicit independent authenticator; `Methods` can restrict
+them further. `Jobs`, `Notifiers`, and `OnReportSaved` attach application behavior
+without copying the standard runner. Report hooks run after authentication and
+successful durable persistence.
+
+`Card.ClientOnly` keeps the initial card shell and evaluates its `Data` callback
+only through the authenticated card-refresh endpoint.
+
+`DefaultTenantID`, `SelfServiceName`, `ExtractJobID`, routing, branding and cookie
+options preserve an embedding application's existing identities. `LicenseConfig`
+passes signing material in memory and fixes it before request handlers start.
+Omitting `VerifyLicense` keeps the standard license verifier; a nil callback does
+not disable verification. Authentication helpers such as `DefaultSessionManager`,
+`DefaultStore`, `SessionFromRequest`, `ActionAllowed` and `CanUseCard` expose the
+same stores used by the runtime. See `app/testdata/external` for an external-module
+compilation fixture with no imports from `heartdesk/internal`.
 
 ## Dependencies
 

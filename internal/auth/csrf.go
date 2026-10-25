@@ -5,12 +5,20 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"errors"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"log"
 	"net/http"
 	"strings"
 )
 
 const csrfCookieName = "heartdesk_csrf"
+
+func configuredCSRFCookieName() string {
+	if value := heartdesk.Env("HEARTDESK_CSRF_COOKIE_NAME"); value != "" {
+		return value
+	}
+	return "heartdesk_csrf"
+}
 
 var errInvalidCSRF = errors.New("invalid csrf token")
 
@@ -25,7 +33,7 @@ var errInvalidCSRF = errors.New("invalid csrf token")
 func EnsureCSRFCookie(w http.ResponseWriter, r *http.Request) string {
 	// セッションがあれば束縛トークンを正本にする。
 	if bound, ok := DefaultSessionManager().CSRFTokenForRequest(r); ok {
-		if c, err := r.Cookie(csrfCookieName); err == nil && c.Value == bound {
+		if c, err := r.Cookie(configuredCSRFCookieName()); err == nil && c.Value == bound {
 			return bound
 		}
 		setCSRFCookie(w, r, bound)
@@ -33,7 +41,7 @@ func EnsureCSRFCookie(w http.ResponseWriter, r *http.Request) string {
 	}
 
 	// 未ログイン: 既存 Cookie があれば再利用、無ければ新規発行。
-	if c, err := r.Cookie(csrfCookieName); err == nil && strings.TrimSpace(c.Value) != "" {
+	if c, err := r.Cookie(configuredCSRFCookieName()); err == nil && strings.TrimSpace(c.Value) != "" {
 		return c.Value
 	}
 	token, err := newCSRFToken()
@@ -62,7 +70,7 @@ func ForceReissueCSRFCookie(w http.ResponseWriter, r *http.Request) string {
 // ClearCSRFCookie は CSRF Cookie を削除する（ログアウト時）。
 func ClearCSRFCookie(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     csrfCookieName,
+		Name:     configuredCSRFCookieName(),
 		Value:    "",
 		Path:     "/",
 		HttpOnly: false,
@@ -74,7 +82,7 @@ func ClearCSRFCookie(w http.ResponseWriter, r *http.Request) {
 
 func setCSRFCookie(w http.ResponseWriter, r *http.Request, token string) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     csrfCookieName,
+		Name:     configuredCSRFCookieName(),
 		Value:    token,
 		Path:     "/",
 		HttpOnly: false, // ダブルサブミット法でフロントから hidden/header へ載せる
@@ -90,7 +98,7 @@ func setCSRFCookie(w http.ResponseWriter, r *http.Request, token string) {
 // 一致に加え、セッションがある場合は Cookie 値がそのセッションに束縛されたトークンと
 // 一致することも要求する。これにより別セッションで発行されたトークンを拒否する。
 func VerifyCSRF(r *http.Request) error {
-	cookie, err := r.Cookie(csrfCookieName)
+	cookie, err := r.Cookie(configuredCSRFCookieName())
 	if err != nil || strings.TrimSpace(cookie.Value) == "" {
 		return errInvalidCSRF
 	}

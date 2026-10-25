@@ -16,7 +16,19 @@ import (
 var (
 	appConfigCacheMu sync.RWMutex
 	appConfigCache   = map[string]*AppConfig{}
+	runtimeLoader    func(string) (*AppConfig, error)
+	runtimeLoaderMu  sync.RWMutex
 )
+
+// SetRuntimeLoader installs the embedding application's tenant loader at startup.
+func SetRuntimeLoader(loader func(string) (*AppConfig, error)) {
+	runtimeLoaderMu.Lock()
+	runtimeLoader = loader
+	runtimeLoaderMu.Unlock()
+	appConfigCacheMu.Lock()
+	defer appConfigCacheMu.Unlock()
+	appConfigCache = map[string]*AppConfig{}
+}
 
 // CachedAppConfigForTenant は tenantID 向け AppConfig をキャッシュ経由で返す。
 // 未キャッシュの場合のみ LoadAppConfigForTenant でロードして保持する。

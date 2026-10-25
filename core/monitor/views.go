@@ -627,7 +627,7 @@ func (h *Handler) renderServerDetail(w http.ResponseWriter, r *http.Request) {
 	if isLocal {
 		ssrAgentID = ""
 	}
-	cards := buildServerDetailCards(h, visibleCards, cardModes, ssrAgentID)
+	cards := buildServerDetailCards(h, visibleCards, cardModes, ssrAgentID, r)
 
 	data := ServerDetailPageData{
 		PageTitle:                 "heartdesk",

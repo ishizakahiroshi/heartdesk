@@ -1,6 +1,7 @@
 package routing
 
 import (
+	"fmt"
 	"net/url"
 	"regexp"
 	"strings"
@@ -43,6 +44,16 @@ func Current() Config {
 		cfgVal = load()
 	})
 	return cfgVal
+}
+
+// Configure selects explicit routing before any process-wide consumer uses it.
+func Configure(value Config) error {
+	configured := false
+	cfgOnce.Do(func() { cfgVal = value; configured = true })
+	if !configured {
+		return fmt.Errorf("routing already initialized")
+	}
+	return nil
 }
 
 func load() Config {

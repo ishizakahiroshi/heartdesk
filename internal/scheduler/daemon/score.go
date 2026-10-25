@@ -148,21 +148,11 @@ func ScoreEngine(ctx context.Context, cfg *config.SchedulerConfig) error {
 		skipScore[ip] = struct{}{}
 	}
 
-	scanHits, scanCriticals := collectHoneypotCounts(ctx, paths.HoneypotDir, cutoff, logLine)
-	authFails := collectAuth401Counts(ctx, paths.NginxAccessLogPath, cutoff, logLine)
-	ncFails := collectNCFailCounts(ctx, paths.LoginEventsPath, paths.NextcloudLogPath, cutoff, ncFailSkip, logLine)
-	nc4xxHits := collectNC4xxCounts(ctx, paths.NC4xxDir, cutoff, logLine)
-	banned := collectBannedIPs(ctx, logLine)
-	autobanEnabled := true
-	if paths.AgentEventDir != "" {
-		scanHits, scanCriticals = collectHoneypotEventCounts(ctx, filepath.Join(paths.AgentEventDir, "honeypot.jsonl"), cutoff, logLine)
-		authFails = collectAuth401EventCounts(ctx, filepath.Join(paths.AgentEventDir, "web_access.jsonl"), cutoff, logLine)
-		ncFails = collectNCFailEventCounts(ctx, filepath.Join(paths.AgentEventDir, "nextcloud_login.jsonl"), cutoff, ncFailSkip, logLine)
-		nc4xxHits = collectNC4xxEventCounts(ctx, filepath.Join(paths.AgentEventDir, "web_access.jsonl"), cutoff, logLine)
-		banned = collectBannedIPsFromEvents(ctx, filepath.Join(paths.AgentEventDir, "fail2ban.jsonl"), cutoff, logLine)
-		autobanEnabled = false
-		logLine("", "agent event score input enabled; monitor-side autoban disabled")
-	}
+	inputs := collectScoreInputs(ctx, paths, cutoff, ncFailSkip, logLine)
+	scanHits, scanCriticals := inputs.scanHits, inputs.scanCriticals
+	authFails, ncFails, nc4xxHits := inputs.authFails, inputs.ncFails, inputs.nc4xxHits
+	banned := inputs.banned
+	autobanEnabled := inputs.autobanEnabled
 
 	allIPs := make(map[string]struct{})
 	mergeKeySet(allIPs, scanHits)
@@ -262,6 +252,43 @@ func ScoreEngine(ctx context.Context, cfg *config.SchedulerConfig) error {
 
 	logLine("", fmt.Sprintf("score completed: rows=%d", len(rows)))
 	return nil
+}
+
+// scoreInputs はスコア計算の入力（IP ごとの件数と BAN 済みの集合）。
+type scoreInputs struct {
+	scanHits       map[string]int
+	scanCriticals  map[string]int
+	authFails      map[string]int
+	ncFails        map[string]int
+	nc4xxHits      map[string]int
+	banned         map[string]struct{}
+	autobanEnabled bool
+}
+
+// collectScoreInputs はスコアの入力を、どちらか一方の経路だけから集める。
+// paths.AgentEventDir があるときはエージェントのイベントだけを読み、honeypot ディレクトリ・
+// nginx ログ・sudo grep・sudo fail2ban-client は呼ばない。以前は両方を呼んでからイベント側の
+// 値で上書きしていたので、旧経路の結果は捨てられるだけで、sudoers に許可の無いテナント
+// では、不要な sudo 呼び出しを避ける。
+func collectScoreInputs(ctx context.Context, paths scorePaths, cutoff time.Time, ncFailSkip map[string]struct{}, logLine func(string, string)) scoreInputs {
+	if paths.AgentEventDir != "" {
+		in := scoreInputs{}
+		in.scanHits, in.scanCriticals = collectHoneypotEventCounts(ctx, filepath.Join(paths.AgentEventDir, "honeypot.jsonl"), cutoff, logLine)
+		in.authFails = collectAuth401EventCounts(ctx, filepath.Join(paths.AgentEventDir, "web_access.jsonl"), cutoff, logLine)
+		in.ncFails = collectNCFailEventCounts(ctx, filepath.Join(paths.AgentEventDir, "nextcloud_login.jsonl"), cutoff, ncFailSkip, logLine)
+		in.nc4xxHits = collectNC4xxEventCounts(ctx, filepath.Join(paths.AgentEventDir, "web_access.jsonl"), cutoff, logLine)
+		in.banned = collectBannedIPsFromEvents(ctx, filepath.Join(paths.AgentEventDir, "fail2ban.jsonl"), cutoff, logLine)
+		in.autobanEnabled = false
+		logLine("", "agent event score input enabled; monitor-side autoban disabled")
+		return in
+	}
+	in := scoreInputs{autobanEnabled: true}
+	in.scanHits, in.scanCriticals = collectHoneypotCounts(ctx, paths.HoneypotDir, cutoff, logLine)
+	in.authFails = collectAuth401Counts(ctx, paths.NginxAccessLogPath, cutoff, logLine)
+	in.ncFails = collectNCFailCounts(ctx, paths.LoginEventsPath, paths.NextcloudLogPath, cutoff, ncFailSkip, logLine)
+	in.nc4xxHits = collectNC4xxCounts(ctx, paths.NC4xxDir, cutoff, logLine)
+	in.banned = collectBannedIPs(ctx, logLine)
+	return in
 }
 
 type scorePaths struct {
@@ -754,6 +781,22 @@ func ipsetPath() string {
 	return ipsetPathValue
 }
 
+// ipsetAvailable は ipset バイナリが実在するかを返す。
+func ipsetAvailable() bool {
+	return ipsetFound(ipsetPath(), exec.LookPath)
+}
+
+// ipsetFound は ipsetPath() の結果から実在を判定する。"/" を含む値は os.Stat で見つかった
+// 絶対パス。含まない値（"ipset"）は見つからなかったときの PATH 解決へのフォールバックなので、
+// lookPath で実在を確かめる。
+func ipsetFound(path string, lookPath func(string) (string, error)) bool {
+	if strings.Contains(path, "/") {
+		return true
+	}
+	_, err := lookPath(path)
+	return err == nil
+}
+
 // japanIPMatcher は japan_ips セットのメンバー（単一 IP / CIDR の両方）を保持し、
 // インメモリで国内判定する。score 1 回につき 1 度だけ ipset を読み込み、IP ごとの
 // sudo 起動（最大 2 プロセス × IP 数）を排除する。
@@ -768,7 +811,7 @@ type japanIPMatcher struct {
 // 正常なので、呼び出し側で foreign_ip 加点を無効化する。
 func loadJapanIPMatcher(ctx context.Context) *japanIPMatcher {
 	m := &japanIPMatcher{ips: map[string]struct{}{}}
-	if ctx.Err() != nil {
+	if ctx.Err() != nil || !ipsetAvailable() {
 		return m
 	}
 	out, err := runCombined(10*time.Second, "sudo", ipsetPath(), "list", "japan_ips")

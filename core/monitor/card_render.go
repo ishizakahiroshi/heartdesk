@@ -14,7 +14,8 @@ import (
 )
 
 type apiCardRender struct {
-	data func(*config.AppConfig) interface{}
+	data            func(*config.AppConfig) interface{}
+	dataWithContext func(*RequestContext) (interface{}, error)
 }
 
 // ssrCardByID は Card ID → SSR データ取得関数のマップ（server-detail 画面で使用）
@@ -30,7 +31,7 @@ var ssrCardByID = map[string]apiCardRender{
 }
 
 // buildServerDetailCards は表示可能カードのHTMLを構築する（SSRカードのみ）
-func buildServerDetailCards(h *Handler, visibleCards []navmeta.MonitorCardMeta, cardModes map[string]string, agentID string) map[string]template.HTML {
+func buildServerDetailCards(h *Handler, visibleCards []navmeta.MonitorCardMeta, cardModes map[string]string, agentID string, requests ...*http.Request) map[string]template.HTML {
 	cards := map[string]template.HTML{}
 	sfData := GetStorageForecast(agentID)
 	for _, card := range visibleCards {
@@ -43,6 +44,23 @@ func buildServerDetailCards(h *Handler, visibleCards []navmeta.MonitorCardMeta, 
 			continue
 		}
 		var data interface{}
+		if entry.dataWithContext != nil {
+			if len(requests) == 0 || requests[0] == nil {
+				continue
+			}
+			probe := discardExtensionResponse{header: http.Header{}}
+			if _, allowed := h.authorizeExtension(probe, requests[0], cardEndpoint(card.ID)); !allowed {
+				continue
+			}
+			ctx := h.extensionContext(requests[0])
+			ctx.AgentID = agentID
+			value, err := entry.dataWithContext(ctx)
+			if err != nil {
+				continue
+			}
+			cards[card.ID] = h.renderCard(navmeta.TemplateNameFromID(card.ID), value)
+			continue
+		}
 		switch card.ID {
 		case navmeta.CardSecStorageForecast:
 			data = sfData
@@ -106,6 +124,30 @@ func (h *Handler) APICard(w http.ResponseWriter, r *http.Request) {
 	// heartdesk 自身のサーバー（is_primary = true の agent）はローカル実行と同等なので agentID="" 扱いにする
 	if h.appCfg.IsLocalAgent(agentID) {
 		agentID = ""
+	}
+	for _, extra := range extensionRegistry.Cards {
+		if extra.Meta.ID == cardMeta.ID {
+			if _, ok := h.authorizeExtension(w, r, cardEndpoint(extra.Meta.ID)); !ok {
+				return
+			}
+			if extra.Data != nil {
+				value, err := extra.Data(h.extensionContext(r))
+				if err != nil {
+					http.Error(w, "card failed", http.StatusInternalServerError)
+					return
+				}
+				data = value
+			}
+			html, err := h.RenderTemplate(navmeta.TemplateNameFromID(cardMeta.ID), data)
+			if err != nil {
+				http.Error(w, "render failed", http.StatusInternalServerError)
+				return
+			}
+			middleware.SetHTMLSecurityHeaders(w)
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write([]byte(html))
+			return
+		}
 	}
 	switch card {
 	case "updates":

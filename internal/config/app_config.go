@@ -604,8 +604,18 @@ func LoadAppConfig() (*AppConfig, error) {
 // それも無ければ /var/lib/heartdesk/config（heartdesk.ConfigDir）。
 // tenantID が空の場合は DefaultTenantID をデフォルトとして使用する
 func LoadAppConfigForTenant(tenantID string) (*AppConfig, error) {
+	runtimeLoaderMu.RLock()
+	loader := runtimeLoader
+	runtimeLoaderMu.RUnlock()
+	if loader != nil {
+		return loader(ResolveTenantID(tenantID))
+	}
+	return LoadAppConfigForTenantAt(heartdesk.ConfigDir(), tenantID)
+}
+
+// LoadAppConfigForTenantAt loads the normal tenant overlays from an explicit root.
+func LoadAppConfigForTenantAt(configDir, tenantID string) (*AppConfig, error) {
 	tenantID = ResolveTenantID(tenantID)
-	configDir := heartdesk.ConfigDir()
 
 	cfg := &AppConfig{TenantID: tenantID}
 

@@ -13,7 +13,7 @@ fresh public clone でも有効な内容に保つこと。 -->
 
 heartdesk は、複数のサーバーを 1 つの画面で見る Go 製のダッシュボードサーバー。Monitor の画面（サーバーごとのカード）、scheduler、認証と権限、通知、テナント管理と Vendor Console を持つ。報告を送る側（Agent）は姉妹の OSS [heartpost](https://github.com/ishizakahiroshi/heartpost)。ライセンスは Apache-2.0。
 
-2026-10-20 に、個人の用途で作った別の監視基盤の汎用部分を切り出して作った（元の基盤は動いたまま。heartdesk を import せず、コードを複製した状態から始まっている）。旧名の環境変数・パス・cookie 名・カード ID などは heartdesk の名前に付け替え済みで、旧名の互換は持たない。**公開前・作業中**。2026-10-21 に Windows と Linux（WSL の Ubuntu）で、合成データを使って起動・ログイン・主な画面・署名つき報告の受理を確認し、CI（Ubuntu と Windows の build・test・vet）も通っている。未確認の範囲は `README.md` の Status 節と `CHANGELOG.md` の Notes。
+2026-10-20 に、個人の用途で作った別の監視基盤の汎用部分を切り出し、v0.1.0 をsource-only pre-releaseとして公開。標準CLIと外部アプリは `app/` の同じruntimeを使う。標準の環境変数・パス・cookie名はheartdesk名で、外部アプリの識別子はOptionsで明示する。合成データの検証済み範囲と実機で未確認の範囲は `README.md` の Status 節と `CHANGELOG.md` の Notes。
 
 ## やらないこと（スコープ外）
 
@@ -32,7 +32,7 @@ heartdesk は、複数のサーバーを 1 つの画面で見る Go 製のダッ
 
 ## ディレクトリ構成
 
-- `main.go` — 起動の処理（設定の読み込み・ルーティング・HTTP サーバー）
+- `main.go` / `app/` — CLIの入口 / 公開runtimeと拡張登録、起動・終了
 - `internal/` — 共通のパッケージ（config・routing・auth・authz・alerts・scheduler・vendorsvc・license・navmeta ほか）
 - `core/monitor/` — Monitor の本体（HTTP ハンドラ・カードの API・Agent の報告の受信）
 - `core/vendor_console/` — Vendor Console の出力と鍵の入れ替え

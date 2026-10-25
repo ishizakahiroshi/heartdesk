@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"fmt"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -257,7 +258,7 @@ func geoipDBPathForCountryCounts() string {
 	if p := strings.TrimSpace(geoSettingsSnapshot().DBPath); p != "" {
 		return p
 	}
-	return strings.TrimSpace(os.Getenv("HEARTDESK_GEOIP_DB"))
+	return strings.TrimSpace(heartdesk.Env("HEARTDESK_GEOIP_DB"))
 }
 
 // geoipLookup は geoiplookup コマンドで国名を返す

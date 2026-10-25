@@ -79,7 +79,7 @@ func DefaultSessionManager() *SessionManager {
 		}
 		defaultSessionMgr = &SessionManager{
 			sessions:   map[string]Session{},
-			cookieName: defaultSessionCookieName,
+			cookieName: sessionCookieName(),
 			ttl:        ttl,
 		}
 	})
@@ -300,4 +300,11 @@ func isSecureRequest(r *http.Request) bool {
 // :8765 直結時はヘッダを無視して RemoteAddr を使う。
 func ClientIP(r *http.Request) string {
 	return TrustedClientIP(r)
+}
+
+func sessionCookieName() string {
+	if v := heartdesk.Env("HEARTDESK_SESSION_COOKIE_NAME"); v != "" {
+		return v
+	}
+	return defaultSessionCookieName
 }

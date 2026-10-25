@@ -7,25 +7,20 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/ishizakahiroshi/heartdesk/internal/config"
-	"github.com/ishizakahiroshi/heartdesk/internal/scheduler"
+	"github.com/ishizakahiroshi/heartdesk/app"
 )
 
 func main() {
-	cfg, err := config.LoadSchedulerConfig()
+	opts := app.OptionsFromEnvironment()
+	opts.SchedulerOnly = true
+	runtime, err := app.New(opts)
 	if err != nil {
-		log.Fatalf("scheduler config load failed: %v", err)
+		log.Fatal(err)
 	}
-
-	if cfg.BaseDir != "" && os.Getenv("HEARTDESK_BASE_DIR") == "" {
-		_ = os.Setenv("HEARTDESK_BASE_DIR", cfg.BaseDir)
-	}
-
+	defer runtime.Close()
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
-
-	s := scheduler.NewScheduler(cfg, log.Default())
-	if err := s.Run(ctx); err != nil && err != context.Canceled {
-		log.Fatalf("scheduler stopped with error: %v", err)
+	if err := runtime.RunScheduler(ctx); err != nil {
+		log.Fatal(err)
 	}
 }

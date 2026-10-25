@@ -1,7 +1,7 @@
 package monitor
 
 import (
-	"os"
+	"github.com/ishizakahiroshi/heartdesk/internal"
 	"sort"
 	"strings"
 	"time"
@@ -75,7 +75,7 @@ func (r *auditLogRecord) getEvent() string {
 // auditAnomalyTrustedIPs はホワイトリスト + SSHAllowed の信頼済みIPを返す
 func auditAnomalyTrustedIPs() map[string]bool {
 	m := map[string]bool{}
-	for _, ip := range strings.Split(os.Getenv("HEARTDESK_WHITELIST_IPS"), ",") {
+	for _, ip := range strings.Split(heartdesk.Env("HEARTDESK_WHITELIST_IPS"), ",") {
 		if ip = strings.TrimSpace(ip); ip != "" {
 			m[ip] = true
 		}

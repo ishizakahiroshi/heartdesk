@@ -14,11 +14,15 @@ var vendorPublicKeysB64 = ""
 
 // ParseVendorPublicKeys はビルド時注入文字列をパースしてkid→PublicKey のmapを返す。
 func ParseVendorPublicKeys() (map[string]ed25519.PublicKey, error) {
+	return parseVendorPublicKeys(vendorPublicKeysB64)
+}
+
+func parseVendorPublicKeys(encoded string) (map[string]ed25519.PublicKey, error) {
 	result := make(map[string]ed25519.PublicKey)
-	if vendorPublicKeysB64 == "" {
+	if encoded == "" {
 		return result, nil
 	}
-	for _, entry := range strings.Split(vendorPublicKeysB64, ",") {
+	for _, entry := range strings.Split(encoded, ",") {
 		entry = strings.TrimSpace(entry)
 		if entry == "" {
 			continue

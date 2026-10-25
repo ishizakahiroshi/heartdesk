@@ -210,6 +210,22 @@ func agentReportStrict(cfg *config.AppConfig) bool {
 	return *cfg.AgentReport.StrictLicense
 }
 
+// agentReportConfigForTenant は報告元の設定に、集約先テナントの署名鍵だけを合わせる。
+// IP 制限・local 用の鍵・ライセンス設定は報告元のものを保ち、共有キャッシュは変更しない。
+func agentReportConfigForTenant(tenantID string) (*config.AppConfig, error) {
+	cfg, err := config.CachedAppConfigForTenant(tenantID)
+	if err != nil || config.ResolveTenantID(tenantID) == config.DefaultTenantID {
+		return cfg, err
+	}
+	aggregatorCfg, err := config.CachedAppConfigForTenant(config.DefaultTenantID)
+	if err != nil {
+		return nil, fmt.Errorf("aggregator config load failed: %w", err)
+	}
+	reportCfg := *cfg
+	reportCfg.AggregatorAgentKeys = aggregatorCfg.AggregatorAgentKeys
+	return &reportCfg, nil
+}
+
 // AgentReportHandler は POST /api/agent/report を処理する
 func AgentReportHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -231,7 +247,7 @@ func AgentReportHandler(w http.ResponseWriter, r *http.Request) {
 	// 高頻度経路。毎リクエストの TOML 4 連 DecodeFile + Glob を避け、
 	// プロセス内キャッシュ（tenantID→*AppConfig）を参照する。設定変更時は SIGHUP で
 	// config.ReloadConfigCache() が呼ばれキャッシュが破棄される。
-	cfg, err := config.CachedAppConfigForTenant(tenantID)
+	cfg, err := agentReportConfigForTenant(tenantID)
 	if err != nil {
 		log.Printf("ERROR: agent_report: config load error: %v", err)
 		http.Error(w, `{"error":"internal error"}`, http.StatusInternalServerError)
@@ -345,6 +361,7 @@ func AgentReportHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	AfterAgentReportSaved(cfg, report)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_, _ = w.Write([]byte(`{"ok":true}`))
 }

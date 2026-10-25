@@ -126,6 +126,15 @@ func (h *Handler) dispatchAPI(w http.ResponseWriter, r *http.Request, api string
 	if h.appCfg.IsLocalAgent(agentID) {
 		agentID = ""
 	}
+	if endpoint, ok := endpointByName(extensionRegistry.APIs, api); ok {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			w.Header().Set("Allow", "GET, HEAD")
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		h.dispatchExtension(w, r, endpoint)
+		return
+	}
 	if handler, ok := agentSimpleAPIByName[api]; ok {
 		if err := json.NewEncoder(w).Encode(handler(agentID)); err != nil {
 			log.Printf("ERROR: monitor: api/%s encode error: %v", api, err)
@@ -273,6 +282,9 @@ func (h *Handler) dispatchAPI(w http.ResponseWriter, r *http.Request, api string
 // 未登録 API に合成 ID を返して CardModes すり抜け（常時許可）しない。
 // cardID が空かつ mapped=true は「カード ACL 対象外だが明示許可」（agent_overview 等）。
 func resolveCardIDForAPI(api string) (cardID string, mapped bool) {
+	if endpoint, ok := endpointByName(extensionRegistry.APIs, api); ok {
+		return endpoint.CardID, true
+	}
 	// レジストリ API キーとクエリキーが一致するものは優先。
 	if card, ok := navmeta.MonitorCardByAPIKey(api); ok {
 		return card.ID, true

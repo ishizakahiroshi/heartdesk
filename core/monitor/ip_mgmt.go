@@ -534,6 +534,20 @@ func ChangeTypeIP(ip, ipType, user string) error {
 
 // ---- managed_ips TOML ヘルパー ----
 
+// syncFail2banIgnoreIPFn は syncIPManage が呼ぶ fail2ban 同期。テストで差し替える。
+var syncFail2banIgnoreIPFn = syncFail2banIgnoreIP
+
+// managedIPsLedgerExists は管理 IP の台帳（TOML または旧 JSON）が存在するかを返す。
+// 存在確認で NotExist 以外のエラーになったときは「ある」として扱う（従来どおり同期する側に倒す）。
+func managedIPsLedgerExists() bool {
+	for _, rel := range []string{managedIPsTOMLPath, legacyManagedIPsJSONPath} {
+		if _, err := os.Stat(heartdesk.Path(rel)); !os.IsNotExist(err) {
+			return true
+		}
+	}
+	return false
+}
+
 func loadManagedIPs() ([]SSHAllowedIP, error) {
 	tomlPath := heartdesk.Path(managedIPsTOMLPath)
 	if _, err := os.Stat(tomlPath); err == nil {
@@ -641,8 +655,13 @@ func syncIPManage(skipNC bool) error {
 		return fmt.Errorf("sync失敗: %v", err)
 	}
 
-	// --- fail2ban ignoreip 更新 ---
-	syncFail2banIgnoreIP(data)
+	// 台帳のないホストでは、既存の fail2ban 許可設定を変更しない。
+	// 空の台帳が実在する場合は、意図的な全削除として従来どおり同期する。
+	if managedIPsLedgerExists() {
+		syncFail2banIgnoreIPFn(data)
+	} else {
+		log.Printf("syncIPManage: managed IP ledger absent; skip fail2ban ignoreip sync")
+	}
 
 	// --- Nextcloud bruteforce whitelist ---
 	if !skipNC {

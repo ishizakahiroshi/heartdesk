@@ -143,6 +143,11 @@ func (h *Handler) dispatchAction(w http.ResponseWriter, r *http.Request, api str
 		return
 	}
 
+	if endpoint, ok := endpointByName(extensionRegistry.Actions, api); ok {
+		h.dispatchExtension(aw, r, endpoint)
+		logActionAudit(r, event, user, role, aw.statusCode, aw.body.String())
+		return
+	}
 	switch api {
 	// --- アラート設定の保存アクション ---
 	case "save_alert_rules":
