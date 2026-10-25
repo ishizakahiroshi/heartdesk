@@ -237,6 +237,17 @@ them further. `Jobs`, `Notifiers`, and `OnReportSaved` attach application behavi
 without copying the standard runner. Report hooks run after authentication and
 successful durable persistence.
 
+`app.ValidateCardConfiguration` checks extension definitions, configured card IDs
+and legacy aliases without initializing a runtime. Customer diagnostics can use
+this function without maintaining a second copy of the standard card registry.
+
+Customer handlers can reuse `app.RequireScreen`, `WriteActionError`,
+`SetDownloadHeader`, `CSVSafe`, `CSVBOM` and `ParseIntParam`. Screen authorization
+uses the same session, method and CSRF checks as the standard middleware.
+`app.JST`, `FormatDatetime` and `ParseTimestamp` preserve the standard presentation
+formats. The public `httpx` package shares the internal client's TLS transports,
+body limits, headers and context cancellation behavior.
+
 `Card.ClientOnly` keeps the initial card shell and evaluates its `Data` callback
 only through the authenticated card-refresh endpoint.
 

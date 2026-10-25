@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.0] - 2026-10-25
+
+### Added
+
+- Public embedding helpers for screen authorization, action errors, download
+  headers, safe CSV output, integer parameters and presentation timestamps.
+- Pure validation of configured shared, customer and legacy card identities,
+  without starting a runtime or opening databases.
+- Public `httpx` facade sharing the existing bounded HTTP client, TLS transports,
+  request headers and cancellation behavior with customer integrations.
+
 ## [0.2.3] - 2026-10-25
 
 ### Fixed
