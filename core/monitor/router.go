@@ -36,9 +36,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// ?r2_metrics=1 → PHP互換の旧エンドポイント（shared.js が ?r2_metrics=1 で呼び出す）
-	// ?api=r2_metrics と同ゲート（agent 形式 + テナント境界）。
+	// ?api=r2_metrics と同じ component/card/agent/tenant ゲート。
 	if r.URL.Query().Has("r2_metrics") {
+		if !h.requireAPIComponent(w, r, "r2_metrics") {
+			return
+		}
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		if !h.requireAPICard(w, r, "r2_metrics") {
+			return
+		}
 		agentID := strings.TrimSpace(r.URL.Query().Get("agent"))
 		if agentID != "" && !isValidAgentID(agentID) {
 			http.Error(w, `{"error":"invalid agent"}`, http.StatusBadRequest)

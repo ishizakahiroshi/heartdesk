@@ -55,13 +55,7 @@ var agentSimpleAPIByName = map[string]func(agentID string) interface{}{
 
 // dispatchAPI は ?api=xxx に応じた JSON を返す
 func (h *Handler) dispatchAPI(w http.ResponseWriter, r *http.Request, api string) {
-	// config.toml の [components] で無効化されたコンポーネントに
-	// 属する API は、認可判定やセッション有無に関わらず 404 で塞ぐ（fail-closed）。
-	// CardModes の hidden（セッション単位の表示切替）とは独立した経路。10 個近い個別 API を
-	// 直接書き換えず、既存の resolveCardIDForAPI（GET API → カード ID の唯一のマップ）を
-	// 再利用してここ 1 か所で判定する。
-	if cardID, mapped := resolveCardIDForAPI(api); mapped && !navmeta.CardComponentEnabled(cardID, h.appCfg) {
-		http.NotFound(w, r)
+	if !h.requireAPIComponent(w, r, api) {
 		return
 	}
 
@@ -87,20 +81,8 @@ func (h *Handler) dispatchAPI(w http.ResponseWriter, r *http.Request, api string
 		return
 	}
 
-	// カード ACL。未マップ API は合成 ID で fail-open しない。
-	if sess, ok := auth.DefaultSessionManager().SessionFromRequest(r); ok {
-		cardID, mapped := resolveCardIDForAPI(api)
-		if !mapped {
-			// 明示マップ外は vendor 専用 API 以外を拒否（未知キーのすり抜け防止）。
-			// switch / map に存在するサブ API は resolveCardIDForAPI 側で親カードへマップする。
-			if !isVendorAPI(api) {
-				http.Error(w, "forbidden", http.StatusForbidden)
-				return
-			}
-		} else if cardID != "" && normalizeCardModes(sess.CardModes)[cardID] == "hidden" {
-			http.Error(w, "forbidden", http.StatusForbidden)
-			return
-		}
+	if !h.requireAPICard(w, r, api) {
+		return
 	}
 
 	// agentID 対応 API は ?agent= を読み取って渡す。
@@ -324,6 +306,42 @@ func resolveCardIDForAPI(api string) (cardID string, mapped bool) {
 		return "", true
 	}
 	return "", false
+}
+
+// requireAPIComponent and requireAPICard are shared with legacy read endpoints.
+// Screen/session and method/CSRF enforcement remain in RequireScreen.
+func (h *Handler) requireAPIComponent(w http.ResponseWriter, r *http.Request, api string) bool {
+	// config.toml の [components] で無効化されたコンポーネントに
+	// 属する API は、認可判定やセッション有無に関わらず 404 で塞ぐ（fail-closed）。
+	// CardModes の hidden（セッション単位の表示切替）とは独立した経路。10 個近い個別 API を
+	// 直接書き換えず、既存の resolveCardIDForAPI（GET API → カード ID の唯一のマップ）を
+	// 再利用してここ 1 か所で判定する。
+	if cardID, mapped := resolveCardIDForAPI(api); mapped && !navmeta.CardComponentEnabled(cardID, h.appCfg) {
+		http.NotFound(w, r)
+		return false
+	}
+
+	return true
+}
+
+func (h *Handler) requireAPICard(w http.ResponseWriter, r *http.Request, api string) bool {
+	// カード ACL。未マップ API は合成 ID で fail-open しない。
+	if sess, ok := auth.DefaultSessionManager().SessionFromRequest(r); ok {
+		cardID, mapped := resolveCardIDForAPI(api)
+		if !mapped {
+			// 明示マップ外は vendor 専用 API 以外を拒否（未知キーのすり抜け防止）。
+			// switch / map に存在するサブ API は resolveCardIDForAPI 側で親カードへマップする。
+			if !isVendorAPI(api) {
+				http.Error(w, "forbidden", http.StatusForbidden)
+				return false
+			}
+		} else if cardID != "" && normalizeCardModes(sess.CardModes)[cardID] == "hidden" {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return false
+		}
+	}
+
+	return true
 }
 
 // ---- fail2ban アクション ----
