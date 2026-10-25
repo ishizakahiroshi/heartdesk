@@ -129,7 +129,7 @@ func TestR2LegacyAuthorization(t *testing.T) {
 	}
 	// Exercise a component association through the existing startup registry
 	// hook. This is isolated test metadata, not an extension API collision.
-	meta, ok := navmeta.MonitorCardByAPIKey("r2_metrics")
+	meta, ok := navmeta.MonitorCardByAPIKey("r2")
 	if !ok {
 		t.Fatal("R2 card metadata missing")
 	}
