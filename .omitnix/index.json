@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "generated": {
-    "commit": "90c91bfa58532cc5374987d68df7a3fabbfa0c50",
+    "commit": "d53d1e83bc194b39b812f50dcd18e09dceabe0f7",
     "dirty": true,
     "tool": "omitnix 0.1.4",
     "partial": false,
@@ -138,8 +138,8 @@
     "discovery_note": ""
   },
   "coverage": {
-    "discovered": 372,
-    "analyzed": 316,
+    "discovered": 374,
+    "analyzed": 318,
     "unresolved": 21,
     "unknown": 3,
     "unclaimed": 32,
@@ -6030,13 +6030,13 @@
       "unresolved": []
     },
     {
-      "path": "internal/filelock/filelock_nonunix.go",
+      "path": "internal/filelock/filelock.go",
       "adapter": "go",
       "status": "analyzed",
       "fields": {
         "summary": {
-          "state": "none_observed",
-          "value": null
+          "state": "value",
+          "value": "Package filelock retains the application's internal import path. OS locking"
         },
         "authentication": {
           "state": "not_configured"
@@ -6088,7 +6088,7 @@
       "unresolved": []
     },
     {
-      "path": "internal/filelock/filelock_unix.go",
+      "path": "internal/filelock/public_compat_test.go",
       "adapter": "go",
       "status": "analyzed",
       "fields": {
@@ -6233,6 +6233,35 @@
       "unresolved": []
     },
     {
+      "path": "internal/license/facade_wire_test.go",
+      "adapter": "go",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "none_observed",
+          "value": null
+        },
+        "authentication": {
+          "state": "not_configured"
+        },
+        "authorization": {
+          "state": "not_configured"
+        },
+        "reads": {
+          "state": "none_observed",
+          "value": []
+        },
+        "writes": {
+          "state": "none_observed",
+          "value": []
+        },
+        "screen_to_api": {
+          "state": "out_of_scope"
+        }
+      },
+      "unresolved": []
+    },
+    {
       "path": "internal/license/identity_test.go",
       "adapter": "go",
       "status": "analyzed",
@@ -6292,6 +6321,35 @@
     },
     {
       "path": "internal/license/jwt.go",
+      "adapter": "go",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "none_observed",
+          "value": null
+        },
+        "authentication": {
+          "state": "not_configured"
+        },
+        "authorization": {
+          "state": "not_configured"
+        },
+        "reads": {
+          "state": "none_observed",
+          "value": []
+        },
+        "writes": {
+          "state": "none_observed",
+          "value": []
+        },
+        "screen_to_api": {
+          "state": "out_of_scope"
+        }
+      },
+      "unresolved": []
+    },
+    {
+      "path": "internal/license/jwt_header_test.go",
       "adapter": "go",
       "status": "analyzed",
       "fields": {

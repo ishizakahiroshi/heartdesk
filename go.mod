@@ -4,7 +4,7 @@ go 1.25.13
 
 require (
 	github.com/BurntSushi/toml v1.4.0
-	github.com/ishizakahiroshi/heartpost v0.1.0
+	github.com/ishizakahiroshi/heartpost v0.2.0
 	github.com/oschwald/maxminddb-golang v1.13.1
 	github.com/yuin/goldmark v1.7.17
 	golang.org/x/crypto v0.51.0

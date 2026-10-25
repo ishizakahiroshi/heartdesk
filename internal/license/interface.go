@@ -1,46 +1,9 @@
 package license
 
-import (
-	"context"
-	"time"
-)
+import publiclicense "github.com/ishizakahiroshi/heartpost/agentlicense"
 
-// Verifier はライセンスキーを検証するインターフェース。
-// 実装は verifier.go（vendorSecret はビルド時に注入する。値はソースに持たない）。
-type Verifier interface {
-	// Verify はライセンスキーとエージェントIDをローカルで検証する（起動時・オフライン）。
-	// 不正なキーの場合は error を返す。
-	Verify(agentID, licenseKey string) error
+type Verifier = publiclicense.Verifier
 
-	// VerifyWithMonitor はMonitor APIにHTTPで検証を依頼してトークンを取得する。
-	// 成功時はトークン文字列を返す。エンドポイント未設定の場合は "" を返しエラーなし。
-	VerifyWithMonitor(ctx context.Context, agentID, licenseKey, monitorEndpoint string) (token string, err error)
-
-	// StartHeartbeat はトークンの有効期限を維持するためのバックグラウンドgoroutineを起動する。
-	// ctx がキャンセルされるまで interval ごとに /api/license/heartbeat を叩く。
-	// 401/403 受信時は VerifyWithMonitor で再認証してgoroutineを継続する（再起動不要）。
-	StartHeartbeat(ctx context.Context, agentID, licenseKey, token, monitorEndpoint string, interval time.Duration)
-
-	// VerifyToken はMonitorから受け取ったJWT（ed25519署名）を検証しclaimsを返す。
-	// ビルド時注入の公開鍵で署名を確認し、有効期限・agentIDの一致も検証する。
-	VerifyToken(agentID, token string) (*Claims, error)
-
-	// VerifyOfflineLicense はオフラインライセンスファイルを検証してclaimsを返す。
-	// Monitor不到達時のフォールバックとして使用する。
-	VerifyOfflineLicense(agentID, filePath string) (*Claims, error)
-
-	// CurrentToken は最新の検証済み Bearer JWT を返す。
-	// StartHeartbeat 起動前は VerifyWithMonitor の戻り値を SetCurrentToken で設定する想定。
-	// トークン未取得時は空文字を返す。
-	CurrentToken() string
-
-	// SetCurrentToken は外部から取得した最新トークンを Verifier 内に保存する。
-	// 通常は main 側で VerifyWithMonitor 直後に呼び、StartHeartbeat 開始前に初期値を埋める。
-	SetCurrentToken(token string)
-}
-
-// New は Verifier の実装を返す。
-// verifier.go が存在しない環境ではビルドエラーになる（意図的）。
-func New() Verifier {
-	return newVerifier()
-}
+// New preserves the application's import path and linker configuration while
+// giving each verifier an immutable copy of its signing material.
+func New() Verifier { return newVerifier() }

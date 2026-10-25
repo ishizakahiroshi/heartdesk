@@ -33,6 +33,9 @@ All notable changes to this project are documented in this file.
 
 ### Notes
 
+- License cryptography and file locking delegate to the public heartpost v0.2.0
+  packages. Existing linker variables, token identities and offline wire bytes
+  remain supported by thin compatibility wrappers.
 - Source release only; operator-supplied license signing material is still required.
 - Local synthetic tests cover the public API, authentication failures, lifecycle,
   extension boundaries and the existing JSONL report fallback. This release does not
