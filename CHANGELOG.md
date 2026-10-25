@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.2.2] - 2026-10-25
+
+### Fixed
+
+- Embedding applications can supply a startup-fixed authentication identity for
+  login titles, subtitles, the Nextcloud session entry, challenge cookies, TOTP
+  issuer and the unregistered-account message. Standard defaults are unchanged.
+  Entry paths and cookie names are validated before runtime initialization.
+- Logout invalidates the server session using the configured cookie name, so a
+  previously issued token cannot be replayed after an embedded application's logout.
+- Startup identities preserve existing monitor wire/export names, browser preferences,
+  script metadata, lock namespaces and trusted audit principals without copying runners.
+- Card aliases retain existing policy modes across all policy layers without rewriting
+  files on read. API/export aliases enforce both their own and built-in target gates.
+- Nextcloud extraction honors configured output directories shared by score readers,
+  including its checkpoint and heartbeat files.
+
 ## [0.2.1] - 2026-10-25
 
 ### Fixed

@@ -30,7 +30,7 @@ type cronJobSpec struct {
 func cronJobSpecsList() []cronJobSpec {
 	return []cronJobSpec{
 		{
-			key: "check_alerts", label: "heartdesk-alerts",
+			key: "check_alerts", label: heartdesk.OperationalIdentity().AlertScriptName,
 			summary: "アラート判定・メール通知",
 			script:  scriptCheckAlerts(),
 			kind:    "csv", csvFile: heartdesk.Path("data/json/alert_check_last.csv"),
@@ -48,9 +48,9 @@ type cronEntry struct {
 
 var reCronWhitespace = regexp.MustCompile(`\s+`)
 var reCronRedirect = regexp.MustCompile(`\s+>>?\s+\S+(\s+2>&1)?$`)
-var reScriptMeta = regexp.MustCompile(`^\s*#\s*HEARTDESK_(\w+)=(.+)$`)
 
 func extractScriptMeta(lines []string) map[string]string {
+	reScriptMeta := regexp.MustCompile(`^\s*#\s*` + regexp.QuoteMeta(heartdesk.OperationalIdentity().ScriptMetadataPrefix) + `_(\w+)=(.+)$`)
 	meta := make(map[string]string)
 	for _, line := range lines {
 		if m := reScriptMeta.FindStringSubmatch(line); m != nil {
@@ -355,7 +355,7 @@ func GetCronStatus(agentID ...string) CronStatusData {
 			var status, lastTime string
 			if strings.Contains(logFileOrCSV, "mariadb-backup") {
 				status, lastTime = detectBackupLogStatus(logFileOrCSV)
-			} else if strings.Contains(logFileOrCSV, "heartdesk-") {
+			} else if strings.Contains(logFileOrCSV, heartdesk.OperationalIdentity().SchedulerLockPrefix+"-") {
 				status, lastTime = detectLogStatus(logFileOrCSV)
 			} else {
 				status, lastTime = detectAppendLogStatus(logFileOrCSV)
@@ -414,7 +414,7 @@ func GetCronStatus(agentID ...string) CronStatusData {
 			Summary:       def.Summary,
 			Schedule:      def.DefaultCronSchedule,
 			ScheduleHuman: cronScheduleHuman(def.DefaultCronSchedule),
-			Command:       "managed by heartdesk-scheduler",
+			Command:       "managed by " + heartdesk.OperationalIdentity().SchedulerLockPrefix + "-scheduler",
 			Registered:    true,
 			LastTime:      lastTime,
 			Result:        result,

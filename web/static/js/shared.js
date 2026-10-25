@@ -1460,6 +1460,10 @@ var COLLAPSE_KEY = (typeof HD_COLLAPSE_KEY !== 'undefined' && HD_COLLAPSE_KEY) ?
 var SIDENAV_SERVER_TREE_KEY = (typeof HD_SIDENAV_SERVER_TREE_KEY !== 'undefined' && HD_SIDENAV_SERVER_TREE_KEY) ? HD_SIDENAV_SERVER_TREE_KEY : 'heartdesk.sidenav.server_tree.v1';
 var SIDENAV_ORDER_KEY = (typeof HD_SIDENAV_ORDER_KEY !== 'undefined' && HD_SIDENAV_ORDER_KEY) ? HD_SIDENAV_ORDER_KEY : 'heartdesk.sidenav.order.v1';
 
+function configuredCardId(id) {
+	return (typeof HD_CARD_ALIASES !== 'undefined' && HD_CARD_ALIASES[id]) || id;
+}
+
 function loadCollapsedSet() {
 	try {
 		var raw = localStorage.getItem(COLLAPSE_KEY);
@@ -1467,7 +1471,7 @@ function loadCollapsedSet() {
 		var arr = JSON.parse(raw);
 		if (!Array.isArray(arr)) return {};
 		var set = {};
-		arr.forEach(function(id) { set[id] = true; });
+		arr.forEach(function(id) { set[configuredCardId(id)] = true; });
 		return set;
 	} catch (e) { return {}; }
 }
@@ -1869,7 +1873,7 @@ function loadSidenavOrder() {
 		var st = JSON.parse(raw);
 		if (!st || !Array.isArray(st.pinned) || !st.groups || typeof st.groups !== 'object') return null;
 		function onlyKeys(arr) {
-			return Array.isArray(arr) ? arr.filter(function(k) { return typeof k === 'string' && k !== ''; }) : [];
+			return Array.isArray(arr) ? arr.filter(function(k) { return typeof k === 'string' && k !== ''; }).map(configuredCardId).filter(function(k, i, all) { return all.indexOf(k) === i; }) : [];
 		}
 		var groups = {};
 		Object.keys(st.groups).forEach(function(g) { groups[g] = onlyKeys(st.groups[g]); });
@@ -2386,7 +2390,7 @@ function initThemeToggle() {
 	var toggle = document.getElementById('themeToggle');
 	if (!toggle) return;
 	var body = document.body;
-	var storageKey = 'heartdesk_theme';
+	var storageKey = (typeof HD_IDENTITY !== 'undefined' && HD_IDENTITY.ThemeStorageKey) || 'heartdesk_theme';
 	var saved = localStorage.getItem(storageKey) || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
 	body.setAttribute('data-theme', saved);
 	toggle.textContent = saved === 'dark' ? '\u{1F319}' : '\u{2600}\u{FE0F}';
@@ -3734,6 +3738,10 @@ var LOGIN_APP_LABELS = {
 	heartdesk_monitor: 'Monitor',
 	heartdesk_admin: 'Admin'
 };
+if (typeof HD_IDENTITY !== 'undefined') {
+	if (HD_IDENTITY.LoginLogAppName) LOGIN_APP_LABELS[HD_IDENTITY.LoginLogAppName] = 'Monitor';
+	if (HD_IDENTITY.AdminLoginLogAppName) LOGIN_APP_LABELS[HD_IDENTITY.AdminLoginLogAppName] = 'Admin';
+}
 
 function loginAppLabel(app) {
 	var key = String(app || '').trim();
@@ -4212,7 +4220,7 @@ function resolveLoginHistorySections(content) {
 		if (Array.isArray(opts.sections)) sections = opts.sections;
 	}
 		if (!sections || sections.length === 0) {
-			sections = ['ssh', 'nextcloud', 'heartdesk_monitor', 'phpmyadmin'];
+			sections = ['ssh', 'nextcloud', (typeof HD_IDENTITY !== 'undefined' && HD_IDENTITY.LoginLogAppName) || 'heartdesk_monitor', 'phpmyadmin'];
 		}
 	return sections;
 }
@@ -4223,7 +4231,7 @@ function renderLoginHistory(content, data) {
 	sections.forEach(function(s) { allowed[s] = true; });
 	var showSsh = !!allowed.ssh;
 	var showNc = !!allowed.nextcloud;
-		var showDash = !!allowed.heartdesk_monitor;
+		var showDash = !!allowed[(typeof HD_IDENTITY !== 'undefined' && HD_IDENTITY.LoginLogAppName) || 'heartdesk_monitor'];
 	var showPma = !!allowed.phpmyadmin;
 
 	if (!showSsh && !showNc && !showDash && !showPma) {

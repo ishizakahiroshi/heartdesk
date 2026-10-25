@@ -93,9 +93,10 @@ func auditAnomalyIsAppTrustedLogin(rec *auditLogRecord, trustedIPs map[string]bo
 	if event == "" {
 		return false
 	}
-	userIsApp := user == "heartdesk_app" ||
-		strings.Contains(event, `"heartdesk_app"`) ||
-		strings.Contains(event, `'heartdesk_app'`)
+	principal := heartdesk.OperationalIdentity().TrustedAuditDBUser
+	userIsApp := user == principal ||
+		strings.Contains(event, `"`+principal+`"`) ||
+		strings.Contains(event, `'`+principal+`'`)
 	if !userIsApp {
 		return false
 	}

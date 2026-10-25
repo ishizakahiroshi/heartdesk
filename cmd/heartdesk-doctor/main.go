@@ -101,9 +101,10 @@ func validateFrontendContracts(wd string) error {
 	}
 	layout := string(layoutRaw)
 	required := []string{
-		`HD_COLLAPSE_KEY = "heartdesk.monitor.collapsed.v1"`,
-		`HD_SIDENAV_SERVER_TREE_KEY = "heartdesk.monitor.sidenav.server_tree.v1"`,
-		`HD_SIDENAV_ORDER_KEY = "heartdesk.monitor.sidenav.order.v1"`,
+		`HD_STORAGE_NAMESPACE = HD_IDENTITY.StorageNamespace || "heartdesk"`,
+		`HD_COLLAPSE_KEY = HD_STORAGE_NAMESPACE + ".monitor.collapsed.v1"`,
+		`HD_SIDENAV_SERVER_TREE_KEY = HD_STORAGE_NAMESPACE + ".monitor.sidenav.server_tree.v1"`,
+		`HD_SIDENAV_ORDER_KEY = HD_STORAGE_NAMESPACE + ".monitor.sidenav.order.v1"`,
 	}
 	for _, needle := range required {
 		if !strings.Contains(layout, needle) {

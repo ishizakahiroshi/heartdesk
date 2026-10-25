@@ -53,6 +53,9 @@ type MergeCardsInput struct {
 //
 // user は復活不可（4 で hidden にするだけ）。
 func MergeCards(in MergeCardsInput) map[string]string {
+	in.SystemDefaults = CanonicalCardModes(in.SystemDefaults)
+	in.TenantCards = CanonicalCardModes(in.TenantCards)
+	in.AgentCards = CanonicalCardModes(in.AgentCards)
 	defaultMode := in.DefaultMode
 	if defaultMode == "" {
 		defaultMode = string(CardModeFull)
@@ -60,6 +63,7 @@ func MergeCards(in MergeCardsInput) map[string]string {
 
 	result := make(map[string]string, len(in.AllCardIDs))
 	for _, id := range in.AllCardIDs {
+		id = CanonicalCardID(id)
 		mode := defaultMode
 		if m, ok := in.SystemDefaults[id]; ok {
 			if nm := NormalizeCardMode(m); nm != "" {
@@ -80,7 +84,7 @@ func MergeCards(in MergeCardsInput) map[string]string {
 	}
 
 	for _, id := range in.UserHideCards {
-		id = strings.TrimSpace(id)
+		id = CanonicalCardID(id)
 		if id == "" {
 			continue
 		}
@@ -103,6 +107,10 @@ type MergeChildCardsInput struct {
 // MergeChildCards は子カード表示モードを tenant -> agent -> user 順でマージする。
 // 親カードID -> 子カードID -> モード のマップを返す。
 func MergeChildCards(in MergeChildCardsInput) map[string]map[string]string {
+	in.SystemDefaults = CanonicalChildCardModes(in.SystemDefaults)
+	in.TenantChildCards = CanonicalChildCardModes(in.TenantChildCards)
+	in.AgentChildCards = CanonicalChildCardModes(in.AgentChildCards)
+	in.UserHideChildCards = normalizeHideChild(in.UserHideChildCards)
 	parents := make(map[string]struct{})
 	for p := range in.SystemDefaults {
 		parents[p] = struct{}{}

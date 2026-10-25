@@ -258,6 +258,23 @@ Report observers receive private copies of configuration and collector payloads;
 editing them cannot alter the receiver's caches. User-store path selection honors
 explicit options, then existing process environment, then the standard default.
 
+`AuthIdentity` preserves an application's existing login presentation, Nextcloud
+entry path, challenge cookie, TOTP issuer and unregistered-account message.
+`OperationalIdentity` preserves lock names, script metadata and the trusted audit
+principal. `MonitorIdentity` controls display names, browser preference keys and
+login-history wire/export names; `VendorName` sets the license attribution.
+These optional configurations are validated and copied at startup, and empty
+fields keep the standalone defaults. Nextcloud entries must be root-relative paths.
+
+`CardAliases` maps former card IDs to registered current cards when reading
+existing policy and preference files. It does not migrate those files on read.
+Policy precedence across role, tenant, agent and user layers remains unchanged;
+colliding old/current keys in one layer use the more restrictive card mode.
+API and export endpoints may also use `AliasFor` to expose a former name for a
+same-kind built-in target. Both the alias and its target must authorize the request.
+Nextcloud extraction writes to the configured event and access-event directories,
+so producers and score readers can continue sharing an existing data location.
+
 ## Dependencies
 
 - Go 1.25.13 or later (see `go.mod`; an older `go` command downloads that toolchain by itself unless `GOTOOLCHAIN=local` is set)

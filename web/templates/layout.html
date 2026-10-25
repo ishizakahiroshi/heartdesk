@@ -8,9 +8,12 @@
 <link rel="stylesheet" href="{{.StaticBase}}/css/shared.css?v={{.AssetVersion}}">
 <script>
 var HD_APP_BASE   = {{.AppBase | js}};
-var HD_COLLAPSE_KEY = "heartdesk.monitor.collapsed.v1";
-var HD_SIDENAV_SERVER_TREE_KEY = "heartdesk.monitor.sidenav.server_tree.v1";
-var HD_SIDENAV_ORDER_KEY = "heartdesk.monitor.sidenav.order.v1";
+var HD_IDENTITY = {{.Identity}};
+var HD_CARD_ALIASES = {{if .CardAliases}}{{.CardAliases}}{{else}}{}{{end}};
+var HD_STORAGE_NAMESPACE = HD_IDENTITY.StorageNamespace || "heartdesk";
+var HD_COLLAPSE_KEY = HD_STORAGE_NAMESPACE + ".monitor.collapsed.v1";
+var HD_SIDENAV_SERVER_TREE_KEY = HD_STORAGE_NAMESPACE + ".monitor.sidenav.server_tree.v1";
+var HD_SIDENAV_ORDER_KEY = HD_STORAGE_NAMESPACE + ".monitor.sidenav.order.v1";
 var BAR_THRESHOLDS = {{if .ResourceBarThresholds}}{{.ResourceBarThresholds}}{{else}}{"warning":60,"danger":85}{{end}};
 var HD_CARD_OPTIONS = {{if .CardOptions}}{{.CardOptions}}{{else}}{}{{end}};
 var HD_CARD_IDS = {{if .CardIDs}}{{.CardIDs}}{{else}}{}{{end}};
@@ -43,6 +46,7 @@ var HD_AGENT_TYPE = {{.AgentType | js}};
 		if (!raw) return;
 		var ids = JSON.parse(raw);
 		if (!Array.isArray(ids) || !ids.length) return;
+		ids = ids.map(function(id) { return HD_CARD_ALIASES[id] || id; });
 		var style = document.createElement('style');
 		var sel = ids.map(function(id) { return '#' + id + '.collapsed'; }).join(',');
 		style.textContent = sel + ' > *:not(.card-header):not(.section-toggle):not(.btn-card-refresh-floating){display:none!important;}';
@@ -132,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
 	<header>
 		<h1 class="dashboard-title">
 			<a href="" class="dashboard-title-link" data-page-reload>
-				<img src="{{.MonitorFaviconPath}}" class="dashboard-title-icon" alt="">{{.AppName}}<span class="dashboard-title-sub">server dashboard</span>
+				<img src="{{.MonitorFaviconPath}}" class="dashboard-title-icon" alt="">{{.AppName}}<span class="dashboard-title-sub">{{if .Identity.Subtitle}}{{.Identity.Subtitle}}{{else}}server dashboard{{end}}</span>
 			</a>
 			<div class="header-search-form">
 				<input type="search" id="header-ip-input" placeholder="IP検索 203.0.113.1 / IPv6"

@@ -12,7 +12,7 @@ import (
 // jobLockPath は per-job filelock のパスを返す（二重起動防止用）。
 // 本番（Linux）は /var/lock/heartdesk-job-<id>.lock。非 Unix では filelock 側が no-op。
 func jobLockPath(jobID string) string {
-	return filepath.Join("/var/lock", "heartdesk-job-"+jobID+".lock")
+	return filepath.Join("/var/lock", heartdesk.OperationalIdentity().SchedulerLockPrefix+"-job-"+jobID+".lock")
 }
 
 // cronSpec は 5 フィールド cron（分 時 日 月 曜）の最小表現。

@@ -72,7 +72,7 @@ func LoadCardsTenants() (CardsTenantsFile, error) {
 	if _, err := toml.Decode(string(raw), &doc); err != nil {
 		return CardsTenantsFile{}, err
 	}
-	return doc, nil
+	return canonicalCardsTenants(doc), nil
 }
 
 // LoadCardsUser は cards_user.toml を読み込んで返す。
@@ -90,7 +90,7 @@ func LoadCardsUser() (CardsUserFile, error) {
 	if _, err := toml.Decode(string(raw), &doc); err != nil {
 		return CardsUserFile{}, err
 	}
-	return doc, nil
+	return canonicalCardsUser(doc), nil
 }
 
 // configDir は HEARTDESK_CONFIG_DIR を返す。未設定時は HEARTDESK_BASE_DIR/config（既定 /var/lib/heartdesk/config）。

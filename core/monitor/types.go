@@ -95,6 +95,8 @@ type HeaderLink struct {
 
 // PageData は HTML テンプレートに渡すデータ
 type PageData struct {
+	Identity                  MonitorIdentityConfig
+	CardAliases               map[string]string
 	AppName                   string
 	PageTitle                 string
 	AppBase                   string
@@ -148,6 +150,8 @@ type PageData struct {
 
 // ServerDetailPageData はサーバー詳細画面（?view=server_detail）のテンプレートデータ
 type ServerDetailPageData struct {
+	Identity                  MonitorIdentityConfig
+	CardAliases               map[string]string
 	PageTitle                 string
 	AppBase                   string
 	MonitorBase               string

@@ -57,6 +57,8 @@ const noAccessScreensError = "利用可能なアプリがありません。管�
 
 // LoginPageData は login.html に渡す表示データ。
 type LoginPageData struct {
+	LoginTitle    string
+	LoginSubtitle string
 	Next          string
 	CSRFToken     string
 	Error         string
@@ -156,7 +158,7 @@ func (h *HTTPHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sessionMgr := DefaultSessionManager()
-	if c, err := r.Cookie(defaultSessionCookieName); err == nil && c.Value != "" {
+	if c, err := r.Cookie(sessionCookieName()); err == nil && c.Value != "" {
 		if sess, ok := sessionMgr.Get(c.Value); ok {
 			log.Printf("auth: logout user=%s ip=%s", sess.Username, ClientIP(r))
 			audit.LogRequest(r, "LOGOUT", sess.Username, sess.Role, "success", "logout", nil)
@@ -252,7 +254,7 @@ func (h *HTTPHandler) loginPostCredential(w http.ResponseWriter, r *http.Request
 func (h *HTTPHandler) loginPostTOTP(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimSpace(r.FormValue("challenge_id"))
 	if id == "" {
-		if c, err := r.Cookie(loginChallengeCookie); err == nil {
+		if c, err := r.Cookie(CurrentIdentity().LoginChallengeCookieName); err == nil {
 			id = strings.TrimSpace(c.Value)
 		}
 	}
@@ -378,7 +380,7 @@ func (h *HTTPHandler) renderLogin(w http.ResponseWriter, r *http.Request, errMsg
 	stage := "password"
 	challengeID := ""
 	username := strings.TrimSpace(strings.ToLower(r.FormValue("username")))
-	if c, err := r.Cookie(loginChallengeCookie); err == nil && strings.TrimSpace(c.Value) != "" {
+	if c, err := r.Cookie(CurrentIdentity().LoginChallengeCookieName); err == nil && strings.TrimSpace(c.Value) != "" {
 		if challenge, ok := DefaultLoginChallengeManager().Get(c.Value); ok {
 			stage = "totp"
 			challengeID = challenge.ID
@@ -392,6 +394,8 @@ func (h *HTTPHandler) renderLogin(w http.ResponseWriter, r *http.Request, errMsg
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	httpsec.SetHTMLSecurityHeaders(w)
 	data := LoginPageData{
+		LoginTitle:    CurrentIdentity().LoginTitle,
+		LoginSubtitle: CurrentIdentity().LoginSubtitle,
 		Next:          next,
 		CSRFToken:     token,
 		Error:         errMsg,
@@ -417,18 +421,20 @@ func (h *HTTPHandler) renderLoginWithChallenge(w http.ResponseWriter, r *http.Re
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	httpsec.SetHTMLSecurityHeaders(w)
 	data := LoginPageData{
-		Next:         challenge.Next,
-		CSRFToken:    token,
-		Error:        errMsg,
-		Info:         infoMsg,
-		StaticBase:   h.routes.StaticBase,
-		AssetVersion: h.systemInfo.AssetVersion,
-		IconPath:     h.routes.IconPath(),
-		LoginPath:    h.routes.LoginPath,
-		Stage:        "totp",
-		Username:     challenge.User.Username,
-		ChallengeID:  challenge.ID,
-		SystemInfo:   h.systemInfo,
+		LoginTitle:    CurrentIdentity().LoginTitle,
+		LoginSubtitle: CurrentIdentity().LoginSubtitle,
+		Next:          challenge.Next,
+		CSRFToken:     token,
+		Error:         errMsg,
+		Info:          infoMsg,
+		StaticBase:    h.routes.StaticBase,
+		AssetVersion:  h.systemInfo.AssetVersion,
+		IconPath:      h.routes.IconPath(),
+		LoginPath:     h.routes.LoginPath,
+		Stage:         "totp",
+		Username:      challenge.User.Username,
+		ChallengeID:   challenge.ID,
+		SystemInfo:    h.systemInfo,
 	}
 	if err := h.tmpl.ExecuteTemplate(w, "login", data); err != nil {
 		log.Printf("auth: login template error: %v", err)
@@ -581,7 +587,7 @@ func (h *HTTPHandler) render2FASettingsPage(w http.ResponseWriter, r *http.Reque
 	}
 	provisioningURI := ""
 	if secret != "" {
-		provisioningURI = TOTPProvisioningURI("heartdesk", sess.Username, secret)
+		provisioningURI = TOTPProvisioningURI(CurrentIdentity().TOTPIssuer, sess.Username, secret)
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	httpsec.SetHTMLSecurityHeaders(w)
@@ -790,7 +796,7 @@ func roleLabel(role string) string {
 
 func setChallengeCookie(w http.ResponseWriter, r *http.Request, challengeID string) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     loginChallengeCookie,
+		Name:     CurrentIdentity().LoginChallengeCookieName,
 		Value:    strings.TrimSpace(challengeID),
 		Path:     "/",
 		HttpOnly: true,
@@ -802,7 +808,7 @@ func setChallengeCookie(w http.ResponseWriter, r *http.Request, challengeID stri
 
 func clearChallengeCookie(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     loginChallengeCookie,
+		Name:     CurrentIdentity().LoginChallengeCookieName,
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,

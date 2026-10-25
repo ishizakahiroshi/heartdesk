@@ -61,7 +61,7 @@ func ncSessionLinkFor(base, next string) string {
 	if base == "" {
 		return ""
 	}
-	return ncSessionEntryPath + "?next=" + url.QueryEscape(next)
+	return CurrentIdentity().NextcloudSessionEntryPath + "?next=" + url.QueryEscape(next)
 }
 
 // ocsSucceeded は OCS の meta.statuscode が成功かを返す。
@@ -170,7 +170,7 @@ func (h *HTTPHandler) loginNCWithBase(w http.ResponseWriter, r *http.Request, ba
 		audit.LogRequest(r, "LOGIN_FAILED", uid, "", "fail", "nc_session_not_registered", nil)
 		msg := genericLoginError
 		if !ok {
-			msg = ncNotRegisteredError
+			msg = CurrentIdentity().NextcloudNotRegisteredMessage
 		}
 		h.renderLogin(w, r, msg, "")
 		return

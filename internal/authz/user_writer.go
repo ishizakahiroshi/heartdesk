@@ -231,7 +231,7 @@ func normalizeIDList(src []string) []string {
 	seen := make(map[string]struct{}, len(src))
 	out := make([]string, 0, len(src))
 	for _, raw := range src {
-		key := strings.TrimSpace(raw)
+		key := CanonicalCardID(raw)
 		if key == "" {
 			continue
 		}
@@ -254,7 +254,7 @@ func normalizeHideChild(src map[string][]string) map[string][]string {
 	}
 	out := make(map[string][]string, len(src))
 	for parentID, children := range src {
-		parent := strings.TrimSpace(parentID)
+		parent := CanonicalCardID(parentID)
 		if parent == "" {
 			continue
 		}
@@ -262,7 +262,7 @@ func normalizeHideChild(src map[string][]string) map[string][]string {
 		if len(ids) == 0 {
 			continue
 		}
-		out[parent] = ids
+		out[parent] = normalizeIDList(append(out[parent], ids...))
 	}
 	if len(out) == 0 {
 		return nil

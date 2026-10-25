@@ -8,6 +8,7 @@ import (
 
 	"github.com/ishizakahiroshi/heartdesk/core/monitor"
 	"github.com/ishizakahiroshi/heartdesk/internal/auth"
+	"github.com/ishizakahiroshi/heartdesk/internal/authz"
 	"github.com/ishizakahiroshi/heartdesk/internal/middleware"
 	"github.com/ishizakahiroshi/heartdesk/internal/navmeta"
 	"github.com/ishizakahiroshi/heartdesk/internal/scheduler"
@@ -30,9 +31,11 @@ func VerifyPassword(hash, password string) bool    { return auth.VerifyPassword(
 func VerifyCSRF(r *http.Request) error             { return auth.VerifyCSRF(r) }
 func TrustedClientIP(r *http.Request) string       { return auth.TrustedClientIP(r) }
 func CanUseCard(session Session, cardID string) bool {
+	cardID = authz.CanonicalCardID(cardID)
+	modes := authz.CanonicalCardModes(session.CardModes)
 	for _, id := range navmeta.AllCardIDs() {
 		if id == cardID {
-			return !strings.EqualFold(strings.TrimSpace(session.CardModes[id]), "hidden")
+			return !strings.EqualFold(strings.TrimSpace(modes[id]), "hidden")
 		}
 	}
 	return false
@@ -53,6 +56,32 @@ type Route struct {
 	Methods                    []string
 	Authenticate               func(http.ResponseWriter, *http.Request) bool
 	Handler                    http.Handler
+}
+
+func validateCardAliasTargets(aliases map[string]string, extensions Extensions) error {
+	known := map[string]bool{}
+	for _, id := range navmeta.AllCardIDs() {
+		known[id] = true
+	}
+	for _, card := range extensions.Cards {
+		known[card.Meta.ID] = true
+	}
+	normalized := map[string]string{}
+	for key, target := range aliases {
+		normalized[strings.TrimSpace(key)] = strings.TrimSpace(target)
+	}
+	for key, target := range normalized {
+		if known[key] {
+			return fmt.Errorf("app: card alias replaces an existing card identity")
+		}
+		for normalized[target] != "" {
+			target = normalized[target]
+		}
+		if !known[target] {
+			return fmt.Errorf("app: card alias target is not registered")
+		}
+	}
+	return nil
 }
 
 func attachRoutes(mux *http.ServeMux, rt *Runtime, routes []Route) error {

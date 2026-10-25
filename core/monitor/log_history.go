@@ -352,8 +352,8 @@ func GetLoginHistory() NginxLoginResponse {
 		entries = append(entries, NginxLoginEntry{
 			Time:     t.Format("02/Jan/2006:15:04:05 +0900"),
 			Result:   e.Result,
-			App:      "heartdesk_monitor",
-			AppLabel: "heartdesk",
+			App:      CurrentMonitorIdentity().LoginLogAppName,
+			AppLabel: CurrentMonitorIdentity().AppName,
 			User:     e.User,
 			IP:       e.IP,
 			Device:   uaInfo.Device,

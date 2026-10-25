@@ -44,6 +44,9 @@ type SystemInfoData = config.SystemInfoData
 type Notifier = alerts.Notifier
 type DeliveryResult = alerts.DeliveryResult
 type LicenseConfig = license.Config
+type AuthIdentityConfig = auth.IdentityConfig
+type OperationalIdentityConfig = heartdesk.OperationalIdentityConfig
+type MonitorIdentityConfig = monitor.MonitorIdentityConfig
 
 // Options supplies explicit application identity and paths. Environment is a
 // snapshot of internal configuration keys; it never changes the process env.
@@ -55,6 +58,8 @@ type Options struct {
 	SessionCookieName, CSRFCookieName, Brand, Version, AssetVersion string
 	Environment                                                     map[string]string
 	ActionPermissionAliases                                         map[string]string
+	CardAliases                                                     map[string]string
+	VendorName                                                      string
 	Config                                                          *Config
 	ConfigLoader                                                    func(string) (*Config, error)
 	Routing                                                         *RoutingConfig
@@ -63,6 +68,9 @@ type Options struct {
 	TemplateFS, StaticFS                                            fs.FS
 	VerifyLicense                                                   func(*Config) error
 	LicenseConfig                                                   *LicenseConfig
+	AuthIdentity                                                    *AuthIdentityConfig
+	OperationalIdentity                                             *OperationalIdentityConfig
+	MonitorIdentity                                                 *MonitorIdentityConfig
 	SkipStartupMaintenance                                          bool
 	Jobs                                                            []Job
 	Extensions                                                      Extensions
@@ -128,6 +136,38 @@ func New(options Options) (*Runtime, error) {
 	if err := authz.ValidateActionPermissionAliases(opts.ActionPermissionAliases); err != nil {
 		return nil, err
 	}
+	opts.CardAliases = map[string]string{}
+	for key, target := range options.CardAliases {
+		opts.CardAliases[key] = target
+	}
+	if err := authz.ValidateCardAliases(opts.CardAliases); err != nil {
+		return nil, err
+	}
+	if err := validateCardAliasTargets(opts.CardAliases, opts.Extensions); err != nil {
+		return nil, err
+	}
+	if opts.OperationalIdentity != nil {
+		copy := *opts.OperationalIdentity
+		opts.OperationalIdentity = &copy
+	}
+	if err := heartdesk.ValidateOperationalIdentity(opts.OperationalIdentity); err != nil {
+		return nil, err
+	}
+	if opts.MonitorIdentity != nil {
+		copy := *opts.MonitorIdentity
+		opts.MonitorIdentity = &copy
+	}
+	if err := monitor.ValidateMonitorIdentity(opts.MonitorIdentity); err != nil {
+		return nil, err
+	}
+	identity := AuthIdentityConfig{}
+	if opts.AuthIdentity != nil {
+		identity = *opts.AuthIdentity
+	}
+	if err := auth.ValidateIdentity(identity); err != nil {
+		return nil, err
+	}
+	opts.AuthIdentity = &identity
 	if opts.BaseDir == "" {
 		opts.BaseDir = opts.Environment["HEARTDESK_BASE_DIR"]
 	}
@@ -240,6 +280,18 @@ func New(options Options) (*Runtime, error) {
 	// From here on process-scoped stores may initialize. Never allow a different
 	// runtime to reuse partially initialized global state after a later failure.
 	runtimeGate.initialized = true
+	if err := heartdesk.ConfigureOperationalIdentity(opts.OperationalIdentity); err != nil {
+		return nil, err
+	}
+	if err := monitor.ConfigureMonitorIdentity(opts.MonitorIdentity); err != nil {
+		return nil, err
+	}
+	if err := authz.ConfigureCardAliases(opts.CardAliases); err != nil {
+		return nil, err
+	}
+	if err := auth.ConfigureIdentity(*opts.AuthIdentity); err != nil {
+		return nil, err
+	}
 	if err := authz.ConfigureActionPermissionAliases(opts.ActionPermissionAliases); err != nil {
 		return nil, err
 	}

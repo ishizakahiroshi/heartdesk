@@ -36,6 +36,7 @@ type Endpoint struct {
 	AllActions, AnyActions          []string
 	Authorize                       func(*http.Request, *RequestContext) bool
 	Handler                         func(http.ResponseWriter, *http.Request, *RequestContext)
+	kind                            string
 }
 
 type CardExtension struct {
@@ -96,8 +97,8 @@ func ValidateExtensions(ext Extensions) error {
 				return fmt.Errorf("invalid or duplicate %s %q", kind, e.Name)
 			}
 			seen[e.Name] = true
-			if e.AliasFor != "" && (kind != "action" || !builtinActionNames[e.AliasFor] || e.Handler != nil) {
-				return fmt.Errorf("invalid action alias %q", e.Name)
+			if e.AliasFor != "" && (e.Handler != nil || !builtinAliasTarget(kind, e.AliasFor)) {
+				return fmt.Errorf("invalid %s alias %q", kind, e.Name)
 			}
 			if kind == "API" {
 				if builtinAPICollision(e.Name) {
@@ -133,6 +134,35 @@ func builtinAPICollision(api string) bool {
 	return known
 }
 
+func builtinAliasTarget(kind, name string) bool {
+	switch kind {
+	case "action":
+		return builtinActionNames[name]
+	case "export":
+		_, ok := exportHandlers[name]
+		return ok
+	case "API":
+		if monitorSimpleAPIByName[name] != nil || agentSimpleAPIByName[name] != nil || vendorOnlySimpleAPIByName[name] != nil {
+			return true
+		}
+		// These are the concrete built-in switch cases, not the broader registry
+		// namespace (which can also contain application extensions).
+		switch name {
+		case "agent_overview", "agent_memo", "nc_storage", "r2_metrics", "backups", "alert_rules", "disk", "services", "ssl", "agent_status", "resource_graph", "nginx_log", "nginx_url_detail", "ban_heatmap_cell", "honeypot_heatmap_cell", "honeypot_access", "honeypot_all", "nc4xx_access", "threat_score_history", "threat_event_history", "search_ip", "vendor_dashboard", "vendor_tenants", "vendor_agents", "vendor_license_audit", "vendor_licenses", "vendor_license_offline", "vendor_license_rotation", "vendor_nc_overview", "vendor_audit_log", "vendor_server_health":
+			return true
+		}
+	}
+	return false
+}
+
+func endpointsWithKind(input []Endpoint, kind string) []Endpoint {
+	out := append([]Endpoint(nil), input...)
+	for i := range out {
+		out[i].kind = kind
+	}
+	return out
+}
+
 // ConfigureExtensions is a startup-only operation owned by app.New.
 func ConfigureExtensions(ext Extensions) error {
 	if extensionsConfigured {
@@ -158,6 +188,9 @@ func ConfigureExtensions(ext Extensions) error {
 		}
 		auth.RegisterActionClass(e.Name, class)
 	}
+	ext.APIs = endpointsWithKind(ext.APIs, "API")
+	ext.Actions = endpointsWithKind(ext.Actions, "action")
+	ext.Exports = endpointsWithKind(ext.Exports, "export")
 	extensionRegistry = ext
 	extensionsConfigured = true
 	return nil
@@ -260,7 +293,38 @@ func (h *Handler) dispatchExtension(w http.ResponseWriter, r *http.Request, e En
 	ctx, ok := h.authorizeExtension(w, r, e)
 	if ok {
 		if e.AliasFor != "" {
-			h.dispatchAction(w, r, e.AliasFor)
+			switch e.kind {
+			case "API":
+				if r.Method != http.MethodGet && r.Method != http.MethodHead {
+					http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+					return
+				}
+				targetScreen := auth.ScreenMonitor
+				if isVendorAPI(e.AliasFor) {
+					targetScreen = auth.ScreenVendor
+				}
+				if !auth.ScreenAllowed(ctx.Session.AccessScreens, targetScreen) {
+					http.Error(w, "forbidden", http.StatusForbidden)
+					return
+				}
+				if targetID, _ := resolveCardIDForAPI(e.AliasFor); targetID != "" {
+					target := cardEndpoint(targetID)
+					target.Screen = string(targetScreen)
+					if _, allowed := h.authorizeExtension(w, r, target); !allowed {
+						return
+					}
+				}
+				h.dispatchAPI(w, r, e.AliasFor)
+			case "export":
+				if targetID := exportCardIDByKey[e.AliasFor]; targetID != "" {
+					if _, allowed := h.authorizeExtension(w, r, cardEndpoint(targetID)); !allowed {
+						return
+					}
+				}
+				dispatchExport(w, r, e.AliasFor)
+			default:
+				h.dispatchAction(w, r, e.AliasFor)
+			}
 		} else {
 			e.Handler(w, r, ctx)
 		}

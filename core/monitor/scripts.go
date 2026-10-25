@@ -12,5 +12,5 @@ func binDir() string {
 }
 
 func scriptCheckAlerts() string {
-	return filepath.Join(binDir(), "heartdesk-alerts")
+	return filepath.Join(binDir(), heartdesk.OperationalIdentity().AlertScriptName)
 }

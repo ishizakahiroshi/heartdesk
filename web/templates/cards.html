@@ -528,7 +528,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>全サーバー概要 - heartdesk</title>
+<title>全サーバー概要 - {{.AppName}}</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
@@ -623,7 +623,7 @@ h1 { color: #90caf9; font-size: 1.4rem; margin-bottom: 20px; }
 </style>
 </head>
 <body>
-<a class="back-link" href="{{.MonitorBase}}/">← heartdesk に戻る</a>
+<a class="back-link" href="{{.MonitorBase}}/">← {{.AppName}} に戻る</a>
 <h1>🖥️ 全サーバー概要</h1>
 {{if .Items}}
 <div class="agents-grid">

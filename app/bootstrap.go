@@ -196,7 +196,11 @@ func bootstrap(opts Options, cfg *Config) (runtime *Runtime, err error) {
 				tc.TenantSlug, tenantID, routingCfg.TenantSlug)
 		}
 	}
-	sysInfo := config.BuildSystemInfo(cfg, opts.Version, opts.AssetVersion, opts.Brand, tenantID, routingCfg.TenantSlug)
+	vendorName := opts.VendorName
+	if vendorName == "" {
+		vendorName = opts.Brand
+	}
+	sysInfo := config.BuildSystemInfo(cfg, opts.Version, opts.AssetVersion, vendorName, tenantID, routingCfg.TenantSlug)
 	monitorH := monitor.NewHandler(tmpl, routingCfg, sysInfo, cfg)
 	authH := auth.NewHTTPHandler(tmpl, routingCfg, cfg.Cards, sysInfo)
 

@@ -41,8 +41,10 @@ func (h *Handler) renderVendorConsole(w http.ResponseWriter, r *http.Request) {
 
 	data := PageData{
 		HeaderLinks:               h.buildHeaderLinks("monitor"),
-		AppName:                   "heartdesk",
-		PageTitle:                 "ベンダーコンソール | heartdesk",
+		AppName:                   CurrentMonitorIdentity().AppName,
+		Identity:                  CurrentMonitorIdentity(),
+		CardAliases:               currentCardAliases(),
+		PageTitle:                 "ベンダーコンソール | " + CurrentMonitorIdentity().AppName,
 		AppBase:                   h.routes.MonitorBase,
 		MonitorBase:               h.routes.MonitorBase,
 		VendorBase:                h.routes.VendorBase,

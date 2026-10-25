@@ -305,8 +305,8 @@ func exportBan(w http.ResponseWriter) {
 func exportLoginHistory(w http.ResponseWriter) {
 	d := GetNginxLoginHistories()
 	entries := d.Heartdesk.Entries
-	setDownloadHeader(w, exportFilename("login_history", "txt"), "text/plain; charset=utf-8")
-	writeNginxLoginText(w, "heartdesk ログイン履歴", entries)
+	setDownloadHeader(w, exportFilename(CurrentMonitorIdentity().LoginHistoryExportBasename, "txt"), "text/plain; charset=utf-8")
+	writeNginxLoginText(w, CurrentMonitorIdentity().LoginHistoryArchiveLabel, entries)
 }
 
 // ---- phpMyAdmin ログイン履歴 ----
@@ -477,11 +477,11 @@ func exportAll(w http.ResponseWriter) {
 
 	// readme.txt
 	if rw, err := zw.Create("readme.txt"); err == nil {
-		fmt.Fprintf(rw, "heartdesk 全ログエクスポート\n出力日時: %s\n\n", ts)
+		fmt.Fprintf(rw, "%s 全ログエクスポート\n出力日時: %s\n\n", CurrentMonitorIdentity().AppName, ts)
 		fmt.Fprintf(rw, "ファイル一覧:\n")
 		fmt.Fprintf(rw, "  fail2ban_status.txt   - fail2ban BAN 状況\n")
 		fmt.Fprintf(rw, "  ssh_login_history.txt - SSH/SFTP ログイン履歴\n")
-		fmt.Fprintf(rw, "  login_history.txt - heartdesk ログイン履歴\n")
+		fmt.Fprintf(rw, "  %s - %s\n", CurrentMonitorIdentity().LoginHistoryArchiveFilename, CurrentMonitorIdentity().LoginHistoryArchiveLabel)
 		fmt.Fprintf(rw, "  phpmyadmin_login.txt  - phpMyAdmin ログイン履歴\n")
 		fmt.Fprintf(rw, "  nc_login_history.txt  - Nextcloud ログイン履歴\n")
 		fmt.Fprintf(rw, "  threat_score.csv      - 脅威スコア\n")
@@ -501,7 +501,7 @@ func exportAll(w http.ResponseWriter) {
 
 	addText("fail2ban_status.txt", exportBan)
 	addText("ssh_login_history.txt", exportSSHLogin)
-	addText("login_history.txt", exportLoginHistory)
+	addText(CurrentMonitorIdentity().LoginHistoryArchiveFilename, exportLoginHistory)
 	addText("phpmyadmin_login.txt", exportPhpMyAdminLogin)
 	addText("nc_login_history.txt", exportNextcloud)
 	addText("threat_score.csv", exportThreatScore)

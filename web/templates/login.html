@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>heartdesk</title>
+<title>{{.LoginTitle}}</title>
 <link rel="stylesheet" href="{{.StaticBase}}/css/shared.css?v={{.AssetVersion}}">
 <style>
 * { box-sizing: border-box; }
@@ -149,8 +149,8 @@ button:hover { filter: brightness(1.08); }
 		<div class="brand">
 			<img src="{{.IconPath}}" alt="">
 			<div>
-				<div class="brand-title">heartdesk</div>
-				<span class="brand-sub">server dashboard</span>
+				<div class="brand-title">{{.LoginTitle}}</div>
+				<span class="brand-sub">{{.LoginSubtitle}}</span>
 			</div>
 		</div>
 		{{if .Error}}<div class="alert error">{{.Error}}</div>{{end}}

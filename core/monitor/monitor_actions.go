@@ -438,7 +438,7 @@ func (h *Handler) actionTOTPGenerate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	auth.DefaultTOTPManager().SetSecret(username, secret, false)
-	uri := auth.TOTPProvisioningURI("heartdesk", username, secret)
+	uri := auth.TOTPProvisioningURI("", username, secret)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"ok":     true,

@@ -279,8 +279,10 @@ func (h *Handler) renderAuditLog(w http.ResponseWriter, r *http.Request) {
 
 	data := PageData{
 		HeaderLinks:          h.buildHeaderLinks("monitor"),
-		AppName:              "heartdesk",
-		PageTitle:            "監査ログ | heartdesk",
+		AppName:              CurrentMonitorIdentity().AppName,
+		Identity:             CurrentMonitorIdentity(),
+		CardAliases:          currentCardAliases(),
+		PageTitle:            "監査ログ | " + CurrentMonitorIdentity().AppName,
 		AppBase:              h.routes.MonitorBase,
 		MonitorBase:          h.routes.MonitorBase,
 		VendorBase:           h.routes.VendorBase,
@@ -446,9 +448,11 @@ func (h *Handler) renderInfraDoc(w http.ResponseWriter, r *http.Request, view st
 	</div>
 </section>`)
 	data := ServerDetailPageData{
-		PageTitle:                 doc.Title + " | heartdesk",
+		PageTitle:                 doc.Title + " | " + CurrentMonitorIdentity().AppName,
 		HeaderLinks:               h.buildHeaderLinks("monitor"),
-		AppName:                   "heartdesk",
+		AppName:                   CurrentMonitorIdentity().AppName,
+		Identity:                  CurrentMonitorIdentity(),
+		CardAliases:               currentCardAliases(),
 		AppBase:                   h.routes.MonitorBase,
 		MonitorBase:               h.routes.MonitorBase,
 		VendorBase:                h.routes.VendorBase,
@@ -522,8 +526,10 @@ func (h *Handler) renderAgentsOverview(w http.ResponseWriter, r *http.Request) {
 	})
 	data := PageData{
 		HeaderLinks:               h.buildHeaderLinks("monitor"),
-		AppName:                   "heartdesk",
-		PageTitle:                 "全サーバー概要 | heartdesk",
+		AppName:                   CurrentMonitorIdentity().AppName,
+		Identity:                  CurrentMonitorIdentity(),
+		CardAliases:               currentCardAliases(),
+		PageTitle:                 "全サーバー概要 | " + CurrentMonitorIdentity().AppName,
 		AppBase:                   h.routes.MonitorBase,
 		MonitorBase:               h.routes.MonitorBase,
 		VendorBase:                h.routes.VendorBase,
@@ -630,8 +636,10 @@ func (h *Handler) renderServerDetail(w http.ResponseWriter, r *http.Request) {
 	cards := buildServerDetailCards(h, visibleCards, cardModes, ssrAgentID, r)
 
 	data := ServerDetailPageData{
-		PageTitle:                 "heartdesk",
-		AppName:                   "heartdesk",
+		PageTitle:                 CurrentMonitorIdentity().AppName,
+		AppName:                   CurrentMonitorIdentity().AppName,
+		Identity:                  CurrentMonitorIdentity(),
+		CardAliases:               currentCardAliases(),
 		AppBase:                   h.routes.MonitorBase,
 		MonitorBase:               h.routes.MonitorBase,
 		VendorBase:                h.routes.VendorBase,

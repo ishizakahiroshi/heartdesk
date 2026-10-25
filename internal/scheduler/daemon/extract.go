@@ -59,18 +59,32 @@ type nc4xxRecord struct {
 // ログイン・セキュリティ・lockout・4xx イベントを JSONL に抽出する。
 // 旧 cmd/extract 相当。
 func ExtractNextcloudEvents(ctx context.Context, cfg *config.SchedulerConfig) error {
-	if err := os.MkdirAll(extractBaseDir(), 0o770); err != nil {
-		return fmt.Errorf("failed to create dir: %s: %w", extractBaseDir(), err)
+	return extractNextcloudEventsAt(ctx, cfg, extractSourceLog, extractAccessLog)
+}
+
+func extractNextcloudEventsAt(ctx context.Context, cfg *config.SchedulerConfig, sourceLog, accessLog string) error {
+	baseDir, nc4xxDir := extractBaseDir(), extractNC4xxDir()
+	if cfg != nil {
+		if configured := strings.TrimSpace(cfg.NCEventBaseDir); configured != "" {
+			baseDir = configured
+		}
+		if configured := strings.TrimSpace(cfg.NC4xxDir); configured != "" {
+			nc4xxDir = configured
+		}
+	}
+	stateFile := filepath.Join(baseDir, "extract_state.json")
+	if err := os.MkdirAll(baseDir, 0o770); err != nil {
+		return fmt.Errorf("failed to create dir: %s: %w", baseDir, err)
 	}
 
-	fh, err := os.Open(extractSourceLog)
+	fh, err := os.Open(sourceLog)
 	if err != nil {
-		return fmt.Errorf("failed to open source log: %s: %w", extractSourceLog, err)
+		return fmt.Errorf("failed to open source log: %s: %w", sourceLog, err)
 	}
 	defer fh.Close()
 
 	state := &extractState{Offset: 0, NC4xxOffset: 0}
-	if data, err := os.ReadFile(extractStateFile()); err == nil {
+	if data, err := os.ReadFile(stateFile); err == nil {
 		_ = json.Unmarshal(data, state)
 	}
 	if state.Offset < 0 {
@@ -139,17 +153,17 @@ func ExtractNextcloudEvents(ctx context.Context, cfg *config.SchedulerConfig) er
 		isLexiconNoise := strings.Contains(msg, "not defined in the config lexicon")
 
 		if isLogin {
-			if extractAppendJSON(handles, extractLoginFile(), data) {
+			if extractAppendJSON(handles, filepath.Join(baseDir, "login_events.jsonl"), data) {
 				loginCount++
 			}
 		}
 		if isLockout {
-			if extractAppendJSON(handles, extractLockoutFile(), data) {
+			if extractAppendJSON(handles, filepath.Join(baseDir, "lockout_events.jsonl"), data) {
 				lockoutCount++
 			}
 		}
 		if reqID != "" && (isLogin || isBruteforce || hasException) {
-			if extractAppendJSON(handles, extractContextFile(), data) {
+			if extractAppendJSON(handles, filepath.Join(baseDir, "login_context.jsonl"), data) {
 				contextCount++
 			}
 		}
@@ -157,7 +171,7 @@ func ExtractNextcloudEvents(ctx context.Context, cfg *config.SchedulerConfig) er
 			if isLexiconNoise {
 				lexiconIgnored++
 			} else {
-				if extractAppendJSON(handles, extractSecurityFile(), data) {
+				if extractAppendJSON(handles, filepath.Join(baseDir, "security_events.jsonl"), data) {
 					securityCount++
 				}
 			}
@@ -169,9 +183,11 @@ func ExtractNextcloudEvents(ctx context.Context, cfg *config.SchedulerConfig) er
 	nc4xxCount := 0
 	nc4xxInode := state.NC4xxInode
 	{
-		os.MkdirAll(extractNC4xxDir(), 0o770)
+		if err := os.MkdirAll(nc4xxDir, 0o770); err != nil {
+			return fmt.Errorf("create access event directory: %w", err)
+		}
 
-		if fhA, err := os.Open(extractAccessLog); err == nil {
+		if fhA, err := os.Open(accessLog); err == nil {
 			stA, _ := fhA.Stat()
 			inodeA := extractInode(stA)
 			sizeA := stA.Size()
@@ -227,7 +243,7 @@ func ExtractNextcloudEvents(ctx context.Context, cfg *config.SchedulerConfig) er
 					Status: status,
 					UA:     m[6],
 				}
-				nc4xxFile := filepath.Join(extractNC4xxDir(), fmt.Sprintf("nc4xx_%s.jsonl", time.Now().Format("200601")))
+				nc4xxFile := filepath.Join(nc4xxDir, fmt.Sprintf("nc4xx_%s.jsonl", time.Now().Format("200601")))
 				extractAppendJSON(handles, nc4xxFile, record)
 				nc4xxCount++
 			}
@@ -247,13 +263,13 @@ func ExtractNextcloudEvents(ctx context.Context, cfg *config.SchedulerConfig) er
 		UpdatedAt:   time.Now().Format(time.RFC3339),
 	}
 	if data, err := json.Marshal(newState); err == nil {
-		tmpFile := extractStateFile() + ".tmp"
+		tmpFile := stateFile + ".tmp"
 		os.WriteFile(tmpFile, data, 0o660)
-		os.Rename(tmpFile, extractStateFile())
-		os.Chmod(extractStateFile(), 0o660)
+		os.Rename(tmpFile, stateFile)
+		os.Chmod(stateFile, 0o660)
 	}
 
-	extractWriteHeartbeat(extractHeartbeatFile(), processed, loginCount, contextCount, securityCount, lockoutCount, lexiconIgnored, jsonErrors, nc4xxCount)
+	extractWriteHeartbeat(filepath.Join(baseDir, "extract_last.csv"), processed, loginCount, contextCount, securityCount, lockoutCount, lexiconIgnored, jsonErrors, nc4xxCount)
 
 	return nil
 }

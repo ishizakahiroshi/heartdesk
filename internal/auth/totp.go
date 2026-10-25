@@ -93,7 +93,7 @@ func hotpCode(key []byte, counter int64) string {
 func TOTPProvisioningURI(issuer, username, secret string) string {
 	issuer = strings.TrimSpace(issuer)
 	if issuer == "" {
-		issuer = "heartdesk"
+		issuer = CurrentIdentity().TOTPIssuer
 	}
 	label := url.PathEscape(issuer + ":" + username)
 	q := url.Values{}

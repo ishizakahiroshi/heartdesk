@@ -52,7 +52,7 @@ func RunAptUpgradeManaged(ctx context.Context, _ *config.SchedulerConfig, mode s
 
 	statePath := defaultAptStatePath()
 	logDir := defaultAptLogDir()
-	lockPath := defaultAptLockPath
+	lockPath := heartdesk.OperationalIdentity().AptUpdateLockPath
 
 	if err := os.MkdirAll(filepath.Dir(statePath), 0o770); err != nil {
 		return fmt.Errorf("apt state dir create failed: %w", err)
