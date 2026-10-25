@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "generated": {
-    "commit": "e35fd52c317d5988910579878a288eb80dfe4ffe",
+    "commit": "e6118d23bc90d402df7468a817c8a0e5f4c23f57",
     "dirty": true,
     "tool": "omitnix 0.1.4",
     "partial": false,
@@ -138,8 +138,8 @@
     "discovery_note": ""
   },
   "coverage": {
-    "discovered": 400,
-    "analyzed": 344,
+    "discovered": 402,
+    "analyzed": 346,
     "unresolved": 21,
     "unknown": 3,
     "unclaimed": 32,
@@ -4567,6 +4567,35 @@
       "unresolved": []
     },
     {
+      "path": "internal/alerts/event_delivery_retry_test.go",
+      "adapter": "go",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "none_observed",
+          "value": null
+        },
+        "authentication": {
+          "state": "not_configured"
+        },
+        "authorization": {
+          "state": "not_configured"
+        },
+        "reads": {
+          "state": "none_observed",
+          "value": []
+        },
+        "writes": {
+          "state": "none_observed",
+          "value": []
+        },
+        "screen_to_api": {
+          "state": "out_of_scope"
+        }
+      },
+      "unresolved": []
+    },
+    {
       "path": "internal/alerts/labels.go",
       "adapter": "go",
       "status": "analyzed",
@@ -8772,6 +8801,35 @@
           "value": [
             "schema_version"
           ]
+        },
+        "writes": {
+          "state": "none_observed",
+          "value": []
+        },
+        "screen_to_api": {
+          "state": "out_of_scope"
+        }
+      },
+      "unresolved": []
+    },
+    {
+      "path": "internal/vendorsvc/store/agent_type_keep_test.go",
+      "adapter": "go",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "none_observed",
+          "value": null
+        },
+        "authentication": {
+          "state": "not_configured"
+        },
+        "authorization": {
+          "state": "not_configured"
+        },
+        "reads": {
+          "state": "none_observed",
+          "value": []
         },
         "writes": {
           "state": "none_observed",

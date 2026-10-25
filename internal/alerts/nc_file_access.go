@@ -1324,8 +1324,13 @@ func ncFAEvaluate(cfg *config.AppConfig, rules AlertRules, state *AlertState, st
 				over = append(over, c)
 				continue
 			}
+			snap := snapshotAlertKey(key, state)
 			if shouldAlert(key, 0, cd, state, now) {
-				out = append(out, fire(rules, ruleID, format(ruleID, c.body, c.firstStep)))
+				msg, ok := fireTracked(rules, ruleID, key, state, snap, format(ruleID, c.body, c.firstStep))
+				if !ok {
+					continue
+				}
+				out = append(out, msg)
 				sent++
 			}
 		}
@@ -1334,7 +1339,9 @@ func ncFAEvaluate(cfg *config.AppConfig, rules AlertRules, state *AlertState, st
 		}
 		// 上限を超えた分は 1 件にまとめる。まとめにも cooldown を効かせ、まとめた対象はその時点で
 		// 通知済みとして扱う。まとめが cooldown 中なら、対象は次の回の候補に残す。
-		if !shouldAlert(ncFACooldownKey(ruleID, ncFAOverflowSubject), 0, cd, state, now) {
+		overflowKey := ncFACooldownKey(ruleID, ncFAOverflowSubject)
+		overflowSnap := snapshotAlertKey(overflowKey, state)
+		if !shouldAlert(overflowKey, 0, cd, state, now) {
 			continue
 		}
 		labels := make([]string, 0, ncFAOverflowLabels)
@@ -1349,7 +1356,12 @@ func ncFAEvaluate(cfg *config.AppConfig, rules AlertRules, state *AlertState, st
 			example += " など"
 		}
 		body := fmt.Sprintf("ほか %d 件（同じルール）がしきい値を超えた（%s）", len(over), example)
-		out = append(out, fire(rules, ruleID, format(ruleID, body, ncFAOverflowFirstStep(ruleID))))
+		msg, ok := fireTracked(rules, ruleID, overflowKey, state, overflowSnap, format(ruleID, body, ncFAOverflowFirstStep(ruleID)))
+		if !ok {
+			// Failed summaries must not consume the summarized subjects either.
+			continue
+		}
+		out = append(out, msg)
 		for _, c := range over {
 			state.LastAlertTime[ncFACooldownKey(ruleID, c.subject)] = now
 		}

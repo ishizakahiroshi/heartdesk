@@ -69,16 +69,28 @@ func evaluateAccountLockout(logPath string, rules AlertRules, state *AlertState)
 
 	now := nowFn()
 	var out []string
+	undelivered := false
 	for _, acct := range order {
 		key := ruleID + ":" + acct
 		// account_lockout は sustainSec を持たない（即時集約発報 + cooldown）。
+		snap := snapshotAlertKey(key, state)
 		if shouldAlert(key, 0, rule.CooldownSec, state, now) {
 			msg := fmt.Sprintf("アカウントロックアウト: %s (%d 件)", acct, counts[acct])
 			if ip := lastIP[acct]; ip != "" {
 				msg += fmt.Sprintf(" (IP: %s)", ip)
 			}
-			out = append(out, fire(rules, ruleID, msg))
+			sent, ok := fireTracked(rules, ruleID, key, state, snap, msg)
+			if !ok {
+				undelivered = true
+				continue
+			}
+			out = append(out, sent)
 		}
+	}
+	if undelivered {
+		// This one-shot event must remain readable on the next evaluation when
+		// every configured delivery path failed. Successful keys keep cooldown.
+		state.Offsets[logPath] = prev
 	}
 	return out
 }

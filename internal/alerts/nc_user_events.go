@@ -184,6 +184,24 @@ func evaluateNCUserEvents(cfg *config.AppConfig, rules AlertRules, state *AlertS
 	var out []string
 
 	for _, src := range ncSources(cfg) {
+		// Retain the source state until every attempted notification succeeds.
+		// Cooldowns of delivered keys remain committed when a source is retried.
+		prevOffsets := make(map[string]int64, len(src.paths))
+		seenPaths := make(map[string]bool, len(src.paths))
+		for _, path := range src.paths {
+			if value, ok := state.Offsets[path]; ok {
+				prevOffsets[path] = value
+				seenPaths[path] = true
+			}
+		}
+		pendingPrefix := src.scope + "|"
+		prevPending := map[string]time.Time{}
+		for key, value := range state.PendingNCUsers {
+			if strings.HasPrefix(key, pendingPrefix) {
+				prevPending[key] = value
+			}
+		}
+		undelivered := false
 		var createdEvents []struct {
 			Time string
 			UID  string
@@ -234,8 +252,13 @@ func evaluateNCUserEvents(cfg *config.AppConfig, rules AlertRules, state *AlertS
 		for _, ev := range createdEvents {
 			if createdDefined && createdRule.Enabled {
 				key := ruleNCUserCreated + ":" + src.scope + ":" + ev.UID
+				snap := snapshotAlertKey(key, state)
 				if shouldAlert(key, 0, createdRule.CooldownSec, state, now) {
-					out = append(out, fire(rules, ruleNCUserCreated, ncUserMessage("Nextcloud 新規ユーザー作成", ev.UID, src.label, ev.Time)))
+					if msg, ok := fireTracked(rules, ruleNCUserCreated, key, state, snap, ncUserMessage("Nextcloud 新規ユーザー作成", ev.UID, src.label, ev.Time)); ok {
+						out = append(out, msg)
+					} else {
+						undelivered = true
+					}
 				}
 			}
 
@@ -261,9 +284,31 @@ func evaluateNCUserEvents(cfg *config.AppConfig, rules AlertRules, state *AlertS
 
 			if firstLoginDefined && firstLoginRule.Enabled {
 				key := ruleNCUserFirstLogin + ":" + pendingKey
+				snap := snapshotAlertKey(key, state)
 				if shouldAlert(key, 0, firstLoginRule.CooldownSec, state, now) {
-					out = append(out, fire(rules, ruleNCUserFirstLogin, ncUserMessage("Nextcloud 新規ユーザー初回ログイン", ev.UID, src.label, ev.Time)))
+					if msg, ok := fireTracked(rules, ruleNCUserFirstLogin, key, state, snap, ncUserMessage("Nextcloud 新規ユーザー初回ログイン", ev.UID, src.label, ev.Time)); ok {
+						out = append(out, msg)
+					} else {
+						undelivered = true
+					}
 				}
+			}
+		}
+		if undelivered {
+			for _, path := range src.paths {
+				if seenPaths[path] {
+					state.Offsets[path] = prevOffsets[path]
+				} else {
+					delete(state.Offsets, path)
+				}
+			}
+			for key := range state.PendingNCUsers {
+				if strings.HasPrefix(key, pendingPrefix) {
+					delete(state.PendingNCUsers, key)
+				}
+			}
+			for key, value := range prevPending {
+				state.PendingNCUsers[key] = value
 			}
 		}
 	}
