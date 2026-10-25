@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "generated": {
-    "commit": "6543845de1f7bb332caad30d9b326cfcfcc20a28",
+    "commit": "990ea7a54e9928c9a2dcbe70b1c6ec7afb994820",
     "dirty": true,
     "tool": "omitnix 0.1.4",
     "partial": false,
@@ -138,8 +138,8 @@
     "discovery_note": ""
   },
   "coverage": {
-    "discovered": 398,
-    "analyzed": 342,
+    "discovered": 399,
+    "analyzed": 343,
     "unresolved": 21,
     "unknown": 3,
     "unclaimed": 32,
@@ -1154,6 +1154,35 @@
     },
     {
       "path": "core/monitor/agent_memo.go",
+      "adapter": "go",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "none_observed",
+          "value": null
+        },
+        "authentication": {
+          "state": "not_configured"
+        },
+        "authorization": {
+          "state": "not_configured"
+        },
+        "reads": {
+          "state": "none_observed",
+          "value": []
+        },
+        "writes": {
+          "state": "none_observed",
+          "value": []
+        },
+        "screen_to_api": {
+          "state": "out_of_scope"
+        }
+      },
+      "unresolved": []
+    },
+    {
+      "path": "core/monitor/agent_overview_inventory_test.go",
       "adapter": "go",
       "status": "analyzed",
       "fields": {

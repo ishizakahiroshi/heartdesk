@@ -144,7 +144,7 @@ func (h *Handler) dispatchAPI(w http.ResponseWriter, r *http.Request, api string
 
 	// agent_overview はセッション tenant でフィルタ。
 	if api == "agent_overview" {
-		if err := json.NewEncoder(w).Encode(agentOverviewForRequest(r)); err != nil {
+		if err := json.NewEncoder(w).Encode(h.agentOverviewForRequest(r)); err != nil {
 			log.Printf("ERROR: monitor: api/%s encode error: %v", api, err)
 		}
 		return

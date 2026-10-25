@@ -68,7 +68,7 @@ func (h *Handler) renderVendorConsole(w http.ResponseWriter, r *http.Request) {
 		Now:                       heartdesk.FormatDatetime(time.Now().In(heartdesk.JST())),
 		IsMaint:                   GetMaintenanceMode(),
 		CurrentAgentID:            "",
-		ServerTree:                GetAgentOverview(),
+		ServerTree:                h.agentOverviewForRequest(r),
 		Nav:                       nav,
 		Cards:                     cards,
 		JSVars:                    template.JS(GetIPMgmtJSVars(h.appCfg, "")),

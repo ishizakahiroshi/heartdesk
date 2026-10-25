@@ -1059,19 +1059,19 @@ func GetAgentLastSeenByID(agentID string) *AgentLastSeen {
 	return &cp
 }
 
-// GetAgentOverview は全 Agent のサマリーを返す（vendor 向け・フィルタなし）。
+// GetAgentOverview は既定設定の登録 Agent サマリーを返す（vendor 向け）。
 // Monitor 画面・tenant API は GetAgentOverviewForSession / agentOverviewForRequest を使うこと。
 func GetAgentOverview() []AgentOverviewItem {
 	return GetAgentOverviewForSession(string(auth.RoleVendorStaff), "")
 }
 
 // agentOverviewForRequest はセッションの role/tenant でフィルタした overview を返す。
-func agentOverviewForRequest(r *http.Request) []AgentOverviewItem {
+func (h *Handler) agentOverviewForRequest(r *http.Request) []AgentOverviewItem {
 	sess, ok := auth.DefaultSessionManager().SessionFromRequest(r)
 	if !ok {
 		return nil
 	}
-	return GetAgentOverviewForSession(sess.Role, sess.TenantID)
+	return getAgentOverviewForConfig(h.appCfg, sess.Role, sess.TenantID)
 }
 
 // GetAgentOverviewForSession はセッション role/tenant に応じて Agent サマリーを返す。
@@ -1082,6 +1082,29 @@ func GetAgentOverviewForSession(role, tenantID string) []AgentOverviewItem {
 	if err != nil {
 		cfg = &config.AppConfig{}
 	}
+	return getAgentOverviewForConfig(cfg, role, tenantID)
+}
+
+// getAgentOverviewForConfig uses the receiving Monitor's effective inventory.
+// Historical reports remain stored, but must not recreate removed registrations.
+func getAgentOverviewForConfig(cfg *config.AppConfig, role, tenantID string) []AgentOverviewItem {
+	if cfg == nil {
+		cfg = &config.AppConfig{}
+	}
+	registered := make(map[string]config.AgentConfig, len(cfg.Agents)+len(cfg.AggregatorAgentKeys))
+	for id, agent := range cfg.Agents {
+		registered[id] = agent
+	}
+	for id, key := range cfg.AggregatorAgentKeys {
+		if key != "" {
+			if _, exists := registered[id]; !exists {
+				registered[id] = config.AgentConfig{AgentID: id}
+			}
+		}
+	}
+	// An explicitly configured registry is authoritative, including an aggregator
+	// whose keys are all disabled. Keep discovery for legacy unregistered setups.
+	hasRegistry := len(cfg.Agents) > 0 || len(cfg.AggregatorAgentKeys) > 0
 
 	agentLastSeenMu.RLock()
 	seenCopy := make(map[string]*AgentLastSeen, len(agentLastSeen))
@@ -1104,6 +1127,9 @@ func GetAgentOverviewForSession(role, tenantID string) []AgentOverviewItem {
 	sessTenant := strings.TrimSpace(tenantID)
 
 	for _, seen := range seenCopy {
+		if _, ok := registered[seen.AgentID]; hasRegistry && !ok {
+			continue
+		}
 		if !vendorAll {
 			if sessTenant == "" || tenantIDFromAgentID(seen.AgentID) != sessTenant {
 				continue

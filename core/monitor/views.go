@@ -308,7 +308,7 @@ func (h *Handler) renderAuditLog(w http.ResponseWriter, r *http.Request) {
 		Now:                  heartdesk.FormatDatetime(time.Now().In(heartdesk.JST())),
 		IsMaint:              GetMaintenanceMode(),
 		CurrentAgentID:       "",
-		ServerTree:           agentOverviewForRequest(r),
+		ServerTree:           h.agentOverviewForRequest(r),
 		Nav: []NavSection{
 			{NavGroup: "管理"},
 			{NavItem: NavItem{ID: "audit-log", Label: "🧾 監査ログ"}},
@@ -479,7 +479,7 @@ func (h *Handler) renderInfraDoc(w http.ResponseWriter, r *http.Request, view st
 		Now:                       heartdesk.FormatDatetime(time.Now().In(heartdesk.JST())),
 		IsMaint:                   GetMaintenanceMode(),
 		CurrentAgentID:            "",
-		ServerTree:                agentOverviewForRequest(r),
+		ServerTree:                h.agentOverviewForRequest(r),
 		Nav: []NavSection{
 			{NavGroup: "ドキュメント"},
 			{NavItem: serverDocItem},
@@ -513,7 +513,7 @@ func (h *Handler) renderInfraDoc(w http.ResponseWriter, r *http.Request, view st
 
 // renderAgentsOverview は ?view=agents_overview の全サーバー概要画面を返す
 func (h *Handler) renderAgentsOverview(w http.ResponseWriter, r *http.Request) {
-	items := agentOverviewForRequest(r)
+	items := h.agentOverviewForRequest(r)
 	csrfToken := auth.EnsureCSRFCookie(w, r)
 	user := middleware.GetUser(r.Context())
 	type agentOverviewCardData struct {
@@ -665,7 +665,7 @@ func (h *Handler) renderServerDetail(w http.ResponseWriter, r *http.Request) {
 		Now:                       heartdesk.FormatDatetime(time.Now().In(heartdesk.JST())),
 		IsMaint:                   isLocal && GetMaintenanceMode(),
 		CurrentAgentID:            seen.AgentID,
-		ServerTree:                agentOverviewForRequest(r),
+		ServerTree:                h.agentOverviewForRequest(r),
 		Nav:                       nav,
 		Cards:                     cards,
 		JSVars:                    template.JS(GetIPMgmtJSVars(h.appCfg, seen.AgentID)),

@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.1] - 2026-10-26
+
+### Fixed
+
+- Monitor overview pages, sidebars and APIs now use the receiving Monitor's
+  effective configuration instead of the default tenant's inventory. Historical
+  reports no longer recreate removed registrations; configured aggregate senders
+  remain visible, and tenant access restrictions are preserved.
+- Agents without a received report display an unreported age instead of zero
+  minutes ago, consistently across server lists and status cards.
+
 ## [0.3.0] - 2026-10-25
 
 ### Added

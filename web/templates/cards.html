@@ -500,7 +500,7 @@
 				<td>{{.AgentLabel}}</td>
 				<td>{{.AgentType}}</td>
 				<td class="nowrap">{{.ReceivedAt}}</td>
-				<td class="nowrap col-count">{{.MinutesAgo}} 分前</td>
+				<td class="nowrap col-count">{{if .ReceivedAt}}{{.MinutesAgo}} 分前{{else}}未報告{{end}}</td>
 				<td class="nowrap">
 					{{if .IsAlert}}
 						<span class="result-badge result-fail">無通信</span>
@@ -636,7 +636,7 @@ h1 { color: #90caf9; font-size: 1.4rem; margin-bottom: 20px; }
 	<div class="agent-meta">
 		<span>{{.AgentID}}</span> &nbsp;·&nbsp;
 		<span>{{.AgentType}}</span> &nbsp;·&nbsp;
-		<span>{{.MinutesAgo}} 分前</span>
+		<span>{{if .ReceivedAt}}{{.MinutesAgo}} 分前{{else}}未報告{{end}}</span>
 	</div>
 	{{if .HasData}}
 	<div class="metrics">

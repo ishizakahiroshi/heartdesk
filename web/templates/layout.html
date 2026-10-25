@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', function() {
 					<span class="sidenav-server-name">{{if .AgentLabel}}{{.AgentLabel}}{{else}}{{.AgentID}}{{end}}</span>
 					<span class="sidenav-server-badge {{if .IsAlert}}is-alert{{else}}is-ok{{end}}">{{if .IsAlert}}異常{{else}}正常{{end}}</span>
 				</span>
-				<span class="sidenav-server-meta">{{if .IsPrimary}}<span class="sidenav-server-role-main">Main Server</span>{{else}}<span class="sidenav-server-role-agent">Agent</span>{{end}} · {{.AgentType}} · {{.MinutesAgo}}分前</span>
+				<span class="sidenav-server-meta">{{if .IsPrimary}}<span class="sidenav-server-role-main">Main Server</span>{{else}}<span class="sidenav-server-role-agent">Agent</span>{{end}} · {{.AgentType}} · {{if .ReceivedAt}}{{.MinutesAgo}}分前{{else}}未報告{{end}}</span>
 			</a>
 			{{end}}
 		</div>

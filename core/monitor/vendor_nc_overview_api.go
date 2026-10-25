@@ -36,7 +36,7 @@ func GetVendorNcOverview(r *http.Request, appCfg *config.AppConfig) interface{} 
 	}
 
 	diskByAgent := map[string]string{}
-	for _, item := range GetAgentOverview() {
+	for _, item := range getAgentOverviewForConfig(appCfg, string(auth.RoleVendorStaff), "") {
 		diskByAgent[item.AgentID] = item.DiskPct
 	}
 
