@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.3] - 2026-10-26
+
+### Fixed
+
+- Event alerts retain their retry state when every attempted notification path
+  fails. Account lockout and user lifecycle events preserve unread offsets and
+  pending users; file access alerts retain cooldown eligibility and subjects
+  included in a failed overflow summary. Any successful delivery still commits
+  the event, and unconfigured notification paths keep their existing behavior.
+- Regression coverage now also checks that reports without an agent type retain
+  the stored type while later explicit reports can update it.
+
 ## [0.3.2] - 2026-10-26
 
 ### Fixed
