@@ -69,7 +69,7 @@ func attachRoutes(mux *http.ServeMux, rt *Runtime, routes []Route) error {
 			}
 		}
 		for pattern := range seen {
-			if pattern != route.Pattern && (strings.HasPrefix(pattern, strings.TrimSuffix(route.Pattern, "/")+"/") || strings.HasPrefix(route.Pattern, strings.TrimSuffix(pattern, "/")+"/")) {
+			if pattern != route.Pattern && (strings.HasSuffix(pattern, "/") && strings.HasPrefix(route.Pattern, pattern) || strings.HasSuffix(route.Pattern, "/") && strings.HasPrefix(pattern, route.Pattern)) {
 				return fmt.Errorf("app: overlapping routes")
 			}
 		}

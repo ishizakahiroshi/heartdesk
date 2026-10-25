@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.2.1] - 2026-10-25
+
+### Fixed
+
+- Extension routes can register an exact root and its trailing-slash subtree
+  together, such as `/example` and `/example/`. Actual subtree overlaps,
+  duplicate patterns and routes that shadow standard handlers remain rejected.
+
 ## [0.2.0] - 2026-10-25
 
 ### Added
