@@ -16,6 +16,8 @@ All notable changes to this project are documented in this file.
 - Explicit preparation and shutdown: handlers return 503 until durable security state
   is restored, and shutdown waits for active requests and jobs before closing stores.
   The runtime supports one initialization per process lifetime.
+- Startup-fixed token identities, offline filename extensions and action-policy key
+  mappings preserve an embedding application's existing authorization and wire formats.
 
 ### Fixed
 
@@ -25,6 +27,9 @@ All notable changes to this project are documented in this file.
 - Event-driven scoring avoids unnecessary privileged resource collection.
 - Notification results distinguish no attempted delivery, failed deliveries and at
   least one successful delivery, preserving retries after complete failure.
+- Embedding preserves process user-store paths and valid routes below a path prefix;
+  renamed built-in jobs cannot be overwritten by extensions. Report observers receive
+  private configuration and collector payload snapshots.
 
 ### Notes
 

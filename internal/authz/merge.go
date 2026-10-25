@@ -185,13 +185,13 @@ type MergeActionsInput struct {
 // user は再許可不可（4 で false にするだけ）。
 func MergeActions(in MergeActionsInput) map[string]bool {
 	result := make(map[string]bool, len(in.RoleDefaults))
-	for k, v := range in.RoleDefaults {
+	for k, v := range CanonicalActionPolicy(in.RoleDefaults) {
 		result[k] = v
 	}
-	for k, v := range in.TenantActions {
+	for k, v := range CanonicalActionPolicy(in.TenantActions) {
 		result[normalizeActionKey(k)] = v
 	}
-	for k, v := range in.AgentActions {
+	for k, v := range CanonicalActionPolicy(in.AgentActions) {
 		result[normalizeActionKey(k)] = v
 	}
 	for _, k := range in.UserDeny {
@@ -205,5 +205,5 @@ func MergeActions(in MergeActionsInput) map[string]bool {
 }
 
 func normalizeActionKey(s string) string {
-	return strings.ToLower(strings.TrimSpace(s))
+	return CanonicalActionKey(s)
 }

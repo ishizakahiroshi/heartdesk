@@ -40,6 +40,8 @@ func TestRuntimeIsolatedScenarios(t *testing.T) {
 }
 
 func testOptions(t *testing.T) app.Options {
+	t.Setenv("HEARTDESK_USERS_TOML", "")
+	t.Setenv("HEARTDESK_USERS_JSON", "")
 	root := t.TempDir()
 	cfg := &app.Config{}
 	cfg.Server.ListenAddr = "127.0.0.1:0"

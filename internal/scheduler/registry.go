@@ -247,6 +247,34 @@ func RegisterJob(def *JobDef) {
 
 var extractJobID = "heartdesk_extract"
 
+// ValidateJobPlan checks the effective registry after a built-in rename, before
+// either the rename or any application job registration can change shared state.
+func ValidateJobPlan(extractID string, extras []JobDef) error {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+	ids := map[string]bool{}
+	for id := range jobDefs {
+		ids[id] = true
+	}
+	if extractID != "" && extractID != extractJobID {
+		if ids[extractID] {
+			return fmt.Errorf("job collision: %s", extractID)
+		}
+		delete(ids, extractJobID)
+		ids[extractID] = true
+	}
+	for _, job := range extras {
+		if job.ID == "" || job.Handler == nil {
+			return fmt.Errorf("invalid application job")
+		}
+		if ids[job.ID] {
+			return fmt.Errorf("job collision: %s", job.ID)
+		}
+		ids[job.ID] = true
+	}
+	return nil
+}
+
 // ConfigureExtractJobID preserves the built-in handler while changing its public
 // identity for existing state, disabled-job, cron and API mappings. Startup only.
 func ConfigureExtractJobID(id string) error {

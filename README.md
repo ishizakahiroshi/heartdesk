@@ -243,11 +243,20 @@ only through the authenticated card-refresh endpoint.
 `DefaultTenantID`, `SelfServiceName`, `ExtractJobID`, routing, branding and cookie
 options preserve an embedding application's existing identities. `LicenseConfig`
 passes signing material in memory and fixes it before request handlers start.
+Its `Issuer`, `Audience`, `OfflineAudience`, `OfflineType` and
+`OfflineFilenameExtension` retain the standalone defaults when empty; explicit
+values preserve an application's existing tokens and offline download names.
+`ActionPermissionAliases` maps shared action names to existing policy keys so
+explicit grants and denials survive renamed actions across policy layers.
 Omitting `VerifyLicense` keeps the standard license verifier; a nil callback does
 not disable verification. Authentication helpers such as `DefaultSessionManager`,
 `DefaultStore`, `SessionFromRequest`, `ActionAllowed` and `CanUseCard` expose the
 same stores used by the runtime. See `app/testdata/external` for an external-module
 compilation fixture with no imports from `heartdesk/internal`.
+
+Report observers receive private copies of configuration and collector payloads;
+editing them cannot alter the receiver's caches. User-store path selection honors
+explicit options, then existing process environment, then the standard default.
 
 ## Dependencies
 

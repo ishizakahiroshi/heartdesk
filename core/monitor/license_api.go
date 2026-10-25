@@ -423,10 +423,11 @@ func issueLicenseJWT(agentID string, cfg *config.AppConfig) (token, kid string, 
 	now := time.Now()
 	exp := now.Add(licenseTokenTTL)
 
+	identity := license.CurrentIdentity()
 	claims := license.Claims{
-		Issuer:    "heartdesk-vendor",
+		Issuer:    identity.Issuer,
 		Subject:   agentID,
-		Audience:  "heartdesk-monitor",
+		Audience:  identity.Audience,
 		TenantID:  tenantID,
 		IssuedAt:  now.Unix(),
 		ExpiresAt: exp.Unix(),
@@ -454,6 +455,7 @@ func issueLicenseJWT(agentID string, cfg *config.AppConfig) (token, kid string, 
 }
 
 func validateAgentSessionClaims(claims *license.Claims, agentID, tenantID string) error {
+	identity := license.CurrentIdentity()
 	if claims == nil {
 		return fmt.Errorf("missing claims")
 	}
@@ -463,10 +465,10 @@ func validateAgentSessionClaims(claims *license.Claims, agentID, tenantID string
 	if claims.TenantID != tenantID {
 		return fmt.Errorf("tenant_id mismatch")
 	}
-	if claims.Audience != "heartdesk-monitor" {
+	if claims.Audience != identity.Audience {
 		return fmt.Errorf("invalid audience")
 	}
-	if claims.Issuer != "heartdesk-vendor" {
+	if claims.Issuer != identity.Issuer {
 		return fmt.Errorf("invalid issuer")
 	}
 	if claims.Scope != "agent.report" {

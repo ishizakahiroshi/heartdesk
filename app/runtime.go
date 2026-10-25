@@ -25,6 +25,7 @@ import (
 	"github.com/ishizakahiroshi/heartdesk/internal/alerts"
 	"github.com/ishizakahiroshi/heartdesk/internal/auditdb"
 	"github.com/ishizakahiroshi/heartdesk/internal/auth"
+	"github.com/ishizakahiroshi/heartdesk/internal/authz"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
 	"github.com/ishizakahiroshi/heartdesk/internal/license"
 	"github.com/ishizakahiroshi/heartdesk/internal/routing"
@@ -53,6 +54,7 @@ type Options struct {
 	SelfServiceName, ExtractJobID                                   string
 	SessionCookieName, CSRFCookieName, Brand, Version, AssetVersion string
 	Environment                                                     map[string]string
+	ActionPermissionAliases                                         map[string]string
 	Config                                                          *Config
 	ConfigLoader                                                    func(string) (*Config, error)
 	Routing                                                         *RoutingConfig
@@ -118,6 +120,13 @@ func New(options Options) (*Runtime, error) {
 	opts.Environment = map[string]string{}
 	for k, v := range options.Environment {
 		opts.Environment[k] = v
+	}
+	opts.ActionPermissionAliases = map[string]string{}
+	for key, target := range options.ActionPermissionAliases {
+		opts.ActionPermissionAliases[key] = target
+	}
+	if err := authz.ValidateActionPermissionAliases(opts.ActionPermissionAliases); err != nil {
+		return nil, err
 	}
 	if opts.BaseDir == "" {
 		opts.BaseDir = opts.Environment["HEARTDESK_BASE_DIR"]
@@ -225,22 +234,15 @@ func New(options Options) (*Runtime, error) {
 			return nil, e
 		}
 	}
-	seenJobs := map[string]bool{}
-	for _, job := range opts.Jobs {
-		if job.ID == "" || job.Handler == nil {
-			return nil, fmt.Errorf("app: invalid job")
-		}
-		if seenJobs[job.ID] {
-			return nil, fmt.Errorf("app: duplicate job %q", job.ID)
-		}
-		seenJobs[job.ID] = true
-		if _, err := scheduler.GetJobDef(job.ID); err == nil {
-			return nil, fmt.Errorf("app: duplicate job %q", job.ID)
-		}
+	if err := scheduler.ValidateJobPlan(opts.ExtractJobID, opts.Jobs); err != nil {
+		return nil, err
 	}
 	// From here on process-scoped stores may initialize. Never allow a different
 	// runtime to reuse partially initialized global state after a later failure.
 	runtimeGate.initialized = true
+	if err := authz.ConfigureActionPermissionAliases(opts.ActionPermissionAliases); err != nil {
+		return nil, err
+	}
 	if opts.LicenseConfig != nil {
 		material := *opts.LicenseConfig
 		if err := license.Configure(material); err != nil {
@@ -252,7 +254,12 @@ func New(options Options) (*Runtime, error) {
 	opts.Environment["HEARTDESK_CONFIG_DIR"] = opts.ConfigDir
 	opts.Environment["HEARTDESK_DATA_DIR"] = opts.DataDir
 	opts.Environment["HEARTDESK_TENANT_ID"] = opts.TenantID
-	if _, ok := opts.Environment["HEARTDESK_USERS_TOML"]; !ok {
+	_, explicitTOML := opts.Environment["HEARTDESK_USERS_TOML"]
+	_, explicitJSON := opts.Environment["HEARTDESK_USERS_JSON"]
+	if explicitJSON && !explicitTOML {
+		opts.Environment["HEARTDESK_USERS_TOML"] = ""
+	}
+	if !explicitTOML && !explicitJSON && os.Getenv("HEARTDESK_USERS_TOML") == "" && os.Getenv("HEARTDESK_USERS_JSON") == "" {
 		userPath := filepath.Join(opts.ConfigDir, "users.toml")
 		if cfg != nil && cfg.Paths.UsersTOML != "" {
 			userPath = cfg.Paths.UsersTOML

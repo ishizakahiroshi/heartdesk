@@ -74,7 +74,9 @@ func attachRoutes(mux *http.ServeMux, rt *Runtime, routes []Route) error {
 			}
 		}
 		request, _ := http.NewRequest(http.MethodGet, "http://example.com"+route.Pattern, nil)
-		if _, pattern := mux.Handler(request); pattern != "" {
+		_, pattern := mux.Handler(request)
+		fallback := rt.routes.PathPrefix != "" && pattern == rt.routes.PathPrefix+"/" && route.Pattern != rt.routes.PathPrefix && route.Pattern != rt.routes.PathPrefix+"/"
+		if pattern != "" && !fallback {
 			return fmt.Errorf("app: route shadows standard route %q", route.Pattern)
 		}
 	}

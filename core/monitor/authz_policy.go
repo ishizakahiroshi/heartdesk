@@ -125,7 +125,7 @@ func authzActionList() []authzActionEntry {
 	entries := make([]authzActionEntry, 0, len(destructive)+len(readonly))
 	for _, id := range destructive {
 		entries = append(entries, authzActionEntry{
-			ID:              id,
+			ID:              authz.CanonicalActionKey(id),
 			Destructive:     true,
 			Label:           authzActionLabel(id),
 			Feature:         authzActionFeature(id),
@@ -135,7 +135,7 @@ func authzActionList() []authzActionEntry {
 	}
 	for _, id := range readonly {
 		entries = append(entries, authzActionEntry{
-			ID:              id,
+			ID:              authz.CanonicalActionKey(id),
 			Destructive:     false,
 			Label:           authzActionLabel(id),
 			Feature:         authzActionFeature(id),

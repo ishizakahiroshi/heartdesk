@@ -42,7 +42,7 @@ func IssueOfflineLicense(priv ed25519.PrivateKey, kid string, claims Claims, met
 	}
 	f.Header.Alg = "EdDSA"
 	f.Header.Kid = kid
-	f.Header.Typ = "heartdesk-offline-license"
+	f.Header.Typ = CurrentIdentity().OfflineType
 
 	// 署名対象: canonical JSON of {header, claims}
 	sigTarget, err := json.Marshal(struct {

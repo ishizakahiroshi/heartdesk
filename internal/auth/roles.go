@@ -1,5 +1,7 @@
 package auth
 
+import "github.com/ishizakahiroshi/heartdesk/internal/authz"
+
 // Role はユーザー属性軸のロールを表す。
 type Role string
 
@@ -138,7 +140,10 @@ func DefaultAccessScreens(role string) []string {
 
 // DefaultActionAllowed は role と action の組み合わせで既定許可を返す。
 func DefaultActionAllowed(role, action string) bool {
-	class, known := actionClasses[action]
+	class, known := actionClasses[authz.CanonicalActionKey(action)]
+	if !known {
+		class, known = actionClasses[action]
+	}
 	if !known {
 		// 未登録アクションは vendor_staff のみ許可
 		return Role(role) == RoleVendorStaff
@@ -162,7 +167,7 @@ func ScreenAllowed(accessScreens []string, screen Screen) bool {
 
 // ActionAllowed は policy.actions と role の既定値を組み合わせてアクション可否を返す。
 func ActionAllowed(policyActions map[string]bool, role, action string) bool {
-	if v, ok := policyActions[action]; ok {
+	if v, ok := authz.ActionPolicyValue(policyActions, action); ok {
 		return v
 	}
 	return DefaultActionAllowed(role, action)

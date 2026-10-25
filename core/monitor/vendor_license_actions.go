@@ -10,6 +10,7 @@ import (
 
 	vendorconsole "github.com/ishizakahiroshi/heartdesk/core/vendor_console"
 	"github.com/ishizakahiroshi/heartdesk/internal/auth"
+	"github.com/ishizakahiroshi/heartdesk/internal/license"
 	"github.com/ishizakahiroshi/heartdesk/internal/middleware"
 	"github.com/ishizakahiroshi/heartdesk/internal/vendorsvc/store"
 )
@@ -163,7 +164,7 @@ func (h *Handler) actionVendorLicenseOfflineGenerate(w http.ResponseWriter, r *h
 		"ok":       true,
 		"message":  agentID + " のオフラインライセンスを発行しました",
 		"data":     base64.StdEncoding.EncodeToString(fileData),
-		"filename": "license_" + agentID + ".hdlic",
+		"filename": "license_" + agentID + license.CurrentIdentity().OfflineFilenameExtension,
 	})
 }
 

@@ -2,9 +2,11 @@ package monitor
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io/fs"
+	"log"
 	"net/http"
 	"strings"
 
@@ -280,9 +282,30 @@ func ConfigureReportObserver(hook func(*config.AppConfig, AgentReport)) error {
 }
 
 func AfterAgentReportSaved(cfg *config.AppConfig, report AgentReport) {
-	if reportSavedHook != nil {
-		reportSavedHook(cfg, report)
+	if reportSavedHook == nil {
+		return
 	}
+	// The receiver may use a cached tenant configuration, including shared maps.
+	// A hook receives its own snapshot so an accidental edit cannot affect later
+	// authentication or another report. Keep signing material in memory only.
+	data, err := json.Marshal(cfg)
+	if err != nil {
+		log.Print("agent report observer skipped: configuration snapshot failed")
+		return
+	}
+	var snapshot *config.AppConfig
+	if err := json.Unmarshal(data, &snapshot); err != nil {
+		log.Print("agent report observer skipped: configuration snapshot failed")
+		return
+	}
+	if report.Collectors != nil {
+		collectors := make(map[string]json.RawMessage, len(report.Collectors))
+		for key, payload := range report.Collectors {
+			collectors[key] = bytes.Clone(payload)
+		}
+		report.Collectors = collectors
+	}
+	reportSavedHook(snapshot, report)
 }
 
 var builtinActionNames = map[string]bool{"save_alert_rules": true, "save_alert_recipients": true, "maintenance_on": true, "maintenance_off": true, "nc_repair": true, "restart_heartdesk": true, "reboot": true, "apt_update": true, "apt_upgrade": true, "apt_full_upgrade": true, "toggle_auto_update": true, "fail2ban_ban": true, "fail2ban_unban": true, "ip_add": true, "ip_remove": true, "ip_rename": true, "ip_changetype": true, "user_mgmt_create": true, "user_mgmt_save": true, "user_mgmt_reset": true, "user_mgmt_delete": true, "wl_add": true, "wl_remove": true, "update_profile_name": true, "update_password": true, "totp_generate": true, "totp_enable": true, "totp_disable": true, "highscore_dismiss": true, "highscore_ban": true, "bulk_ban": true, "agent_memo_save": true, "vendor_license_issue": true, "vendor_license_revoke": true, "vendor_license_offline_generate": true, "vendor_license_rotation_generate": true}

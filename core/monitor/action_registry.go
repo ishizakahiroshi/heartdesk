@@ -318,7 +318,7 @@ func isMonitorActionAllowed(r *http.Request, sess auth.Session, api string) bool
 	if !ok {
 		return allowed
 	}
-	if v, ok := ae.Actions[key]; ok {
+	if v, ok := authz.ActionPolicyValue(ae.Actions, key); ok {
 		return v
 	}
 	return allowed

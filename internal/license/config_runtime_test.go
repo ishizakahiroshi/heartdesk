@@ -17,17 +17,26 @@ func TestConfigureRuntimeOnce(t *testing.T) {
 		return
 	}
 	before := vendorSecret
+	for _, extension := range []string{"example", "../example", ".bad/path", ".bad\\path", ".bad.ext", ".bad name", ".bad\n"} {
+		if Configure(Config{OfflineFilenameExtension: extension}) == nil {
+			t.Fatal("unsafe filename extension accepted")
+		}
+	}
 	if err := Configure(Config{VendorSecret: "invalid-must-not-install", VendorPublicKeysB64: "malformed"}); err == nil {
 		t.Fatal("invalid public key accepted")
 	}
 	if vendorSecret != before {
 		t.Fatal("validation failure installed signing material")
 	}
-	cfg := Config{VendorSecret: "synthetic-signing-material", VendorPublicKeysB64: "synthetic=" + base64.StdEncoding.EncodeToString(make([]byte, 32))}
+	cfg := Config{VendorSecret: "synthetic-signing-material", VendorPublicKeysB64: "synthetic=" + base64.StdEncoding.EncodeToString(make([]byte, 32)), Issuer: "example-vendor", Audience: "example-monitor", OfflineAudience: "example-agent", OfflineType: "example-offline-license"}
 	if err := Configure(cfg); err != nil {
 		t.Fatal(err)
 	}
 	cfg.VendorSecret = "caller mutation"
+	cfg.Issuer = "caller mutation"
+	if CurrentIdentity().Issuer != "example-vendor" {
+		t.Fatal("caller changed active identity")
+	}
 	if vendorSecret != "synthetic-signing-material" {
 		t.Fatal("caller mutation changed configured material")
 	}
@@ -36,5 +45,8 @@ func TestConfigureRuntimeOnce(t *testing.T) {
 	}
 	if vendorSecret != "synthetic-signing-material" {
 		t.Fatal("second configuration leaked into active verifier")
+	}
+	if CurrentIdentity().Issuer != "example-vendor" {
+		t.Fatal("second instance changed active identity")
 	}
 }
