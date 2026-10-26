@@ -184,6 +184,16 @@ Settings are read from TOML files in the directory given by `HEARTDESK_CONFIG_DI
 
 ## Embedding the application
 
+The standalone manual alert evaluator is also available as the public `alertscli`
+package. `alertscli.New(Options).Run(testMail)` performs one historical CLI cycle;
+`Options.Paths` lets an embedding application supply all seven input/output paths
+independently, while `TestSubject` and `TestBody` customize test-mail identity.
+Omitted options retain standalone defaults. `Options.Dependencies` replaces clock,
+file, command and mail effects per runner for synthetic verification. `Run(true)`
+still performs normal evaluation before the execution stamp, test mail and state
+save. This compatibility runner retains the manual CLI's legacy state and
+best-effort behavior; it does not use the scheduler's alert evaluation semantics.
+
 The public `github.com/ishizakahiroshi/heartdesk/app` package assembles the same
 Monitor, authentication, report receiver and scheduler used by the standard CLIs.
 Pass an absolute `Options.BaseDir`, explicit `ConfigDir` / `DataDir` when needed,

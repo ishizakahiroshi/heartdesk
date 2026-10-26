@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.5] - 2026-10-26
+
+### Fixed
+
+- Embedding applications can reuse the standalone manual alert CLI through the
+  importable `alertscli` runner, with independent input/output paths and test-mail
+  identity. The standard CLI uses the same runner and retains its existing
+  defaults, flags, nested state, evaluation order and best-effort delivery behavior.
+- Per-runner clock, file, command and mail dependencies support synthetic
+  compatibility checks without host operations or notification delivery. The
+  compatibility CLI remains separate from the scheduler's richer alert evaluator.
+
 ## [0.3.4] - 2026-10-26
 
 ### Fixed
