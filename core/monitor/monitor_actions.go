@@ -553,13 +553,16 @@ func parseAutoUpdateMode(mode string) (enable, ok bool) {
 	return false, false
 }
 
+// autoUpdateToggler preserves the production executor and permits no-host regression tests.
+var autoUpdateToggler = ToggleAutoUpdate
+
 func (h *Handler) actionToggleAutoUpdate(w http.ResponseWriter, r *http.Request) {
 	enable, ok := parseAutoUpdateMode(r.FormValue("mode"))
 	if !ok {
 		writeActionError(w, "mode は enable か disable を指定してください", http.StatusBadRequest)
 		return
 	}
-	if err := ToggleAutoUpdate(enable); err != nil {
+	if err := autoUpdateToggler(enable); err != nil {
 		writeActionError(w, "自動更新設定の変更に失敗しました: "+err.Error(), http.StatusInternalServerError)
 		return
 	}

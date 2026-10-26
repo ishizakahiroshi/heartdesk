@@ -192,6 +192,20 @@ and either `Config`, `ConfigLoader`, or configuration files loaded with
 configuration cache as well as startup. A supplied `Config` and `Environment` map
 are copied; hook implementations and returned configuration must remain immutable.
 
+An embedding application may set `Config.NCFileAccessDefaultServiceAccounts` to
+define its own fallback for file-access alert classification. Supply it on both
+the startup configuration and each `ConfigLoader` result. It is an in-memory
+embedding field, not a TOML option. The optional `service_accounts` JSON setting
+takes priority when present: `[]` disables service classification and a custom
+list replaces the fallback. Missing or null uses the configuration's fallback;
+standalone heartdesk assumes no service accounts.
+
+`MonitorIdentity.LegacyStorageNamespace` optionally imports collapsed-card,
+server-tree and sidenav-order preferences from a previous namespace before
+rendering. The current namespace takes precedence whenever its key exists;
+unknown or malformed old values are ignored and old keys are retained. The
+default is empty, which disables migration.
+
 ```go
 runtime, err := app.New(app.Options{BaseDir: root, Config: cfg})
 if err != nil {

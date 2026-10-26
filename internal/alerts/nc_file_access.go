@@ -162,10 +162,13 @@ func loadNCFileAccessSettings() ncFileAccessSettings {
 	return s
 }
 
-func (s ncFileAccessSettings) serviceAccountSet() map[string]bool {
+func (s ncFileAccessSettings) serviceAccountSet(defaults ...[]string) map[string]bool {
 	list := s.ServiceAccounts
 	if list == nil {
 		list = ncFADefaultServiceAccounts
+		if len(defaults) > 0 {
+			list = defaults[0]
+		}
 	}
 	out := map[string]bool{}
 	for _, a := range list {
@@ -1004,6 +1007,9 @@ func ncFAShellArg(s string) string {
 func evaluateNCFileAccess(cfg *config.AppConfig, rules AlertRules, state *AlertState) []string {
 	settings := loadNCFileAccessSettings()
 	services := settings.serviceAccountSet()
+	if cfg != nil {
+		services = settings.serviceAccountSet(cfg.NCFileAccessDefaultServiceAccounts)
+	}
 	auditPath := ncAuditLogPath(cfg, settings)
 	statePath := ncFAStatePath()
 

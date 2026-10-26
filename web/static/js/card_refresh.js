@@ -474,7 +474,10 @@
 				var raw = localStorage.getItem(key);
 				var arr = raw ? JSON.parse(raw) : [];
 				if (Array.isArray(arr)) {
-					arr = arr.filter(function(id) { return id !== cardId; });
+					var configuredId = function(id) {
+						return (typeof HD_CARD_ALIASES !== 'undefined' && HD_CARD_ALIASES[id]) || id;
+					};
+					arr = arr.filter(function(id) { return configuredId(id) !== configuredId(cardId); });
 					localStorage.setItem(key, JSON.stringify(arr));
 				}
 			} catch (e) {}

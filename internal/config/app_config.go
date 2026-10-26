@@ -19,6 +19,12 @@ type AppConfig struct {
 	// 読み込み後に代入する（tenants/<id>/ を組み立て直す側が env を再読しないで済むように）。
 	TenantID string `toml:"-"`
 
+	// NCFileAccessDefaultServiceAccounts supplies an embedding application's
+	// fallback only when the optional JSON service_accounts value is absent or
+	// null. An explicit empty or custom JSON list always wins. Standalone
+	// heartdesk leaves this nil, so no service account is assumed.
+	NCFileAccessDefaultServiceAccounts []string `toml:"-"`
+
 	Server struct {
 		ListenAddr string   `toml:"listen_addr"`
 		Name       string   `toml:"name"`

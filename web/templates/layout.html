@@ -14,6 +14,29 @@ var HD_STORAGE_NAMESPACE = HD_IDENTITY.StorageNamespace || "heartdesk";
 var HD_COLLAPSE_KEY = HD_STORAGE_NAMESPACE + ".monitor.collapsed.v1";
 var HD_SIDENAV_SERVER_TREE_KEY = HD_STORAGE_NAMESPACE + ".monitor.sidenav.server_tree.v1";
 var HD_SIDENAV_ORDER_KEY = HD_STORAGE_NAMESPACE + ".monitor.sidenav.order.v1";
+/* Import only known preference shapes; existing current values always win. */
+(function() {
+	var legacy = HD_IDENTITY.LegacyStorageNamespace;
+	if (!legacy || legacy === HD_STORAGE_NAMESPACE) return;
+	function ids(value) {
+		return Array.isArray(value) && value.every(function(id) { return typeof id === 'string' && id !== ''; });
+	}
+	function valid(suffix, raw) {
+		if (suffix === '.monitor.sidenav.server_tree.v1') return raw === '0' || raw === '1';
+		var value = JSON.parse(raw);
+		if (suffix === '.monitor.collapsed.v1') return ids(value);
+		if (!value || Array.isArray(value) || !ids(value.pinned) || !value.groups || typeof value.groups !== 'object' || Array.isArray(value.groups)) return false;
+		return Object.keys(value.groups).every(function(group) { return ids(value.groups[group]); });
+	}
+	['.monitor.collapsed.v1', '.monitor.sidenav.server_tree.v1', '.monitor.sidenav.order.v1'].forEach(function(suffix) {
+		try {
+			var currentKey = HD_STORAGE_NAMESPACE + suffix;
+			if (localStorage.getItem(currentKey) !== null) return;
+			var raw = localStorage.getItem(legacy + suffix);
+			if (raw !== null && valid(suffix, raw)) localStorage.setItem(currentKey, raw);
+		} catch (e) {}
+	});
+})();
 var BAR_THRESHOLDS = {{if .ResourceBarThresholds}}{{.ResourceBarThresholds}}{{else}}{"warning":60,"danger":85}{{end}};
 var HD_CARD_OPTIONS = {{if .CardOptions}}{{.CardOptions}}{{else}}{}{{end}};
 var HD_CARD_IDS = {{if .CardIDs}}{{.CardIDs}}{{else}}{}{{end}};

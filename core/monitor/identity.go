@@ -17,6 +17,9 @@ type MonitorIdentityConfig struct {
 	LoginLogAppName, AdminLoginLogAppName, LoginHistorySourceKey                      string
 	LoginHistoryExportBasename, LoginHistoryArchiveFilename, LoginHistoryArchiveLabel string
 	AuditAppTrustedJSONKey                                                            string
+	// LegacyStorageNamespace optionally imports known browser preferences into
+	// StorageNamespace when the current key has never been set. Empty disables it.
+	LegacyStorageNamespace string
 }
 
 var monitorIdentity atomic.Pointer[MonitorIdentityConfig]
@@ -26,8 +29,9 @@ var identityJSONKey = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 func currentCardAliases() map[string]string { return authz.ConfiguredCardAliases() }
 
 func resolvedMonitorIdentity(input *MonitorIdentityConfig) (MonitorIdentityConfig, error) {
-	cfg := MonitorIdentityConfig{"heartdesk", "server dashboard", "heartdesk", "heartdesk_theme", "heartdesk_monitor", "heartdesk_admin", "heartdesk", "login_history", "login_history.txt", "heartdesk ログイン履歴", "excluded_app_trusted"}
+	cfg := MonitorIdentityConfig{"heartdesk", "server dashboard", "heartdesk", "heartdesk_theme", "heartdesk_monitor", "heartdesk_admin", "heartdesk", "login_history", "login_history.txt", "heartdesk ログイン履歴", "excluded_app_trusted", ""}
 	if input != nil {
+		cfg.LegacyStorageNamespace = input.LegacyStorageNamespace
 		targets := []*string{&cfg.AppName, &cfg.Subtitle, &cfg.StorageNamespace, &cfg.ThemeStorageKey, &cfg.LoginLogAppName, &cfg.AdminLoginLogAppName, &cfg.LoginHistorySourceKey, &cfg.LoginHistoryExportBasename, &cfg.LoginHistoryArchiveFilename, &cfg.LoginHistoryArchiveLabel, &cfg.AuditAppTrustedJSONKey}
 		values := []string{input.AppName, input.Subtitle, input.StorageNamespace, input.ThemeStorageKey, input.LoginLogAppName, input.AdminLoginLogAppName, input.LoginHistorySourceKey, input.LoginHistoryExportBasename, input.LoginHistoryArchiveFilename, input.LoginHistoryArchiveLabel, input.AuditAppTrustedJSONKey}
 		for i, value := range values {
@@ -35,6 +39,9 @@ func resolvedMonitorIdentity(input *MonitorIdentityConfig) (MonitorIdentityConfi
 				*targets[i] = value
 			}
 		}
+	}
+	if value := cfg.LegacyStorageNamespace; value != "" && (!identityToken.MatchString(value) || value == "." || value == "..") {
+		return cfg, fmt.Errorf("invalid legacy storage namespace")
 	}
 	for _, value := range []string{cfg.AppName, cfg.Subtitle, cfg.LoginHistoryArchiveLabel} {
 		if strings.ContainsAny(value, "\x00\r\n") {

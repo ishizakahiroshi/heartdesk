@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.4] - 2026-10-26
+
+### Fixed
+
+- Embedded applications can supply per-configuration default service accounts
+  for Nextcloud file-access alert classification. The fallback applies only when
+  the optional JSON list is absent or null; explicit empty and custom lists keep
+  their meaning. Standalone defaults remain empty, and configuration copies own
+  their slices without introducing shared mutable classification state.
+- Embedded applications can explicitly import known display preferences from a
+  previous storage namespace. Existing current values win, malformed old values
+  are ignored, and old keys remain untouched. Refreshing an aliased card also
+  clears its saved collapsed state consistently across reloads.
+- Regression coverage preserves recipient-specific rule settings, rejects
+  malformed recipient data without changing it, and checks empty bulk targets
+  and automatic-update arguments without running host operations.
+
 ## [0.3.3] - 2026-10-26
 
 ### Fixed
