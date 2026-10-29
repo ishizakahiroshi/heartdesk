@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.6] - 2026-10-30
+
+### Fixed
+
+- Agent reports no longer re-read the whole per-agent event JSONL to check for
+  duplicates. The monitor keeps the dedupe keys in memory per file, loads only the
+  last 48 hours from the end of the file on first use (bounded to 128MiB), and
+  serializes writes to the same file. Previously each report scanned the entire
+  file, so a large event log made report handling slower than the agent's request
+  timeout; agent retries then stacked concurrent full scans until the monitor ran
+  out of memory.
+- The dedupe index is rebuilt from the file after a failed write or when the file
+  has been removed or moved away. Events older than the window are kept with their
+  receive time so a resent backlog is still rejected.
+
 ## [0.3.5] - 2026-10-26
 
 ### Fixed
