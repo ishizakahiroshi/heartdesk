@@ -54,7 +54,7 @@ func TestIngestCorrelatesHeartpostHTTPOutcomeWithNginxEvent(t *testing.T) {
 
 	cutoff := now.Add(-time.Hour)
 	parse := func(s string) (time.Time, error) { return time.Parse(time.RFC3339, s) }
-	events, receipts := httpclassload.Load(filepath.Join(dir, "web_access.jsonl"), filepath.Join(dir, "http_outcome.jsonl"), cutoff, parse, nil)
+	events, receipts := httpclassload.Load(filepath.Join(dir, "web_access.jsonl"), filepath.Join(dir, "http_outcome.jsonl"), now, cutoff, parse, nil)
 	if len(events) != 3 || len(receipts) != 2 {
 		t.Fatalf("events=%d receipts=%d", len(events), len(receipts))
 	}
@@ -75,7 +75,7 @@ func TestIngestCorrelatesHeartpostHTTPOutcomeWithNginxEvent(t *testing.T) {
 		Collectors: map[string]json.RawMessage{"http_outcome": json.RawMessage(bad)}}); err != nil {
 		t.Fatal(err)
 	}
-	events, receipts = httpclassload.Load(filepath.Join(dir, "web_access.jsonl"), filepath.Join(dir, "http_outcome.jsonl"), cutoff, parse, nil)
+	events, receipts = httpclassload.Load(filepath.Join(dir, "web_access.jsonl"), filepath.Join(dir, "http_outcome.jsonl"), now, cutoff, parse, nil)
 	for i, r := range httpclassload.Classify(events, receipts) {
 		if events[i].RequestID == id1 && r.Class != httpclassification.Unclassified {
 			t.Fatalf("conflicting duplicate must disable the match: %v", r.Class)

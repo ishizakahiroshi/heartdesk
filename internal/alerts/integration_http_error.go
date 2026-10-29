@@ -38,6 +38,11 @@ const (
 	integrationLookback = 24 * time.Hour
 	// integrationItemRetention drops idle, delivered items from the state.
 	integrationItemRetention = 30 * 24 * time.Hour
+	// integrationSeenRetention bounds the per-key identity memory.
+	integrationSeenRetention = 7 * 24 * time.Hour
+	// integrationMaxPerRun caps notifications per evaluation; the rest stay
+	// pending and go out on the next runs.
+	integrationMaxPerRun = 5
 )
 
 // IntegrationHTTPItem is the persisted state of one (scope, operation,
@@ -46,9 +51,15 @@ type IntegrationHTTPItem struct {
 	Scope     string `json:"scope"`
 	Operation string `json:"operation"`
 	PathHash  string `json:"path_hash"`
-	// Pending is the number of integration errors not yet delivered.
-	Pending     int       `json:"pending,omitempty"`
-	PendingLast time.Time `json:"pending_last,omitempty"`
+	// Pending is the number of integration errors not yet delivered;
+	// PendingIDs holds their (hashed) request identities.
+	Pending     int                  `json:"pending,omitempty"`
+	PendingIDs  map[string]time.Time `json:"pending_ids,omitempty"`
+	PendingLast time.Time            `json:"pending_last,omitempty"`
+	// Seen remembers every error identity already counted (hashed request id ->
+	// time) for integrationSeenRetention, so an error is counted exactly once
+	// even when several errors share a timestamp second or the window slides.
+	Seen map[string]time.Time `json:"seen,omitempty"`
 	// SentThrough is the newest error time already delivered; older errors are
 	// never counted again.
 	SentThrough time.Time `json:"sent_through,omitempty"`
@@ -77,10 +88,14 @@ func integrationKey(scope, op, hash string) string {
 	return ruleIntegrationHTTPError + ":" + hex.EncodeToString(sum[:8])
 }
 
+type integrationErr struct {
+	id string
+	ts time.Time
+}
+
 type integrationObs struct {
 	scope, op, hash string
-	errCount        int
-	errLast         time.Time
+	errs            []integrationErr
 	successLast     time.Time
 }
 
@@ -108,7 +123,7 @@ func evaluateIntegrationHTTPError(cfg *config.AppConfig, rules AlertRules, state
 	for _, dir := range integrationAgentDirs(cfg) {
 		events, receipts := httpclassload.Load(
 			filepath.Join(dir, httpclassload.RawFile), filepath.Join(dir, httpclassload.ReceiptFile),
-			cutoff, parseAlertTimestamp,
+			now, cutoff, parseAlertTimestamp,
 			func(e httpclassload.Event) bool { return httpclassification.ValidRequestID(e.RequestID) })
 		results := httpclassload.Classify(events, receipts)
 		for i, e := range events {
@@ -128,33 +143,38 @@ func evaluateIntegrationHTTPError(cfg *config.AppConfig, rules AlertRules, state
 				}
 				continue
 			}
-			item := state.IntegrationHTTP[k]
-			if item != nil && !e.Time.After(item.SentThrough) {
-				continue // already delivered
-			}
-			o.errCount++
-			if e.Time.After(o.errLast) {
-				o.errLast = e.Time
-			}
+			sum := sha256.Sum256([]byte(e.Scope + "|" + e.RequestID))
+			o.errs = append(o.errs, integrationErr{id: hex.EncodeToString(sum[:12]), ts: e.Time})
 		}
 	}
 
 	for k, o := range obs {
 		item := state.IntegrationHTTP[k]
 		if item == nil {
-			if o.errCount == 0 {
+			if len(o.errs) == 0 {
 				continue // success for a resource that never failed
 			}
 			item = &IntegrationHTTPItem{Scope: o.scope, Operation: o.op, PathHash: o.hash}
 			state.IntegrationHTTP[k] = item
 		}
 		item.LastSeen = now
-		if o.errCount > item.Pending {
-			item.Pending = o.errCount
+		if item.Seen == nil {
+			item.Seen = map[string]time.Time{}
 		}
-		if o.errLast.After(item.PendingLast) {
-			item.PendingLast = o.errLast
+		if item.PendingIDs == nil {
+			item.PendingIDs = map[string]time.Time{}
 		}
+		for _, er := range o.errs {
+			if _, dup := item.Seen[er.id]; dup {
+				continue // already counted (delivered or pending)
+			}
+			item.Seen[er.id] = er.ts
+			item.PendingIDs[er.id] = er.ts
+			if er.ts.After(item.PendingLast) {
+				item.PendingLast = er.ts
+			}
+		}
+		item.Pending = len(item.PendingIDs)
 	}
 
 	keys := make([]string, 0, len(state.IntegrationHTTP))
@@ -164,9 +184,10 @@ func evaluateIntegrationHTTPError(cfg *config.AppConfig, rules AlertRules, state
 	sort.Strings(keys)
 
 	var out []string
+	notified := 0
 	for _, k := range keys {
 		item := state.IntegrationHTTP[k]
-		if item.Pending >= th {
+		if item.Pending >= th && notified < integrationMaxPerRun {
 			snap := snapshotAlertKey(k, state)
 			if shouldAlert(k, 0, cd, state, now) {
 				msg := fmt.Sprintf("連携アプリのHTTPエラー: 操作=%s 対象(ハッシュ)=%s 送信元=%s 件数=%d 最終=%s",
@@ -176,8 +197,10 @@ func evaluateIntegrationHTTPError(cfg *config.AppConfig, rules AlertRules, state
 					out = append(out, sent)
 					item.SentThrough = item.PendingLast
 					item.Pending = 0
+					item.PendingIDs = map[string]time.Time{}
 					state.Active[k] = true
 				}
+				notified++
 			}
 		}
 		// Recovery: only a reliable success newer than the last error.
@@ -196,6 +219,9 @@ func evaluateIntegrationHTTPError(cfg *config.AppConfig, rules AlertRules, state
 				}
 				if recovered {
 					state.Active[k] = false
+					// The episode is over: a later failure is a new episode and must
+					// not be held back by the old episode's cooldown.
+					delete(state.LastAlertTime, k)
 				}
 			}
 		}
@@ -212,6 +238,11 @@ func evaluateIntegrationHTTPError(cfg *config.AppConfig, rules AlertRules, state
 	state.Active[ruleIntegrationHTTPError] = anyActive
 
 	for k, item := range state.IntegrationHTTP {
+		for id, ts := range item.Seen {
+			if _, pending := item.PendingIDs[id]; !pending && now.Sub(ts) > integrationSeenRetention {
+				delete(item.Seen, id)
+			}
+		}
 		if item.Pending == 0 && !state.Active[k] && now.Sub(item.LastSeen) > integrationItemRetention {
 			delete(state.IntegrationHTTP, k)
 			delete(state.LastAlertTime, k)

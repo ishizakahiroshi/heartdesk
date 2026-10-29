@@ -191,3 +191,57 @@ func TestIntegrationHTTPErrorRecoveryNeedsReliableSuccess(t *testing.T) {
 		t.Fatal("aggregate flag must clear")
 	}
 }
+
+// Two different errors in the same second as an already delivered one are
+// still new events (identity is the request id, not the timestamp).
+func TestIntegrationHTTPErrorSameSecondErrorsAreCountedOnce(t *testing.T) {
+	e := newIHEnv(t)
+	e.pair(ihID1, "GET", 404, "fetch_file", "integration_error", time.Minute, ihPath)
+	st := newAlertState()
+	if out := e.run(ihRule, st); len(out) != 1 {
+		t.Fatal(out)
+	}
+	e.pair(ihID2, "GET", 404, "fetch_file", "integration_error", time.Minute, ihPath) // same second
+	e.now = e.now.Add(4 * time.Hour)
+	if out := e.run(ihRule, st); len(out) != 1 || !strings.Contains(out[0], "件数=1") {
+		t.Fatalf("the new same-second error must be reported once: %v", out)
+	}
+	if out := e.run(ihRule, st); len(out) != 0 {
+		t.Fatalf("no recount: %v", out)
+	}
+}
+
+// After a recovery, a new failure is a new episode and is not held by the old
+// episode's cooldown.
+func TestIntegrationHTTPErrorNewEpisodeAfterRecovery(t *testing.T) {
+	e := newIHEnv(t)
+	e.pair(ihID1, "GET", 404, "fetch_file", "integration_error", 10*time.Minute, ihPath)
+	st := newAlertState()
+	if out := e.run(ihRule, st); len(out) != 1 {
+		t.Fatal(out)
+	}
+	e.pair(ihID2, "GET", 200, "fetch_file", "success", 5*time.Minute, ihPath)
+	e.run(ihRule, st) // recovery bookkeeping (NotifyRecovery off)
+	e.pair(ihID3, "GET", 404, "fetch_file", "integration_error", time.Minute, ihPath)
+	if out := e.run(ihRule, st); len(out) != 1 {
+		t.Fatalf("new episode inside the old cooldown must notify: %v", out)
+	}
+}
+
+// At most five notifications per run; the rest stay pending for later runs.
+func TestIntegrationHTTPErrorCapsNotificationsPerRun(t *testing.T) {
+	e := newIHEnv(t)
+	for i := 0; i < 8; i++ {
+		e.pair(fmt.Sprintf("%032x", 100+i), "GET", 404, "fetch_file", "integration_error", time.Minute, fmt.Sprintf("/nextcloud/f%d.txt", i))
+	}
+	st := newAlertState()
+	if out := e.run(ihRule, st); len(out) != integrationMaxPerRun {
+		t.Fatalf("first run: %d", len(out))
+	}
+	if out := e.run(ihRule, st); len(out) != 3 {
+		t.Fatalf("second run must send the remaining 3: %d", len(out))
+	}
+	if out := e.run(ihRule, st); len(out) != 0 {
+		t.Fatalf("third run: %d", len(out))
+	}
+}

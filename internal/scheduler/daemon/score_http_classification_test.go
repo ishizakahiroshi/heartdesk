@@ -42,6 +42,9 @@ func hcRun(t *testing.T, raw, receipts string) nc4xxClassified {
 		}
 	}
 	cutoff := time.Date(2026, 10, 30, 0, 0, 0, 0, time.UTC)
+	orig := scoreNow
+	scoreNow = func() time.Time { return time.Date(2026, 10, 30, 12, 0, 0, 0, time.UTC) }
+	defer func() { scoreNow = orig }()
 	return collectNC4xxEventClassified(context.Background(), rawPath, filepath.Join(dir, "http_outcome.jsonl"), cutoff, func(string, string) {})
 }
 
@@ -137,6 +140,32 @@ func TestNC4xxResentReceipt(t *testing.T) {
 	rc := hcReceipt("agent-a", hcID1, "MKCOL", 405, "ensure_collection", "expected", "2026-10-30T10:00:01Z", h)
 	got := hcRun(t, hcRaw("agent-a", hcID1, "MKCOL", 405, "2026-10-30T10:00:00Z"), rc+rc)
 	if got.Scored[hcIP] != 0 || got.Expected[hcIP] != 1 {
+		t.Fatalf("%+v", got)
+	}
+}
+
+// A nonce reused on a second request (here a 2xx on another path, which is not
+// a scoring target) makes the nonce ambiguous: the 404 keeps scoring.
+func TestNC4xxNonceReplayOnNonTargetRequestKeepsScoring(t *testing.T) {
+	h := httpclassification.PathHash(hcPath)
+	raw := hcRaw("agent-a", hcID1, "MKCOL", 405, "2026-10-30T10:00:00Z") +
+		fmt.Sprintf(`{"ts":"2026-10-30T10:00:03Z","ip":%q,"agent_id":"agent-a","request_id":%q,"method":"GET","path":"/other","status":200}`+"\n", hcIP, hcID1)
+	rc := hcReceipt("agent-a", hcID1, "MKCOL", 405, "ensure_collection", "expected", "2026-10-30T10:00:01Z", h)
+	got := hcRun(t, raw, rc)
+	if got.Scored[hcIP] != 1 || got.Expected[hcIP] != 0 {
+		t.Fatalf("%+v", got)
+	}
+}
+
+// A future-dated event must keep scoring (agent clock skew must not hide attacks),
+// and a receipt dated far in the future cannot excuse it.
+func TestNC4xxFutureDatedEventsStillScore(t *testing.T) {
+	future := time.Date(2026, 10, 30, 12, 0, 0, 0, time.UTC).Add(2 * time.Hour).UTC().Format(time.RFC3339)
+	h := httpclassification.PathHash(hcPath)
+	got := hcRun(t,
+		hcRaw("agent-a", hcID1, "MKCOL", 405, future),
+		hcReceipt("agent-a", hcID1, "MKCOL", 405, "ensure_collection", "expected", future, h))
+	if got.Scored[hcIP] != 1 || got.Expected[hcIP] != 0 {
 		t.Fatalf("%+v", got)
 	}
 }

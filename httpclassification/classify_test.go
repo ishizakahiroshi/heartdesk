@@ -180,3 +180,74 @@ func TestPathHashIgnoresQueryOnly(t *testing.T) {
 		t.Error("escaped path must not be normalized")
 	}
 }
+
+func TestSuccessNeedsTheOperationsMethod(t *testing.T) {
+	bad := []struct {
+		method string
+		op     string
+	}{
+		{"GET", OpEnsureCollection}, {"PUT", OpEnsureCollection}, {"GET", OpPathExists},
+		{"PROPFIND", OpFetchFile}, {"HEAD", OpPreviewFile}, {"POST", OpFetchFile},
+	}
+	for _, c := range bad {
+		raw, rc := pair(c.method, 200, c.op, "success")
+		if got := one(t, raw, rc).Class; got != Unclassified {
+			t.Errorf("%s 200 %s: got %v", c.method, c.op, got)
+		}
+	}
+	raw, rc := pair("HEAD", 200, OpFetchFile, "success")
+	if one(t, raw, rc).Class != Success {
+		t.Error("HEAD 200 fetch_file must be success")
+	}
+}
+
+func TestValidEscapedPath(t *testing.T) {
+	good := []string{"/", "/a/b%20c", "/a?x=1", "/a%2F%2f", "/nextcloud/remote.php/dav/files/alice/"}
+	bad := []string{"", "a/b", "//host/x", "http://example.com/x", "/a#frag", "/a?x#y", "/a%2", "/a%zz", "/a b", "/a\x00", "/a\n", "/é"}
+	for _, s := range good {
+		if !ValidEscapedPath(s) {
+			t.Errorf("should be valid: %q", s)
+		}
+	}
+	for _, s := range bad {
+		if ValidEscapedPath(s) {
+			t.Errorf("should be invalid: %q", s)
+		}
+	}
+	// an otherwise perfect pair with an invalid path never matches
+	raw, rc := pair("MKCOL", 405, OpEnsureCollection, "expected")
+	raw.Path = "/a%zz"
+	rc.PathHash = PathHash(raw.Path)
+	if r := one(t, raw, rc); r.Class != Unclassified || r.Reason != "invalid_path" {
+		t.Errorf("%+v", r)
+	}
+}
+
+func TestReasonCodesAreGenericAndInputsAreUntouched(t *testing.T) {
+	raw, rc := pair("MKCOL", 405, OpEnsureCollection, "expected")
+	raws, rcs := []RawEvent{raw}, []Receipt{rc}
+	rawCopy, rcCopy := raws[0], rcs[0]
+	if r := Classify(raws, rcs)[0]; r.Reason != "matched" {
+		t.Fatalf("%+v", r)
+	}
+	if raws[0] != rawCopy || rcs[0] != rcCopy {
+		t.Fatal("inputs were modified")
+	}
+	if r := Classify(raws, nil)[0]; r.Reason != "no_receipt" {
+		t.Fatalf("%+v", r)
+	}
+	// negative control: changing exactly one binding field breaks the match
+	for name, f := range map[string]func(*RawEvent){
+		"method": func(e *RawEvent) { e.Method = "PROPFIND" },
+		"status": func(e *RawEvent) { e.Status = 404 },
+		"path":   func(e *RawEvent) { e.Path = path + "z" },
+		"id":     func(e *RawEvent) { e.RequestID = id2 },
+	} {
+		e := raw
+		f(&e)
+		r := Classify([]RawEvent{e}, rcs)[0]
+		if r.Class != Unclassified || strings.Contains(r.Reason, "/") {
+			t.Errorf("%s: %+v", name, r)
+		}
+	}
+}

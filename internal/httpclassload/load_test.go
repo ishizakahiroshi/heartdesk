@@ -23,8 +23,27 @@ func TestLoadBoundsReceipts(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ReceiptFile), []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	_, got := Load(filepath.Join(dir, RawFile), filepath.Join(dir, ReceiptFile), now.Add(-time.Hour), parse, nil)
+	_, got := Load(filepath.Join(dir, RawFile), filepath.Join(dir, ReceiptFile), now, now.Add(-time.Hour), parse, nil)
 	if len(got) != 1 || got[0].RequestID != id(2) {
 		t.Fatalf("want only the current receipt once, got %+v", got)
+	}
+}
+
+func TestLoadDropsReceiptsDatedBeyondSkewButKeepsFutureEvents(t *testing.T) {
+	dir := t.TempDir()
+	parse := func(s string) (time.Time, error) { return time.Parse(time.RFC3339, s) }
+	now := time.Date(2026, 10, 30, 12, 0, 0, 0, time.UTC)
+	future := now.Add(time.Hour).Format(time.RFC3339)
+	rc := fmt.Sprintf(`{"ts":%q,"request_id":"%032x","method":"GET","path_hash":"%s","status":404,"operation":"fetch_file","outcome":"integration_error"}`+"\n", future, 7, strings.Repeat("a", 64))
+	raw := fmt.Sprintf(`{"ts":%q,"ip":"203.0.113.9","request_id":"%032x","method":"GET","path":"/x","status":404}`+"\n", future, 7)
+	if err := os.WriteFile(filepath.Join(dir, ReceiptFile), []byte(rc), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, RawFile), []byte(raw), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ev, got := Load(filepath.Join(dir, RawFile), filepath.Join(dir, ReceiptFile), now, now.Add(-time.Hour), parse, nil)
+	if len(got) != 0 || len(ev) != 1 {
+		t.Fatalf("events=%d receipts=%d", len(ev), len(got))
 	}
 }

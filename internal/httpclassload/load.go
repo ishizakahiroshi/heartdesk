@@ -48,8 +48,8 @@ type scopeLine struct {
 // field (written by the ingest step from the authenticated report) and falls
 // back to the raw file's directory name, so a record carrying another agent's id never
 // matches this directory's records. keep filters raw events (nil keeps all
-// with a parseable ts at or after cutoff). Unreadable files yield nothing.
-func Load(rawPath, receiptPath string, cutoff time.Time, parseTime func(string) (time.Time, error), keep func(Event) bool) ([]Event, []httpclassification.Receipt) {
+// with a parseable ts at or after cutoff; future-dated raw events are kept so they keep scoring, they simply cannot match a receipt because receipts later than now+MatchWindow are dropped). Unreadable files yield nothing.
+func Load(rawPath, receiptPath string, now, cutoff time.Time, parseTime func(string) (time.Time, error), keep func(Event) bool) ([]Event, []httpclassification.Receipt) {
 	fallback := filepath.Base(filepath.Dir(rawPath))
 	var events []Event
 	_ = readJSONL(rawPath, func(line []byte) {
@@ -90,7 +90,7 @@ func Load(rawPath, receiptPath string, cutoff time.Time, parseTime func(string) 
 		}
 		// Receipts older than the window cannot match any kept event. Receipts
 		// with an unusable ts are kept: they still make their request id ambiguous.
-		if !r.Time.IsZero() && r.Time.Before(cutoff.Add(-httpclassification.MatchWindow)) {
+		if !r.Time.IsZero() && (r.Time.Before(cutoff.Add(-httpclassification.MatchWindow)) || r.Time.After(now.Add(httpclassification.MatchWindow))) {
 			return
 		}
 		// heartpost re-sends old receipts after a rotation: collapse exact copies.

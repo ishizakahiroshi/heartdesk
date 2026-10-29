@@ -93,6 +93,9 @@ type Result struct {
 	Class     Class
 	Operation string
 	PathHash  string
+	// Reason is a stable generic code (never contains a path or any input
+	// text) saying why the event is, or is not, classified.
+	Reason string
 }
 
 var (
@@ -118,8 +121,12 @@ func ValidRequestID(s string) bool { return reRequestID.MatchString(s) }
 // outcome is only checked for consistency with this; it never decides.
 func policyOutcome(op, method string, status int) (Class, string) {
 	if status >= 200 && status < 300 {
-		switch op {
-		case OpEnsureCollection, OpPathExists, OpFetchFile, OpPreviewFile:
+		// Only the method that operation really uses counts as success evidence.
+		switch {
+		case op == OpEnsureCollection && method == "MKCOL",
+			op == OpPathExists && method == "PROPFIND",
+			op == OpFetchFile && (method == "GET" || method == "HEAD"),
+			op == OpPreviewFile && method == "GET":
 			return Success, "success"
 		}
 		return Unclassified, ""
@@ -172,43 +179,84 @@ func Classify(raw []RawEvent, receipts []Receipt) []Result {
 	}
 
 	for i, e := range raw {
-		if !ValidRequestID(e.RequestID) {
-			continue
-		}
-		k := key{e.Scope, e.RequestID}
-		if rawCount[k] != 1 || rcCount[k] != 1 {
-			continue
-		}
-		r := receipts[rcIndex[k]]
-		if !wellFormed(r) {
-			continue
-		}
-		method := strings.ToUpper(e.Method)
-		if e.Method == "" || method != e.Method || r.Method != method {
-			continue
-		}
-		if r.Status != e.Status || r.PathHash != PathHash(e.Path) {
-			continue
-		}
-		if e.Time.IsZero() || r.Time.IsZero() {
-			continue
-		}
-		d := e.Time.Sub(r.Time)
-		if d < 0 {
-			d = -d
-		}
-		if d > MatchWindow {
-			continue
-		}
-		class, outcome := policyOutcome(r.Operation, method, e.Status)
-		if class == Unclassified || r.Outcome != outcome {
-			continue
-		}
-		out[i] = Result{Class: class, Operation: r.Operation, PathHash: r.PathHash}
+		out[i].Reason = classifyOne(e, rawCount, rcCount, rcIndex, receipts, &out[i])
 	}
 	return out
 }
 
+// ValidEscapedPath reports whether s is an origin-form request target: it
+// starts with a single "/", has no fragment, no control or blank bytes and only
+// well-formed %XX escapes. A query string is allowed (and ignored by PathHash).
+func ValidEscapedPath(s string) bool {
+	if len(s) == 0 || s[0] != '/' || strings.HasPrefix(s, "//") || strings.IndexByte(s, '#') >= 0 {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c <= 0x20 || c >= 0x7f {
+			return false
+		}
+		if c == '%' {
+			if i+2 >= len(s) || !isHex(s[i+1]) || !isHex(s[i+2]) {
+				return false
+			}
+			i += 2
+		}
+	}
+	return true
+}
+
+func isHex(c byte) bool {
+	return c >= '0' && c <= '9' || c >= 'a' && c <= 'f' || c >= 'A' && c <= 'F'
+}
+
+func classifyOne(e RawEvent, rawCount, rcCount map[key]int, rcIndex map[key]int, receipts []Receipt, res *Result) string {
+	if !ValidRequestID(e.RequestID) {
+		return "no_request_id"
+	}
+	k := key{e.Scope, e.RequestID}
+	if rawCount[k] != 1 {
+		return "duplicate_request_id"
+	}
+	switch rcCount[k] {
+	case 0:
+		return "no_receipt"
+	case 1:
+	default:
+		return "ambiguous_receipt"
+	}
+	r := receipts[rcIndex[k]]
+	if !wellFormed(r) {
+		return "receipt_malformed"
+	}
+	if !ValidEscapedPath(e.Path) {
+		return "invalid_path"
+	}
+	method := strings.ToUpper(e.Method)
+	if e.Method == "" || method != e.Method || r.Method != method ||
+		r.Status != e.Status || r.PathHash != PathHash(e.Path) {
+		return "binding_mismatch"
+	}
+	if e.Time.IsZero() || r.Time.IsZero() {
+		return "time_invalid"
+	}
+	d := e.Time.Sub(r.Time)
+	if d < 0 {
+		d = -d
+	}
+	if d > MatchWindow {
+		return "time_skew"
+	}
+	class, outcome := policyOutcome(r.Operation, method, e.Status)
+	if class == Unclassified {
+		return "policy_not_covered"
+	}
+	if r.Outcome != outcome {
+		return "outcome_mismatch"
+	}
+	*res = Result{Class: class, Operation: r.Operation, PathHash: r.PathHash}
+	return "matched"
+}
 func wellFormed(r Receipt) bool {
 	return ValidRequestID(r.RequestID) && rePathHash.MatchString(r.PathHash) &&
 		r.Method != "" && r.Status > 0 && r.Operation != "" && r.Outcome != ""

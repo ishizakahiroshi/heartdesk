@@ -702,6 +702,9 @@ func collectNC4xxCounts(ctx context.Context, dir string, cutoff time.Time, logLi
 	return out
 }
 
+// scoreNow is the clock used for receipt time bounds (tests replace it).
+var scoreNow = time.Now
+
 // nc4xxClassified is the result of correlating Nextcloud 4xx events with the
 // integration's receipts. Scored keeps the existing weight; Expected and
 // IntegrationErr are not scored but stay visible.
@@ -719,17 +722,26 @@ func collectNC4xxEventCounts(ctx context.Context, path string, cutoff time.Time,
 
 func collectNC4xxEventClassified(ctx context.Context, path, receiptPath string, cutoff time.Time, logLine func(string, string)) nc4xxClassified {
 	out := nc4xxClassified{Scored: map[string]int{}, Expected: map[string]int{}, IntegrationErr: map[string]int{}}
-	events, receipts := httpclassload.Load(path, receiptPath, cutoff, parseFlexTimestamp, func(e httpclassload.Event) bool {
+	scoreTarget := func(e httpclassload.Event) bool {
 		if !isIPv4(e.IP) || e.Status < 400 || e.Status >= 500 {
 			return false
 		}
 		pathOnly := strings.SplitN(e.Path, "?", 2)[0]
 		return pathOnly == "/nextcloud" || strings.HasPrefix(pathOnly, "/nextcloud/")
+	}
+	// Events carrying a request id are loaded even when they are not scoring
+	// targets (2xx, 3xx, 5xx, other paths): a nonce reused on any other request
+	// must make that nonce ambiguous, or one receipt could excuse two requests.
+	events, receipts := httpclassload.Load(path, receiptPath, scoreNow(), cutoff, parseFlexTimestamp, func(e httpclassload.Event) bool {
+		return scoreTarget(e) || httpclassification.ValidRequestID(e.RequestID)
 	})
 	results := httpclassload.Classify(events, receipts)
 	for i, e := range events {
 		if ctx.Err() != nil {
 			break
+		}
+		if !scoreTarget(e) {
+			continue
 		}
 		switch results[i].Class {
 		case httpclassification.Expected:
@@ -743,6 +755,7 @@ func collectNC4xxEventClassified(ctx context.Context, path, receiptPath string, 
 	logLine("", fmt.Sprintf("agent nc4xx parsed: ip=%d expected_ip=%d integration_error_ip=%d", len(out.Scored), len(out.Expected), len(out.IntegrationErr)))
 	return out
 }
+
 func collectBannedIPs(ctx context.Context, logLine func(string, string)) map[string]struct{} {
 	jails := []string{"sshd", "nginx-basic-auth", "recidive"}
 	out := make(map[string]struct{})
