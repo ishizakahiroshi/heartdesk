@@ -1,5 +1,7 @@
 # P-20261030-001 heartdesk: correlate trusted HTTP operation results
 
+Management Issue: https://github.com/ishizakahiroshi/heartdesk/issues/4
+
 Implement a small pure Go package `httpclassification` and its tests. Do not change existing runtime, monitoring, UI, dependencies, workflows, or other packages. The local integrator owns those files in a separate worktree. This public task contains only generic behavior and synthetic data.
 
 Base source: `990ea7a54e9928c9a2dcbe70b1c6ec7afb994820`. Use this instruction commit as the branch base. Read FACTS.md and REVIEW.md. Parent alone updates PROGRESS.md.
