@@ -19,6 +19,25 @@
 		<div class="card-header-actions"></div>
 	</div>
 	<div class="card-body">
+		{{with .Inventory}}
+		<details class="inventory-report" open>
+			<summary>構成情報 — {{.StatusText}}</summary>
+			<p>対象: {{.AgentID}} ／ 採取時刻: {{if .ObservedAt}}{{.ObservedAt}}{{else}}未確認{{end}}</p>
+			{{if .Stale}}<p role="status">構成情報の採取から2時間を超えています。他の監視情報が届いていても、再収集が必要です。</p>{{end}}
+			{{if .HistoryLimited}}<p>表示できる履歴の範囲に上限があります。</p>{{end}}
+			<div class="inventory-table-wrap"><table class="inventory-table inventory-summary-table">
+				<thead><tr><th>項目</th><th>今回の取得</th><th>最後の成功</th><th>採取元</th></tr></thead>
+				<tbody>{{range .Sections}}<tr><th scope="row">{{.Label}}</th><td data-label="今回の取得">{{.StatusText}}{{if .ErrorCode}} ({{.ErrorCode}}){{end}}</td><td data-label="最後の成功">{{if .LastSuccessAt}}{{.LastSuccessAt}}{{else}}未確認{{end}}</td><td data-label="採取元">{{.Source}}</td></tr>{{end}}</tbody>
+			</table></div>
+			{{range .Sections}}{{if .Items}}
+			<details><summary>{{.Label}}の保存済み情報（{{len .Items}}項目）</summary>
+				{{if eq .Status "partial"}}<p>確認できた情報と前回成功時の情報を表示しています。未確認の範囲があります。</p>{{else if ne .Status "ok"}}<p>今回の取得に成功していないため、前回成功時の情報を表示しています。</p>{{end}}
+				<div class="inventory-table-wrap"><table class="inventory-table"><thead><tr><th>対象</th><th>観測値</th></tr></thead><tbody>{{range $key,$value := .DisplayItems}}<tr><td>{{$key}}</td><td>{{$value}}</td></tr>{{end}}</tbody></table></div>
+				{{if gt (len .Items) 50}}<p>画面には先頭50項目を表示しています。</p>{{end}}
+			</details>{{end}}{{end}}
+			{{if .Changes}}<details><summary>前回成功時からの変更（{{len .Changes}}件）</summary><div class="inventory-table-wrap"><table class="inventory-table"><thead><tr><th>項目</th><th>対象</th><th>前回</th><th>今回</th></tr></thead><tbody>{{range .Changes}}<tr><td>{{.Section}}</td><td>{{.Item}}</td><td>{{if .Before}}{{.Before}}{{else}}なし{{end}}</td><td>{{if .After}}{{.After}}{{else}}なし{{end}}</td></tr>{{end}}</tbody></table></div></details>{{end}}
+		</details>
+		{{end}}
 		<div class="svc-grid">
 			{{if .UbuntuVer}}
 			<div class="svc-box svc-ok">

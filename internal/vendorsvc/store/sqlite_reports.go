@@ -4,10 +4,29 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"regexp"
 	"time"
 )
 
 type sqliteReportStore struct{ db *sql.DB }
+
+// ListRawReportsForCollector bounds history by the requested collector so
+// unrelated frequent reports cannot evict slow configuration snapshots.
+func (s *sqliteReportStore) ListRawReportsForCollector(ctx context.Context, tenantID, agentID, collector string, limit int) ([]RawReport, error) {
+	if !regexp.MustCompile(`^[a-z0-9_]+$`).MatchString(collector) || limit < 1 || limit > 100 {
+		return nil, fmt.Errorf("invalid collector history query")
+	}
+	const q = `SELECT id,tenant_id,agent_id,received_at,reported_at,json_object(?,json_extract(collectors_json,?))
+	FROM agent_reports_raw WHERE tenant_id=? AND agent_id=? AND json_type(collectors_json,?) IS NOT NULL
+	ORDER BY received_at DESC,id DESC LIMIT ?`
+	path := "$." + collector
+	rows, err := s.db.QueryContext(ctx, q, collector, path, tenantID, agentID, path, limit)
+	if err != nil {
+		return nil, fmt.Errorf("collector history query failed")
+	}
+	defer rows.Close()
+	return scanRawReports(rows)
+}
 
 // NewReportStore は ReportStore の SQLite 実装を返す。
 func NewReportStore(db *sql.DB) ReportStore {
@@ -29,7 +48,7 @@ func (s *sqliteReportStore) ListRawReports(ctx context.Context, tenantID, agentI
 	const q = `SELECT id, tenant_id, agent_id, received_at, reported_at, collectors_json
 		FROM agent_reports_raw
 		WHERE tenant_id = ? AND agent_id = ? AND received_at >= ? AND received_at <= ?
-		ORDER BY received_at DESC LIMIT ?`
+		ORDER BY received_at DESC, id DESC LIMIT ?`
 	fromStr := from.UTC().Format("2006-01-02T15:04:05Z")
 	toStr := to.UTC().Format("2006-01-02T15:04:05Z")
 	rows, err := s.db.QueryContext(ctx, q, tenantID, agentID, fromStr, toStr, limit)
@@ -49,6 +68,16 @@ func (s *sqliteReportStore) PurgeRawReportsOlderThan(ctx context.Context, tenant
 	}
 	n, _ := res.RowsAffected()
 	return n, nil
+}
+
+// PurgeAgentRawReportsOlderThan preserves the legacy per-agent retention scope.
+func (s *sqliteReportStore) PurgeAgentRawReportsOlderThan(ctx context.Context, tenantID, agentID string, before time.Time) (int64, error) {
+	const q = `DELETE FROM agent_reports_raw WHERE tenant_id = ? AND agent_id = ? AND received_at < ?`
+	result, err := s.db.ExecContext(ctx, q, tenantID, agentID, before.UTC().Format(storeTimeLayout))
+	if err != nil {
+		return 0, fmt.Errorf("agent report retention failed")
+	}
+	return result.RowsAffected()
 }
 
 func (s *sqliteReportStore) UpsertHourlySummary(ctx context.Context, tenantID string, sum HourlySummary) error {

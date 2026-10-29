@@ -79,6 +79,7 @@ type AlertState struct {
 	FirstBreach    map[string]time.Time `json:"first_breach"`
 	Offsets        map[string]int64     `json:"offsets"`
 	PendingNCUsers map[string]time.Time `json:"pending_nc_users"`
+	EventReceipts  map[string]time.Time `json:"event_receipts,omitempty"`
 }
 
 // nowFn は現在時刻取得（テストで差し替え可能）。
@@ -186,12 +187,14 @@ func Run(cfg *config.AppConfig) ([]string, error) {
 	fired = append(fired, evaluateNCUserEvents(cfg, rules, state)...)
 	// 6. Nextcloud のファイル大量取得（audit.log を直接読む。集計は nc_file_access_state.json）
 	fired = append(fired, evaluateNCFileAccess(cfg, rules, state)...)
+	observationEvents, eventErr := evaluateEvents(cfg, rules, state)
+	fired = append(fired, observationEvents...)
 
 	if err := saveAlertState(statePath(cfg), state); err != nil {
 		// state 保存失敗は致命ではない（次回ログから再評価できる）が記録する。
 		log.Printf("alerts: save state: %v", err)
 	}
-	return fired, nil
+	return fired, eventErr
 }
 
 // loadAlertRules はルールファイルを読む。
@@ -249,6 +252,9 @@ func newAlertState() *AlertState {
 }
 
 func (st *AlertState) ensureMaps() {
+	if st.EventReceipts == nil {
+		st.EventReceipts = map[string]time.Time{}
+	}
 	if st.Active == nil {
 		st.Active = map[string]bool{}
 	}

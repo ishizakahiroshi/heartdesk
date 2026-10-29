@@ -188,7 +188,7 @@ type servicesCollectorResult struct {
 // コレクターが存在しない場合は false を返す。
 func servicesFromReport(agentID string) (ServicesResponse, bool) {
 	raw := loadCollectorRaw(agentID, "services")
-	if raw == nil {
+	if !collectorObject(raw, "services", "order") {
 		return ServicesResponse{}, false
 	}
 	var result servicesCollectorResult

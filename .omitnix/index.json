@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "generated": {
-    "commit": "d6c28d7510c83c1dc3a4b54757c9bc8dcbc39a71",
+    "commit": "a9e3c07b1e6cdd865e54fb39640c45ebdb0e7231",
     "dirty": true,
     "tool": "omitnix 0.1.4",
     "partial": false,
@@ -138,9 +138,9 @@
     "discovery_note": ""
   },
   "coverage": {
-    "discovered": 412,
-    "analyzed": 356,
-    "unresolved": 21,
+    "discovered": 425,
+    "analyzed": 368,
+    "unresolved": 22,
     "unknown": 3,
     "unclaimed": 32,
     "skipped_by_config": 0
@@ -674,6 +674,35 @@
     },
     {
       "path": "app/extensions.go",
+      "adapter": "go",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "none_observed",
+          "value": null
+        },
+        "authentication": {
+          "state": "not_configured"
+        },
+        "authorization": {
+          "state": "not_configured"
+        },
+        "reads": {
+          "state": "none_observed",
+          "value": []
+        },
+        "writes": {
+          "state": "none_observed",
+          "value": []
+        },
+        "screen_to_api": {
+          "state": "out_of_scope"
+        }
+      },
+      "unresolved": []
+    },
+    {
+      "path": "app/inventory_pipeline_test.go",
       "adapter": "go",
       "status": "analyzed",
       "fields": {
@@ -1472,6 +1501,35 @@
       "unresolved": []
     },
     {
+      "path": "core/monitor/agent_retention_test.go",
+      "adapter": "go",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "none_observed",
+          "value": null
+        },
+        "authentication": {
+          "state": "not_configured"
+        },
+        "authorization": {
+          "state": "not_configured"
+        },
+        "reads": {
+          "state": "none_observed",
+          "value": []
+        },
+        "writes": {
+          "state": "none_observed",
+          "value": []
+        },
+        "screen_to_api": {
+          "state": "out_of_scope"
+        }
+      },
+      "unresolved": []
+    },
+    {
       "path": "core/monitor/agent_status_test.go",
       "adapter": "go",
       "status": "analyzed",
@@ -1937,6 +1995,64 @@
     },
     {
       "path": "core/monitor/card_render.go",
+      "adapter": "go",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "none_observed",
+          "value": null
+        },
+        "authentication": {
+          "state": "not_configured"
+        },
+        "authorization": {
+          "state": "not_configured"
+        },
+        "reads": {
+          "state": "none_observed",
+          "value": []
+        },
+        "writes": {
+          "state": "none_observed",
+          "value": []
+        },
+        "screen_to_api": {
+          "state": "out_of_scope"
+        }
+      },
+      "unresolved": []
+    },
+    {
+      "path": "core/monitor/collector_availability.go",
+      "adapter": "go",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "none_observed",
+          "value": null
+        },
+        "authentication": {
+          "state": "not_configured"
+        },
+        "authorization": {
+          "state": "not_configured"
+        },
+        "reads": {
+          "state": "none_observed",
+          "value": []
+        },
+        "writes": {
+          "state": "none_observed",
+          "value": []
+        },
+        "screen_to_api": {
+          "state": "out_of_scope"
+        }
+      },
+      "unresolved": []
+    },
+    {
+      "path": "core/monitor/collector_availability_test.go",
       "adapter": "go",
       "status": "analyzed",
       "fields": {
@@ -2635,6 +2751,180 @@
     },
     {
       "path": "core/monitor/input_validation_test.go",
+      "adapter": "go",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "none_observed",
+          "value": null
+        },
+        "authentication": {
+          "state": "not_configured"
+        },
+        "authorization": {
+          "state": "not_configured"
+        },
+        "reads": {
+          "state": "none_observed",
+          "value": []
+        },
+        "writes": {
+          "state": "none_observed",
+          "value": []
+        },
+        "screen_to_api": {
+          "state": "out_of_scope"
+        }
+      },
+      "unresolved": []
+    },
+    {
+      "path": "core/monitor/inventory.go",
+      "adapter": "go",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "none_observed",
+          "value": null
+        },
+        "authentication": {
+          "state": "not_configured"
+        },
+        "authorization": {
+          "state": "not_configured"
+        },
+        "reads": {
+          "state": "none_observed",
+          "value": []
+        },
+        "writes": {
+          "state": "none_observed",
+          "value": []
+        },
+        "screen_to_api": {
+          "state": "out_of_scope"
+        }
+      },
+      "unresolved": []
+    },
+    {
+      "path": "core/monitor/inventory_authorization_test.go",
+      "adapter": "go",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "none_observed",
+          "value": null
+        },
+        "authentication": {
+          "state": "not_configured"
+        },
+        "authorization": {
+          "state": "not_configured"
+        },
+        "reads": {
+          "state": "none_observed",
+          "value": []
+        },
+        "writes": {
+          "state": "none_observed",
+          "value": []
+        },
+        "screen_to_api": {
+          "state": "out_of_scope"
+        }
+      },
+      "unresolved": []
+    },
+    {
+      "path": "core/monitor/inventory_events.go",
+      "adapter": "go",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "none_observed",
+          "value": null
+        },
+        "authentication": {
+          "state": "not_configured"
+        },
+        "authorization": {
+          "state": "not_configured"
+        },
+        "reads": {
+          "state": "none_observed",
+          "value": []
+        },
+        "writes": {
+          "state": "none_observed",
+          "value": []
+        },
+        "screen_to_api": {
+          "state": "out_of_scope"
+        }
+      },
+      "unresolved": []
+    },
+    {
+      "path": "core/monitor/inventory_events_test.go",
+      "adapter": "go",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "none_observed",
+          "value": null
+        },
+        "authentication": {
+          "state": "not_configured"
+        },
+        "authorization": {
+          "state": "not_configured"
+        },
+        "reads": {
+          "state": "none_observed",
+          "value": []
+        },
+        "writes": {
+          "state": "none_observed",
+          "value": []
+        },
+        "screen_to_api": {
+          "state": "out_of_scope"
+        }
+      },
+      "unresolved": []
+    },
+    {
+      "path": "core/monitor/inventory_jsonl_test.go",
+      "adapter": "go",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "none_observed",
+          "value": null
+        },
+        "authentication": {
+          "state": "not_configured"
+        },
+        "authorization": {
+          "state": "not_configured"
+        },
+        "reads": {
+          "state": "none_observed",
+          "value": []
+        },
+        "writes": {
+          "state": "none_observed",
+          "value": []
+        },
+        "screen_to_api": {
+          "state": "out_of_scope"
+        }
+      },
+      "unresolved": []
+    },
+    {
+      "path": "core/monitor/inventory_test.go",
       "adapter": "go",
       "status": "analyzed",
       "fields": {
@@ -4800,6 +5090,93 @@
     },
     {
       "path": "internal/alerts/event_delivery_retry_test.go",
+      "adapter": "go",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "none_observed",
+          "value": null
+        },
+        "authentication": {
+          "state": "not_configured"
+        },
+        "authorization": {
+          "state": "not_configured"
+        },
+        "reads": {
+          "state": "none_observed",
+          "value": []
+        },
+        "writes": {
+          "state": "none_observed",
+          "value": []
+        },
+        "screen_to_api": {
+          "state": "out_of_scope"
+        }
+      },
+      "unresolved": []
+    },
+    {
+      "path": "internal/alerts/events.go",
+      "adapter": "go",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "none_observed",
+          "value": null
+        },
+        "authentication": {
+          "state": "not_configured"
+        },
+        "authorization": {
+          "state": "not_configured"
+        },
+        "reads": {
+          "state": "none_observed",
+          "value": []
+        },
+        "writes": {
+          "state": "none_observed",
+          "value": []
+        },
+        "screen_to_api": {
+          "state": "out_of_scope"
+        }
+      },
+      "unresolved": []
+    },
+    {
+      "path": "internal/alerts/events_missing_destination_test.go",
+      "adapter": "go",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "none_observed",
+          "value": null
+        },
+        "authentication": {
+          "state": "not_configured"
+        },
+        "authorization": {
+          "state": "not_configured"
+        },
+        "reads": {
+          "state": "none_observed",
+          "value": []
+        },
+        "writes": {
+          "state": "none_observed",
+          "value": []
+        },
+        "screen_to_api": {
+          "state": "out_of_scope"
+        }
+      },
+      "unresolved": []
+    },
+    {
+      "path": "internal/alerts/events_test.go",
       "adapter": "go",
       "status": "analyzed",
       "fields": {
@@ -9398,7 +9775,7 @@
     {
       "path": "internal/vendorsvc/store/sqlite_reports.go",
       "adapter": "go",
-      "status": "analyzed",
+      "status": "unresolved",
       "fields": {
         "summary": {
           "state": "none_observed",
@@ -9428,7 +9805,12 @@
           "state": "out_of_scope"
         }
       },
-      "unresolved": []
+      "unresolved": [
+        {
+          "code": "sql_unreadable",
+          "detail": "sqlglot could not read: SELECT id,tenant_id,agent_id,received_at,reported_at,json_object(?,jso..."
+        }
+      ]
     },
     {
       "path": "internal/vendorsvc/store/sqlite_sessions.go",
@@ -11742,7 +12124,9 @@
         "internal/vendorsvc/store/sqlite_reports.go"
       ],
       "in_schema_snapshot": false,
-      "unresolved_in": []
+      "unresolved_in": [
+        "internal/vendorsvc/store/sqlite_reports.go"
+      ]
     },
     {
       "name": "agent_reports_hourly",
@@ -11753,7 +12137,9 @@
         "internal/vendorsvc/store/sqlite_reports.go"
       ],
       "in_schema_snapshot": false,
-      "unresolved_in": []
+      "unresolved_in": [
+        "internal/vendorsvc/store/sqlite_reports.go"
+      ]
     },
     {
       "name": "agent_reports_raw",
@@ -11766,7 +12152,9 @@
         "internal/vendorsvc/store/sqlite_reports.go"
       ],
       "in_schema_snapshot": false,
-      "unresolved_in": []
+      "unresolved_in": [
+        "internal/vendorsvc/store/sqlite_reports.go"
+      ]
     },
     {
       "name": "agents",
@@ -11905,9 +12293,10 @@
   "table_gaps": {
     "files": [
       "internal/auditdb/auditdb.go",
-      "internal/scheduler/daemon/purge_old_reports.go"
+      "internal/scheduler/daemon/purge_old_reports.go",
+      "internal/vendorsvc/store/sqlite_reports.go"
     ],
-    "unresolved_count": 4,
-    "note": "4 statements in 2 files could not be read, so the table list may be incomplete: a table mentioned only there is missing from it entirely, and a table that is listed may be touched in more places than it names."
+    "unresolved_count": 5,
+    "note": "5 statements in 3 files could not be read, so the table list may be incomplete: a table mentioned only there is missing from it entirely, and a table that is listed may be touched in more places than it names."
   }
 }

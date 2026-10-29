@@ -44,6 +44,9 @@ var alertRulesMu sync.RWMutex
 
 // AlertRuleDefOrder はルール定義の表示順
 var AlertRuleDefOrder = []string{
+	"inventory_changed",
+	"inventory_stale",
+	"inventory_collection_failed",
 	"memory_high",
 	"disk_high",
 	"service_down_nginx",
@@ -65,6 +68,9 @@ const ncCountThresholdMax = 100000
 
 // AlertRuleDefs はアラートルールの静的定義
 var AlertRuleDefs = map[string]AlertRuleDef{
+	"inventory_changed":           {Label: "構成変更", Desc: "前回成功時からの構成差分。収集失敗は削除とみなさない"},
+	"inventory_stale":             {Label: "構成情報の鮮度切れ", Desc: "構成情報の採取から2時間超"},
+	"inventory_collection_failed": {Label: "構成情報の取得失敗・一部未確認", Desc: "権限不足や取得エラーを通知"},
 	"memory_high": {
 		Label: "メモリ高騰", Desc: "使用量/合計メモリ", HasThreshold: true, HasRecovery: true, HasSustain: true,
 	},
