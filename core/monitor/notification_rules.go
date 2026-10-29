@@ -58,6 +58,7 @@ var AlertRuleDefOrder = []string{
 	"nc_public_link_burst",
 	"nc_service_new_ip",
 	"nc_service_volume",
+	"integration_http_error",
 }
 
 // ncCountThresholdMax は Nextcloud の取得ルール（件数で判定する）のしきい値の上限。
@@ -124,6 +125,13 @@ var AlertRuleDefs = map[string]AlertRuleDef{
 		Label: "Nextcloud 連携アカウントの大量取得", Desc: "連携アカウントの直近60分の取得件数・0 は判定しない",
 		HasThreshold: true, ThresholdMin: 0, ThresholdMax: ncCountThresholdMax, IntegerThreshold: true,
 		DefaultThreshold: 0, DefaultCooldownSec: 10800,
+	},
+	// 連携アプリ自身が受領書で「失敗した」と申告した HTTP エラー（internal/alerts/integration_http_error.go）。
+	// 既定は無効（保存されていないルールは無効）。継続秒は使わない。
+	"integration_http_error": {
+		Label: "連携アプリのHTTPエラー", Desc: "受領書と突き合わせた連携アプリ自身のHTTPエラー件数・対象と送信元ごとに通知",
+		HasThreshold: true, ThresholdMin: 1, ThresholdMax: ncCountThresholdMax, IntegerThreshold: true,
+		DefaultThreshold: 1, DefaultCooldownSec: 10800,
 	},
 }
 

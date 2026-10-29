@@ -7,20 +7,21 @@ package alerts
 // 挟んだ）。ここは表示名だけの写しなので小さな重複を許し、ズレは
 // core/monitor 側の parity テストで検出する。
 var ruleLabels = map[string]string{
-	"memory_high":           "メモリ高騰",
-	"disk_high":             "ディスク逼迫",
-	"service_down_nginx":    "サービス停止 (nginx)",
-	"service_down_mariadb":  "サービス停止 (mariadb)",
-	"threat_score_critical": "脅威スコア100到達",
-	"nc_user_created":       "Nextcloud 新規ユーザー作成",
-	"nc_user_first_login":   "Nextcloud 新規ユーザー初回ログイン",
-	"nc_mass_access":        "Nextcloud 大量取得",
-	"nc_folder_sweep":       "Nextcloud 多数フォルダ巡回",
-	"nc_new_ip_access":      "Nextcloud 初めての接続元からの取得",
-	"nc_off_hours_access":   "Nextcloud 夜間・土日の取得",
-	"nc_public_link_burst":  "Nextcloud 公開リンクへの集中アクセス",
-	"nc_service_new_ip":     "Nextcloud 連携アカウントの見知らぬ接続元",
-	"nc_service_volume":     "Nextcloud 連携アカウントの大量取得",
+	"memory_high":            "メモリ高騰",
+	"disk_high":              "ディスク逼迫",
+	"service_down_nginx":     "サービス停止 (nginx)",
+	"service_down_mariadb":   "サービス停止 (mariadb)",
+	"threat_score_critical":  "脅威スコア100到達",
+	"nc_user_created":        "Nextcloud 新規ユーザー作成",
+	"nc_user_first_login":    "Nextcloud 新規ユーザー初回ログイン",
+	"nc_mass_access":         "Nextcloud 大量取得",
+	"nc_folder_sweep":        "Nextcloud 多数フォルダ巡回",
+	"nc_new_ip_access":       "Nextcloud 初めての接続元からの取得",
+	"nc_off_hours_access":    "Nextcloud 夜間・土日の取得",
+	"nc_public_link_burst":   "Nextcloud 公開リンクへの集中アクセス",
+	"nc_service_new_ip":      "Nextcloud 連携アカウントの見知らぬ接続元",
+	"nc_service_volume":      "Nextcloud 連携アカウントの大量取得",
+	"integration_http_error": "連携アプリのHTTPエラー",
 }
 
 // NotifyRuleLabels は通知の見出しに使うラベル表の写しを返す。

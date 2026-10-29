@@ -163,6 +163,9 @@ func eventKindAndSource(collectorName string, ev map[string]interface{}) (string
 		return "fail2ban", "fail2ban"
 	case "honeypot":
 		return "honeypot", "honeypot"
+	case "integration_receipt":
+		// Receipts written by the integration (httpclassification, policy v2).
+		return "integration_receipt", "integration_receipt"
 	case "nextcloud":
 		if eventString(ev, "source") == "audit" {
 			return "audit", "audit"
@@ -188,6 +191,14 @@ func buildAgentEventDedupeKey(source, ts string, ev map[string]interface{}) stri
 		eventString(ev, "msg"),
 		eventString(ev, "ua"),
 		eventString(ev, "user_agent"),
+	}
+	// Events that carry a request id (and receipts, which carry a path hash and
+	// an operation) must not collapse into each other when everything else is
+	// equal. Appended only when present so existing keys do not change.
+	for _, k := range []string{"request_id", "path_hash", "operation"} {
+		if v := eventString(ev, k); v != "" {
+			parts = append(parts, k+"="+v)
+		}
 	}
 	joined := strings.Join(parts, "|")
 	if len(joined) <= 240 {

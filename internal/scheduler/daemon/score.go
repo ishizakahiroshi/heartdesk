@@ -22,8 +22,10 @@ import (
 
 	"github.com/BurntSushi/toml"
 
+	"github.com/ishizakahiroshi/heartdesk/httpclassification"
 	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
+	"github.com/ishizakahiroshi/heartdesk/internal/httpclassload"
 )
 
 const (
@@ -65,6 +67,10 @@ type scoreIPEntry struct {
 	AuthFails     int
 	NCFails       int
 	NC4xx         int
+	// NC4xxExpected / NCIntegration are not scored (zero weight); they are written to
+	// the sidecar CSV so the exclusion stays visible.
+	NC4xxExpected int
+	NCIntegration int
 	IsBanned      int
 	IsForeign     int
 }
@@ -227,6 +233,8 @@ func ScoreEngine(ctx context.Context, cfg *config.SchedulerConfig) error {
 			AuthFails:     auth,
 			NCFails:       nc,
 			NC4xx:         nc4xx,
+			NC4xxExpected: inputs.nc4xxExpected[ip],
+			NCIntegration: inputs.ncIntegration[ip],
 			IsBanned:      isBanned,
 			IsForeign:     isForeign,
 		})
@@ -242,6 +250,9 @@ func ScoreEngine(ctx context.Context, cfg *config.SchedulerConfig) error {
 	if err := writeThreatScoreCSV(paths.ScoreOutputPath, nowTS, rows); err != nil {
 		logLine("ERROR", "threat score csv write failed: "+err.Error())
 		return err
+	}
+	if err := writeHTTPClassifiedCSV(classifiedCSVPath(paths.ScoreOutputPath), nowTS, inputs.nc4xxExpected, inputs.ncIntegration); err != nil {
+		logLine("WARN", "http classification csv write failed: "+err.Error())
 	}
 	if err := appendThreatScoreHistory(paths.ScoreHistoryPath, nowTS, rows); err != nil {
 		logLine("WARN", "threat score history update failed: "+err.Error())
@@ -261,6 +272,8 @@ type scoreInputs struct {
 	authFails      map[string]int
 	ncFails        map[string]int
 	nc4xxHits      map[string]int
+	nc4xxExpected  map[string]int
+	ncIntegration  map[string]int
 	banned         map[string]struct{}
 	autobanEnabled bool
 }
@@ -276,7 +289,8 @@ func collectScoreInputs(ctx context.Context, paths scorePaths, cutoff time.Time,
 		in.scanHits, in.scanCriticals = collectHoneypotEventCounts(ctx, filepath.Join(paths.AgentEventDir, "honeypot.jsonl"), cutoff, logLine)
 		in.authFails = collectAuth401EventCounts(ctx, filepath.Join(paths.AgentEventDir, "web_access.jsonl"), cutoff, logLine)
 		in.ncFails = collectNCFailEventCounts(ctx, filepath.Join(paths.AgentEventDir, "nextcloud_login.jsonl"), cutoff, ncFailSkip, logLine)
-		in.nc4xxHits = collectNC4xxEventCounts(ctx, filepath.Join(paths.AgentEventDir, "web_access.jsonl"), cutoff, logLine)
+		nc4 := collectNC4xxEventClassified(ctx, filepath.Join(paths.AgentEventDir, httpclassload.RawFile), filepath.Join(paths.AgentEventDir, httpclassload.ReceiptFile), cutoff, logLine)
+		in.nc4xxHits, in.nc4xxExpected, in.ncIntegration = nc4.Scored, nc4.Expected, nc4.IntegrationErr
 		in.banned = collectBannedIPsFromEvents(ctx, filepath.Join(paths.AgentEventDir, "fail2ban.jsonl"), cutoff, logLine)
 		in.autobanEnabled = false
 		logLine("", "agent event score input enabled; monitor-side autoban disabled")
@@ -688,30 +702,47 @@ func collectNC4xxCounts(ctx context.Context, dir string, cutoff time.Time, logLi
 	return out
 }
 
-func collectNC4xxEventCounts(ctx context.Context, path string, cutoff time.Time, logLine func(string, string)) map[string]int {
-	out := make(map[string]int)
-	_ = readJSONL(path, func(line []byte) {
-		if ctx.Err() != nil {
-			return
-		}
-		var rec webAccessLine
-		if err := json.Unmarshal(line, &rec); err != nil || !isIPv4(rec.IP) || rec.Status < 400 || rec.Status >= 500 {
-			return
-		}
-		pathOnly := strings.SplitN(rec.Path, "?", 2)[0]
-		if pathOnly != "/nextcloud" && !strings.HasPrefix(pathOnly, "/nextcloud/") {
-			return
-		}
-		t, err := parseFlexTimestamp(rec.TS)
-		if err != nil || t.Before(cutoff) {
-			return
-		}
-		out[rec.IP]++
-	})
-	logLine("", fmt.Sprintf("agent nc4xx parsed: ip=%d", len(out)))
-	return out
+// nc4xxClassified is the result of correlating Nextcloud 4xx events with the
+// integration's receipts. Scored keeps the existing weight; Expected and
+// IntegrationErr are not scored but stay visible.
+type nc4xxClassified struct {
+	Scored         map[string]int
+	Expected       map[string]int
+	IntegrationErr map[string]int
 }
 
+// collectNC4xxEventCounts keeps the old signature: scored hits only. The
+// receipts file sits next to the events file.
+func collectNC4xxEventCounts(ctx context.Context, path string, cutoff time.Time, logLine func(string, string)) map[string]int {
+	return collectNC4xxEventClassified(ctx, path, filepath.Join(filepath.Dir(path), httpclassload.ReceiptFile), cutoff, logLine).Scored
+}
+
+func collectNC4xxEventClassified(ctx context.Context, path, receiptPath string, cutoff time.Time, logLine func(string, string)) nc4xxClassified {
+	out := nc4xxClassified{Scored: map[string]int{}, Expected: map[string]int{}, IntegrationErr: map[string]int{}}
+	events, receipts := httpclassload.Load(path, receiptPath, cutoff, parseFlexTimestamp, func(e httpclassload.Event) bool {
+		if !isIPv4(e.IP) || e.Status < 400 || e.Status >= 500 {
+			return false
+		}
+		pathOnly := strings.SplitN(e.Path, "?", 2)[0]
+		return pathOnly == "/nextcloud" || strings.HasPrefix(pathOnly, "/nextcloud/")
+	})
+	results := httpclassload.Classify(events, receipts)
+	for i, e := range events {
+		if ctx.Err() != nil {
+			break
+		}
+		switch results[i].Class {
+		case httpclassification.Expected:
+			out.Expected[e.IP]++
+		case httpclassification.IntegrationError:
+			out.IntegrationErr[e.IP]++
+		default:
+			out.Scored[e.IP]++
+		}
+	}
+	logLine("", fmt.Sprintf("agent nc4xx parsed: ip=%d expected_ip=%d integration_error_ip=%d", len(out.Scored), len(out.Expected), len(out.IntegrationErr)))
+	return out
+}
 func collectBannedIPs(ctx context.Context, logLine func(string, string)) map[string]struct{} {
 	jails := []string{"sshd", "nginx-basic-auth", "recidive"}
 	out := make(map[string]struct{})
@@ -894,6 +925,41 @@ func writeThreatScoreCSV(path, ts string, rows []scoreIPEntry) error {
 			strconv.Itoa(row.IsBanned),
 			strconv.Itoa(row.IsForeign),
 		})
+	}
+	w.Flush()
+	return w.Error()
+}
+
+// classifiedCSVPath is the sidecar next to threat_score.csv. The main CSV keeps
+// its columns (core/monitor detects the format by column count).
+func classifiedCSVPath(scoreOutputPath string) string {
+	return filepath.Join(filepath.Dir(scoreOutputPath), "threat_score_http_classified.csv")
+}
+
+// writeHTTPClassifiedCSV lists, per IP, the Nextcloud 4xx events that were
+// not scored because a trusted receipt explains them (nc_4xx_expected, zero
+// weight) or because they are integration errors (nc_integration_error).
+func writeHTTPClassifiedCSV(path, ts string, expected, integration map[string]int) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o770); err != nil {
+		return err
+	}
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o660)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	ips := map[string]struct{}{}
+	mergeKeySet(ips, expected)
+	mergeKeySet(ips, integration)
+	sorted := make([]string, 0, len(ips))
+	for ip := range ips {
+		sorted = append(sorted, ip)
+	}
+	sort.Strings(sorted)
+	w := csv.NewWriter(f)
+	_ = w.Write([]string{"timestamp", "ip", "nc_4xx_expected", "nc_integration_error"})
+	for _, ip := range sorted {
+		_ = w.Write([]string{ts, ip, strconv.Itoa(expected[ip]), strconv.Itoa(integration[ip])})
 	}
 	w.Flush()
 	return w.Error()

@@ -79,6 +79,8 @@ type AlertState struct {
 	FirstBreach    map[string]time.Time `json:"first_breach"`
 	Offsets        map[string]int64     `json:"offsets"`
 	PendingNCUsers map[string]time.Time `json:"pending_nc_users"`
+	// IntegrationHTTP: integration_http_error の未送信・送信済みの控え（キーはルール ID + 対象のハッシュ）。
+	IntegrationHTTP map[string]*IntegrationHTTPItem `json:"integration_http,omitempty"`
 }
 
 // nowFn は現在時刻取得（テストで差し替え可能）。
@@ -186,6 +188,8 @@ func Run(cfg *config.AppConfig) ([]string, error) {
 	fired = append(fired, evaluateNCUserEvents(cfg, rules, state)...)
 	// 6. Nextcloud のファイル大量取得（audit.log を直接読む。集計は nc_file_access_state.json）
 	fired = append(fired, evaluateNCFileAccess(cfg, rules, state)...)
+	// 7. 連携アプリ自身の HTTP エラー（受領書と突き合わせた結果。既定は無効）
+	fired = append(fired, evaluateIntegrationHTTPError(cfg, rules, state)...)
 
 	if err := saveAlertState(statePath(cfg), state); err != nil {
 		// state 保存失敗は致命ではない（次回ログから再評価できる）が記録する。
@@ -263,6 +267,9 @@ func (st *AlertState) ensureMaps() {
 	}
 	if st.PendingNCUsers == nil {
 		st.PendingNCUsers = map[string]time.Time{}
+	}
+	if st.IntegrationHTTP == nil {
+		st.IntegrationHTTP = map[string]*IntegrationHTTPItem{}
 	}
 }
 

@@ -25,6 +25,8 @@ var ncFileAccessRuleDefaults = map[string]struct {
 	"nc_public_link_burst": {50, 10800},
 	"nc_service_new_ip":    {1, 86400},
 	"nc_service_volume":    {0, 10800},
+	// 連携アプリ自身のHTTPエラー（internal/alerts/integration_http_error.go）。件数のルールで、既定は無効。
+	"integration_http_error": {1, 10800},
 }
 
 func TestAlertRuleDefsIncludesNCFileAccessRules(t *testing.T) {
