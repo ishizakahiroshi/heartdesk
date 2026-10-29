@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.7] - 2026-10-30
+
+### Added
+
+- `httpclassification` package: matches nginx request events with trusted
+  `http_outcome` receipts from the agent (operation ID, method, exact path hash,
+  status, 5 minute window, one to one). Only known internal operations are
+  excused from the threat score; unmatched, duplicate, late or malformed receipts,
+  401/403 and unknown operations keep scoring.
+- `integration_http_error` alert rule (disabled by default) for failed integration
+  file fetches, with persistent pending items and recovery on a matching success.
+- Excused and integration-error counts are written to a sidecar CSV next to the
+  threat score; the existing score CSV format is unchanged.
 ## [0.3.6] - 2026-10-30
 
 ### Fixed
