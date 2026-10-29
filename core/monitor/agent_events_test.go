@@ -117,12 +117,21 @@ func writeEventLines(t *testing.T, path string, keyPrefix string, n int, ts time
 	}
 }
 
+// withSeedLimits はテストの間だけ、初回読み込みの止める量と上限を小さくする。
+func withSeedLimits(t *testing.T, stopAfterOld, maxBytes int64) {
+	t.Helper()
+	prevStop, prevMax := agentEventSeedStopAfterOld, agentEventSeedMaxBytes
+	agentEventSeedStopAfterOld, agentEventSeedMaxBytes = stopAfterOld, maxBytes
+	t.Cleanup(func() { agentEventSeedStopAfterOld, agentEventSeedMaxBytes = prevStop, prevMax })
+}
+
 // 報告のたびにファイル全体を読み直さないこと。ファイルの先頭にだけあるキーは、
 // 重複確認の対象（直近 48 時間）の外なので、同じキーの報告は書き足される。
 // 直す前のコード（毎回全行を読む）では先頭のキーを拾って書き足さないので、このテストは落ちる。
 func TestSaveAgentEventStreamsDoesNotRescanWholeFile(t *testing.T) {
 	base := t.TempDir()
 	t.Setenv("HEARTDESK_BASE_DIR", base)
+	withSeedLimits(t, 2<<20, 128<<20)
 	now := time.Now()
 	path := filepath.Join(base, "data/logs/agents/alpha-vps-main/web_access.jsonl")
 
@@ -155,6 +164,71 @@ func TestSaveAgentEventStreamsDedupesRecentHistoryAfterRestart(t *testing.T) {
 	}
 	if got := len(readJSONLLines(t, path)); got != before {
 		t.Fatalf("line count = %d, want %d (recent duplicate was written)", got, before)
+	}
+}
+
+// 長く止まっていた Agent の古いイベントがファイル末尾に並んでも、その手前の直近の行は読む。
+func TestLoadAgentEventDedupeKeysReadsPastTrailingOldBacklog(t *testing.T) {
+	withSeedLimits(t, 8<<20, 128<<20)
+	now := time.Now()
+	path := filepath.Join(t.TempDir(), "web_access.jsonl")
+	writeEventLines(t, path, "recent", 5, now.Add(-time.Hour))
+	writeEventLines(t, path, "backlog", 4*agentEventSeedChunk/100, now.Add(-100*time.Hour)) // 約 4MiB の古い行
+
+	keys := loadAgentEventDedupeKeys(path, now.Add(-agentEventDedupeWindow))
+	if _, ok := keys["recent-0"]; !ok {
+		t.Fatalf("recent key before the trailing backlog was not loaded (keys=%d)", len(keys))
+	}
+}
+
+// ts が読めない行ばかりの大きいファイルでも、上限より先は読まない。
+func TestLoadAgentEventDedupeKeysStopsAtMaxBytesForUndatedLines(t *testing.T) {
+	withSeedLimits(t, 1<<20, 2<<20)
+	path := filepath.Join(t.TempDir(), "web_access.jsonl")
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	w := bufio.NewWriter(f)
+	const total = 60000 // 約 6MiB
+	for i := 0; i < total; i++ {
+		fmt.Fprintf(w, `{"ts":"2026-01-01 00:00:00","dedupe_key":"undated-%d","path":"/padding-padding-padding-padding-padding-padding"}`+"\n", i)
+	}
+	if err := w.Flush(); err != nil {
+		t.Fatalf("flush: %v", err)
+	}
+	f.Close()
+
+	keys := loadAgentEventDedupeKeys(path, time.Now().Add(-agentEventDedupeWindow))
+	if len(keys) == 0 || len(keys) >= total/2 {
+		t.Fatalf("keys = %d, want a bounded tail (0 < keys < %d)", len(keys), total/2)
+	}
+	if _, ok := keys[fmt.Sprintf("undated-%d", total-1)]; !ok {
+		t.Fatalf("last line key missing")
+	}
+}
+
+// ファイルが外から消されたら表を作り直し、消えた行と同じキーでも書く。
+func TestSaveAgentEventStreamsRebuildsIndexWhenFileRemoved(t *testing.T) {
+	base := t.TempDir()
+	t.Setenv("HEARTDESK_BASE_DIR", base)
+	rec := nginxEventReport(t, "alpha-vps-main", "gone-1", time.Now())
+	path := filepath.Join(base, "data/logs/agents/alpha-vps-main/web_access.jsonl")
+
+	if err := saveAgentEventStreams(rec); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+	if err := os.Remove(path); err != nil {
+		t.Fatalf("remove: %v", err)
+	}
+	if err := saveAgentEventStreams(rec); err != nil {
+		t.Fatalf("save after remove: %v", err)
+	}
+	if got := len(readJSONLLines(t, path)); got != 1 {
+		t.Fatalf("line count = %d, want 1", got)
 	}
 }
 

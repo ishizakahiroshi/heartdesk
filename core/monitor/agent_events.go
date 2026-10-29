@@ -29,6 +29,16 @@ const agentEventDedupeWindow = 48 * time.Hour
 // agentEventSeedChunk は起動後の初回に、イベント JSONL を末尾から読むときの 1 回の読み込み量。
 const agentEventSeedChunk = 1 << 20
 
+// agentEventSeedStopAfterOld は、末尾から読んでいて ts が窓より前の行だけの塊がこの量だけ続いたら止める量。
+// 長く止まっていた Agent が古いイベントをまとめて送ると、ファイル末尾に古い行が並び、その手前に
+// 直近の行が残るため、古い塊 1 つでは止めない（1 報告は 1 種類あたり最大 1000 件で、数百 KB に収まる）。
+var agentEventSeedStopAfterOld int64 = 8 << 20
+
+// agentEventSeedMaxBytes は初回に読む量の上限。ts が読めない行ばかりのファイルや、
+// 窓の中の行が極端に多いファイルでも、全体を読んでメモリに載せることはしない
+// （1 日に約 5 万行のホストで、直近 48 時間分は約 80MB）。
+var agentEventSeedMaxBytes int64 = 128 << 20
+
 // agentEventNow はテストで時刻を差し替えるための関数。
 var agentEventNow = time.Now
 
@@ -223,8 +233,15 @@ func appendAgentEvents(agentID, kind string, records []agentEventRecord) error {
 	defer idx.mu.Unlock()
 
 	now := agentEventNow()
+	cutoff := now.Add(-agentEventDedupeWindow)
+	if idx.loaded {
+		// ファイルが外から消された・別名へ移されたときは、表を作り直す（消えた行のキーで弾かない）
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			idx.loaded = false
+		}
+	}
 	if !idx.loaded {
-		idx.keys = loadAgentEventDedupeKeys(path, now.Add(-agentEventDedupeWindow))
+		idx.keys = loadAgentEventDedupeKeys(path, cutoff)
 		idx.loaded = true
 		idx.prunedAt = now
 	}
@@ -236,7 +253,14 @@ func appendAgentEvents(agentID, kind string, records []agentEventRecord) error {
 	}
 	defer f.Close()
 
-	// 書き込みに成功した分だけ idx.keys へ入れる（途中で失敗したイベントは次の報告で書けるように残す）。
+	// 途中で書き込みに失敗したら、どこまでファイルに入ったか分からないので、次の報告で表を作り直す。
+	ok := false
+	defer func() {
+		if !ok {
+			idx.loaded = false
+		}
+	}()
+
 	written := make(map[string]time.Time, len(records))
 	w := bufio.NewWriter(f)
 	for _, rec := range records {
@@ -260,7 +284,13 @@ func appendAgentEvents(agentID, kind string, records []agentEventRecord) error {
 		if err := w.WriteByte('\n'); err != nil {
 			return fmt.Errorf("write agent event newline: %w", err)
 		}
-		written[key] = agentEventTime(rec, now)
+		// 窓より前の時刻のイベント（長く止まっていた Agent の古い分）は、受け取った時刻で持つ。
+		// イベントの時刻のままだと次の掃除ですぐ消え、送り直しを弾けない。
+		ts := agentEventTime(rec, now)
+		if ts.Before(cutoff) {
+			ts = now
+		}
+		written[key] = ts
 	}
 	if err := w.Flush(); err != nil {
 		return fmt.Errorf("flush agent events: %w", err)
@@ -268,8 +298,8 @@ func appendAgentEvents(agentID, kind string, records []agentEventRecord) error {
 	for key, ts := range written {
 		idx.keys[key] = ts
 	}
+	ok = true
 	if now.Sub(idx.prunedAt) >= time.Hour {
-		cutoff := now.Add(-agentEventDedupeWindow)
 		for key, ts := range idx.keys {
 			if ts.Before(cutoff) {
 				delete(idx.keys, key)
@@ -291,8 +321,9 @@ func agentEventTime(rec agentEventRecord, now time.Time) time.Time {
 }
 
 // loadAgentEventDedupeKeys はイベント JSONL を末尾から読み、ts が cutoff 以降のイベントの重複確認キーを返す。
-// ファイルは追記の順にほぼ時刻順なので、読み込んだ 1 回分の行がすべて cutoff より前になった時点で止める
-// （ファイル全体は読まない）。ts が読めない行のキーは残すが、止めるかどうかの判断には使わない。
+// ファイルは追記の順にほぼ時刻順なので、cutoff より前の行だけの塊が agentEventSeedStopAfterOld 続いたら止める。
+// どの場合も agentEventSeedMaxBytes より先は読まない（ファイル全体は読まない）。
+// ts が読めない行のキーは残すが、止めるかどうかの判断には使わない。
 func loadAgentEventDedupeKeys(path string, cutoff time.Time) map[string]time.Time {
 	keys := make(map[string]time.Time)
 	f, err := os.Open(path)
@@ -307,12 +338,18 @@ func loadAgentEventDedupeKeys(path string, cutoff time.Time) map[string]time.Tim
 	}
 	offset := fi.Size()
 	var carry []byte // 1 つ後ろの読み込み分の先頭にあった、行の途中
+	var readTotal, oldRun int64
 	for offset > 0 {
+		if readTotal >= agentEventSeedMaxBytes {
+			log.Printf("WARN: agent_events: stopped reading %s for dedupe keys after %d bytes", path, readTotal)
+			break
+		}
 		readSize := int64(agentEventSeedChunk)
 		if offset < readSize {
 			readSize = offset
 		}
 		offset -= readSize
+		readTotal += readSize
 		buf := make([]byte, readSize, readSize+int64(len(carry)))
 		if _, err := f.ReadAt(buf, offset); err != nil && err != io.EOF {
 			log.Printf("WARN: agent_events: read %s for dedupe keys: %v", path, err)
@@ -345,7 +382,12 @@ func loadAgentEventDedupeKeys(path string, cutoff time.Time) map[string]time.Tim
 			keys[key] = ts
 		}
 		if datedLines > 0 && recentLines == 0 {
-			break
+			oldRun += readSize
+			if oldRun >= agentEventSeedStopAfterOld {
+				break
+			}
+		} else if recentLines > 0 {
+			oldRun = 0
 		}
 	}
 	return keys
