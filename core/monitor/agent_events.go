@@ -7,16 +7,49 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/ishizakahiroshi/heartdesk/internal"
 )
 
 const agentEventMaxPerCollector = 1000
+
+// agentEventDedupeWindow は重複確認に使うキーを持つ期間。
+// Agent は新しいイベントだけを送るため、同じイベントが再び届くのは送り直しと、
+// Agent 側の記録が消えてログ末尾を送り直したときだけで、どちらも 1 日以内に収まる。
+const agentEventDedupeWindow = 48 * time.Hour
+
+// agentEventSeedChunk は起動後の初回に、イベント JSONL を末尾から読むときの 1 回の読み込み量。
+const agentEventSeedChunk = 1 << 20
+
+// agentEventNow はテストで時刻を差し替えるための関数。
+var agentEventNow = time.Now
+
+// agentEventDedupeIndex はイベント JSONL 1 本ぶんの重複確認キー（キー → イベント時刻）。
+// 報告のたびにファイル全体を読み直すと、ファイルの大きさに比例して読み込み量とメモリが増え、
+// 処理が Agent の待ち時間を超えて送り直しが重なる（2026-10 に 3.6GB で Monitor が OOM）。
+// そのため初回だけ直近の分を読み、以後はプロセス内で持ち続ける。mu は同じファイルへの書き込みも直列にする。
+type agentEventDedupeIndex struct {
+	mu       sync.Mutex
+	loaded   bool
+	keys     map[string]time.Time
+	prunedAt time.Time
+}
+
+// agentEventIndexes は path → *agentEventDedupeIndex。
+var agentEventIndexes sync.Map
+
+func agentEventIndexFor(path string) *agentEventDedupeIndex {
+	v, _ := agentEventIndexes.LoadOrStore(path, &agentEventDedupeIndex{})
+	return v.(*agentEventDedupeIndex)
+}
 
 type agentCollectorEvents struct {
 	Events []map[string]interface{} `json:"events"`
@@ -185,7 +218,16 @@ func appendAgentEvents(agentID, kind string, records []agentEventRecord) error {
 	}
 
 	path := filepath.Join(dir, kind+".jsonl")
-	seen := loadAgentEventDedupeKeys(path)
+	idx := agentEventIndexFor(path)
+	idx.mu.Lock()
+	defer idx.mu.Unlock()
+
+	now := agentEventNow()
+	if !idx.loaded {
+		idx.keys = loadAgentEventDedupeKeys(path, now.Add(-agentEventDedupeWindow))
+		idx.loaded = true
+		idx.prunedAt = now
+	}
 
 	// イベント JSONL は heartdesk プロセス専用のため 0600。
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
@@ -194,16 +236,20 @@ func appendAgentEvents(agentID, kind string, records []agentEventRecord) error {
 	}
 	defer f.Close()
 
+	// 書き込みに成功した分だけ idx.keys へ入れる（途中で失敗したイベントは次の報告で書けるように残す）。
+	written := make(map[string]time.Time, len(records))
 	w := bufio.NewWriter(f)
 	for _, rec := range records {
 		key, _ := rec["dedupe_key"].(string)
 		if key == "" {
 			continue
 		}
-		if _, dup := seen[key]; dup {
+		if _, dup := idx.keys[key]; dup {
 			continue
 		}
-		seen[key] = struct{}{}
+		if _, dup := written[key]; dup {
+			continue
+		}
 		b, err := json.Marshal(rec)
 		if err != nil {
 			continue
@@ -214,32 +260,112 @@ func appendAgentEvents(agentID, kind string, records []agentEventRecord) error {
 		if err := w.WriteByte('\n'); err != nil {
 			return fmt.Errorf("write agent event newline: %w", err)
 		}
+		written[key] = agentEventTime(rec, now)
 	}
 	if err := w.Flush(); err != nil {
 		return fmt.Errorf("flush agent events: %w", err)
 	}
+	for key, ts := range written {
+		idx.keys[key] = ts
+	}
+	if now.Sub(idx.prunedAt) >= time.Hour {
+		cutoff := now.Add(-agentEventDedupeWindow)
+		for key, ts := range idx.keys {
+			if ts.Before(cutoff) {
+				delete(idx.keys, key)
+			}
+		}
+		idx.prunedAt = now
+	}
 	return nil
 }
 
-func loadAgentEventDedupeKeys(path string) map[string]struct{} {
-	seen := make(map[string]struct{})
+// agentEventTime はイベントの ts を時刻にする。読めないときは now（受け取った時刻）を使う。
+func agentEventTime(rec agentEventRecord, now time.Time) time.Time {
+	if s, _ := rec["ts"].(string); s != "" {
+		if t, err := time.Parse(time.RFC3339, s); err == nil {
+			return t
+		}
+	}
+	return now
+}
+
+// loadAgentEventDedupeKeys はイベント JSONL を末尾から読み、ts が cutoff 以降のイベントの重複確認キーを返す。
+// ファイルは追記の順にほぼ時刻順なので、読み込んだ 1 回分の行がすべて cutoff より前になった時点で止める
+// （ファイル全体は読まない）。ts が読めない行のキーは残すが、止めるかどうかの判断には使わない。
+func loadAgentEventDedupeKeys(path string, cutoff time.Time) map[string]time.Time {
+	keys := make(map[string]time.Time)
 	f, err := os.Open(path)
 	if err != nil {
-		return seen
+		return keys
 	}
 	defer f.Close()
 
-	sc := bufio.NewScanner(f)
-	sc.Buffer(make([]byte, 512*1024), 512*1024)
-	for sc.Scan() {
-		var rec map[string]interface{}
-		if err := json.Unmarshal(sc.Bytes(), &rec); err != nil {
-			continue
+	fi, err := f.Stat()
+	if err != nil {
+		return keys
+	}
+	offset := fi.Size()
+	var carry []byte // 1 つ後ろの読み込み分の先頭にあった、行の途中
+	for offset > 0 {
+		readSize := int64(agentEventSeedChunk)
+		if offset < readSize {
+			readSize = offset
 		}
-		key, _ := rec["dedupe_key"].(string)
-		if key != "" {
-			seen[key] = struct{}{}
+		offset -= readSize
+		buf := make([]byte, readSize, readSize+int64(len(carry)))
+		if _, err := f.ReadAt(buf, offset); err != nil && err != io.EOF {
+			log.Printf("WARN: agent_events: read %s for dedupe keys: %v", path, err)
+			break
+		}
+		buf = append(buf, carry...)
+		lines := bytes.Split(buf, []byte{'\n'})
+		carry = nil
+		if offset > 0 {
+			// 先頭の 1 行は前の読み込み分とつながっている可能性があるので次へ持ち越す
+			carry = append([]byte(nil), lines[0]...)
+			lines = lines[1:]
+		}
+
+		datedLines, recentLines := 0, 0
+		for _, line := range lines {
+			key, ts, dated, ok := parseAgentEventKey(line)
+			if !ok {
+				continue
+			}
+			if !dated {
+				keys[key] = agentEventNow()
+				continue
+			}
+			datedLines++
+			if ts.Before(cutoff) {
+				continue
+			}
+			recentLines++
+			keys[key] = ts
+		}
+		if datedLines > 0 && recentLines == 0 {
+			break
 		}
 	}
-	return seen
+	return keys
+}
+
+// parseAgentEventKey は JSONL の 1 行から dedupe_key と ts を取り出す。
+func parseAgentEventKey(line []byte) (key string, ts time.Time, dated bool, ok bool) {
+	if len(bytes.TrimSpace(line)) == 0 {
+		return "", time.Time{}, false, false
+	}
+	var rec struct {
+		DedupeKey string `json:"dedupe_key"`
+		TS        string `json:"ts"`
+	}
+	if err := json.Unmarshal(line, &rec); err != nil || rec.DedupeKey == "" {
+		return "", time.Time{}, false, false
+	}
+	t, err := time.Parse(time.RFC3339, rec.TS)
+	if err != nil {
+		return rec.DedupeKey, time.Time{}, false, true
+	}
+	return rec.DedupeKey, t, true, true
 }
