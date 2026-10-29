@@ -62,7 +62,7 @@ func (e *ihEnv) append(name, line string) {
 func (e *ihEnv) pair(id, method string, status int, op, outcome string, ago time.Duration, path string) {
 	ts := e.now.Add(-ago).Format(time.RFC3339)
 	e.append("web_access.jsonl", fmt.Sprintf(`{"ts":%q,"ip":"203.0.113.30","agent_id":"agent-a","request_id":%q,"method":%q,"path":%q,"status":%d}`, ts, id, method, path, status))
-	e.append("integration_receipt.jsonl", fmt.Sprintf(`{"ts":%q,"agent_id":"agent-a","request_id":%q,"method":%q,"path_hash":%q,"status":%d,"operation":%q,"outcome":%q}`,
+	e.append("http_outcome.jsonl", fmt.Sprintf(`{"ts":%q,"agent_id":"agent-a","request_id":%q,"method":%q,"path_hash":%q,"status":%d,"operation":%q,"outcome":%q}`,
 		ts, id, method, httpclassification.PathHash(path), status, op, outcome))
 }
 

@@ -163,9 +163,13 @@ func eventKindAndSource(collectorName string, ev map[string]interface{}) (string
 		return "fail2ban", "fail2ban"
 	case "honeypot":
 		return "honeypot", "honeypot"
-	case "integration_receipt":
-		// Receipts written by the integration (httpclassification, policy v2).
-		return "integration_receipt", "integration_receipt"
+	case "http_outcome":
+		// Receipts written by the integration (heartpost http_outcome collector;
+		// httpclassification, policy v2). heartpost may re-send old receipts after
+		// a rotation: the dedupe key covers every receipt field, so an identical
+		// re-send is dropped while a conflicting one with the same request_id is kept
+		// (and makes that request_id ambiguous, so it matches nothing).
+		return "http_outcome", "http_outcome"
 	case "nextcloud":
 		if eventString(ev, "source") == "audit" {
 			return "audit", "audit"
@@ -195,7 +199,7 @@ func buildAgentEventDedupeKey(source, ts string, ev map[string]interface{}) stri
 	// Events that carry a request id (and receipts, which carry a path hash and
 	// an operation) must not collapse into each other when everything else is
 	// equal. Appended only when present so existing keys do not change.
-	for _, k := range []string{"request_id", "path_hash", "operation"} {
+	for _, k := range []string{"request_id", "path_hash", "operation", "outcome"} {
 		if v := eventString(ev, k); v != "" {
 			parts = append(parts, k+"="+v)
 		}

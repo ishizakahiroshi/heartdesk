@@ -37,12 +37,12 @@ func hcRun(t *testing.T, raw, receipts string) nc4xxClassified {
 		t.Fatal(err)
 	}
 	if receipts != "" {
-		if err := os.WriteFile(filepath.Join(dir, "integration_receipt.jsonl"), []byte(receipts), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, "http_outcome.jsonl"), []byte(receipts), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
 	cutoff := time.Date(2026, 10, 30, 0, 0, 0, 0, time.UTC)
-	return collectNC4xxEventClassified(context.Background(), rawPath, filepath.Join(dir, "integration_receipt.jsonl"), cutoff, func(string, string) {})
+	return collectNC4xxEventClassified(context.Background(), rawPath, filepath.Join(dir, "http_outcome.jsonl"), cutoff, func(string, string) {})
 }
 
 func TestNC4xxExpectedReceiptIsNotScored(t *testing.T) {
@@ -81,8 +81,10 @@ func TestNC4xxStillScoredWithoutTrustedReceipt(t *testing.T) {
 			okRaw, hcReceipt("agent-a", hcID1, "MKCOL", 405, "ensure_collection", "expected", "2026-10-30T10:00:01Z", httpclassification.PathHash("/other"))},
 		"spoofed status": {
 			okRaw, hcReceipt("agent-a", hcID1, "MKCOL", 404, "ensure_collection", "expected", "2026-10-30T10:00:01Z", h)},
-		"duplicate receipt": {okRaw, okRc + okRc},
-		"duplicate raw":     {okRaw + okRaw, okRc},
+		// an identical re-sent receipt is collapsed by the loader (see TestNC4xxResentReceipt);
+		// a conflicting one with the same request id makes it ambiguous.
+		"conflicting duplicate receipt": {okRaw, okRc + hcReceipt("agent-a", hcID1, "MKCOL", 405, "ensure_collection", "expected", "2026-10-30T10:00:01Z", httpclassification.PathHash("/other"))},
+		"duplicate raw":                 {okRaw + okRaw, okRc},
 		"late receipt": {
 			okRaw, hcReceipt("agent-a", hcID1, "MKCOL", 405, "ensure_collection", "expected", "2026-10-30T10:06:00Z", h)},
 		"other request id": {
@@ -127,5 +129,14 @@ func TestWriteHTTPClassifiedCSV(t *testing.T) {
 		if !strings.Contains(s, w) {
 			t.Errorf("missing %q in %q", w, s)
 		}
+	}
+}
+
+func TestNC4xxResentReceipt(t *testing.T) {
+	h := httpclassification.PathHash(hcPath)
+	rc := hcReceipt("agent-a", hcID1, "MKCOL", 405, "ensure_collection", "expected", "2026-10-30T10:00:01Z", h)
+	got := hcRun(t, hcRaw("agent-a", hcID1, "MKCOL", 405, "2026-10-30T10:00:00Z"), rc+rc)
+	if got.Scored[hcIP] != 0 || got.Expected[hcIP] != 1 {
+		t.Fatalf("%+v", got)
 	}
 }

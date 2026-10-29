@@ -1,11 +1,12 @@
 // Package httpclassload reads the agent event files that feed
 // httpclassification: web_access.jsonl (raw nginx events) and
-// integration_receipt.jsonl (receipts written by the integration).
+// http_outcome.jsonl (receipts written by the integration).
 package httpclassload
 
 import (
 	"bufio"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"time"
@@ -15,8 +16,12 @@ import (
 
 const (
 	// RawFile and ReceiptFile are the file names inside an agent event dir.
-	RawFile     = "web_access.jsonl"
-	ReceiptFile = "integration_receipt.jsonl"
+	RawFile = "web_access.jsonl"
+	// MaxReadBytes caps how much of the tail of each file is read per run, and
+	// MaxRecords caps how many records are kept (newest win).
+	MaxReadBytes = 64 << 20
+	MaxRecords   = 200000
+	ReceiptFile  = "http_outcome.jsonl"
 )
 
 // Event is one raw access event with the fields the callers need.
@@ -69,6 +74,7 @@ func Load(rawPath, receiptPath string, cutoff time.Time, parseTime func(string) 
 		}
 	})
 	var receipts []httpclassification.Receipt
+	seenReceipt := map[httpclassification.Receipt]struct{}{}
 	_ = readJSONL(receiptPath, func(line []byte) {
 		var s scopeLine
 		if json.Unmarshal(line, &s) != nil {
@@ -82,20 +88,48 @@ func Load(rawPath, receiptPath string, cutoff time.Time, parseTime func(string) 
 		if !ok {
 			return
 		}
+		// Receipts older than the window cannot match any kept event. Receipts
+		// with an unusable ts are kept: they still make their request id ambiguous.
+		if !r.Time.IsZero() && r.Time.Before(cutoff.Add(-httpclassification.MatchWindow)) {
+			return
+		}
+		// heartpost re-sends old receipts after a rotation: collapse exact copies.
+		if _, dup := seenReceipt[r]; dup {
+			return
+		}
+		seenReceipt[r] = struct{}{}
 		receipts = append(receipts, r)
 	})
+	if len(receipts) > MaxRecords {
+		receipts = receipts[len(receipts)-MaxRecords:]
+	}
+	if len(events) > MaxRecords {
+		events = events[len(events)-MaxRecords:]
+	}
 	return events, receipts
 }
 
+// readJSONL reads at most the last MaxReadBytes of the file. When it starts in
+// the middle of the file the first (partial) line is discarded.
 func readJSONL(path string, fn func([]byte)) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
+	skipFirst := false
+	if info, err := f.Stat(); err == nil && info.Size() > MaxReadBytes {
+		if _, err := f.Seek(info.Size()-MaxReadBytes, io.SeekStart); err == nil {
+			skipFirst = true
+		}
+	}
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	for sc.Scan() {
+		if skipFirst {
+			skipFirst = false
+			continue
+		}
 		b := sc.Bytes()
 		if len(b) == 0 {
 			continue

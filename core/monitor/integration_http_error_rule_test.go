@@ -21,8 +21,8 @@ func TestAgentEventDedupeKeySeparatesRequestIDs(t *testing.T) {
 }
 
 func TestReceiptCollectorIsIngestedAsOwnStream(t *testing.T) {
-	kind, source := eventKindAndSource("integration_receipt", map[string]interface{}{})
-	if kind != "integration_receipt" || source != "integration_receipt" {
+	kind, source := eventKindAndSource("http_outcome", map[string]interface{}{})
+	if kind != "http_outcome" || source != "http_outcome" {
 		t.Fatalf("%q %q", kind, source)
 	}
 }
