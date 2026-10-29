@@ -80,6 +80,7 @@ type AlertState struct {
 	Offsets           map[string]int64     `json:"offsets"`
 	PendingNCUsers    map[string]time.Time `json:"pending_nc_users"`
 	DeliveredNCEvents map[string]time.Time `json:"delivered_nc_events,omitempty"`
+	EventReceipts     map[string]time.Time `json:"event_receipts,omitempty"`
 	// IntegrationHTTP: integration_http_error の未送信・送信済みの控え（キーはルール ID + 対象のハッシュ）。
 	IntegrationHTTP map[string]*IntegrationHTTPItem `json:"integration_http,omitempty"`
 }
@@ -191,12 +192,15 @@ func Run(cfg *config.AppConfig) ([]string, error) {
 	fired = append(fired, evaluateNCFileAccess(cfg, rules, state)...)
 	// 7. 連携アプリ自身の HTTP エラー（受領書と突き合わせた結果。既定は無効）
 	fired = append(fired, evaluateIntegrationHTTPError(cfg, rules, state)...)
+	// 8. 構成情報などの観測イベント（inventory_changed / inventory_stale / inventory_collection_failed）
+	observationEvents, eventErr := evaluateEvents(cfg, rules, state)
+	fired = append(fired, observationEvents...)
 
 	if err := saveAlertState(statePath(cfg), state); err != nil {
 		// state 保存失敗は致命ではない（次回ログから再評価できる）が記録する。
 		log.Printf("alerts: save state: %v", err)
 	}
-	return fired, nil
+	return fired, eventErr
 }
 
 // loadAlertRules はルールファイルを読む。
@@ -254,6 +258,9 @@ func newAlertState() *AlertState {
 }
 
 func (st *AlertState) ensureMaps() {
+	if st.EventReceipts == nil {
+		st.EventReceipts = map[string]time.Time{}
+	}
 	if st.Active == nil {
 		st.Active = map[string]bool{}
 	}

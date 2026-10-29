@@ -3021,7 +3021,7 @@ tr.authz-edit-panel-row > td {
 .score-value { font-size:0.82rem; font-weight:600; min-width:2em; }
 /* 脅威スコア — テーブル */
 .log-table .score-detail { font-size:0.75rem; text-align:center; }
-/* 脅威スコア — 要確認IP（高スコア・手動BAN候補）行ハイライト */
+/* 脅威スコア — 要確認IP（高スコア・手動BAN候補）の行の強調表示 */
 .log-table tr.ts-row-high-risk > td { background:rgba(244, 67, 54, 0.12); }
 .log-table tr.ts-row-high-risk:hover > td { background:rgba(244, 67, 54, 0.18); }
 .log-table tr.ts-row-high-risk > td:first-child { box-shadow:inset 3px 0 0 #e74c3c; }
@@ -3231,3 +3231,20 @@ tr.authz-edit-panel-row > td {
 .ssl-renew-btn.is-busy { background: var(--btn-ssl-busy); }
 .ssl-renew-btn.is-ok   { background: var(--btn-ssl-ok); }
 .ssl-renew-btn.is-err  { background: var(--btn-ssl-err); }
+/* Configuration observations share the updates card and its authorization. */
+.inventory-report { margin-bottom: 1rem; }
+.inventory-report summary { cursor: pointer; font-weight: 600; padding: .5rem 0; }
+.inventory-report p { font-size: .85rem; line-height: 1.6; overflow-wrap: anywhere; }
+.inventory-table-wrap { overflow-x: auto; margin: .5rem 0; }
+.inventory-table { border-collapse: collapse; width: 100%; font-size: .85rem; }
+.inventory-table th, .inventory-table td { text-align: left; vertical-align: top; padding: .5rem; border-bottom: 1px solid var(--border-color, #444); overflow-wrap: anywhere; }
+.inventory-table th { font-weight: 600; }
+@media (max-width: 600px) {
+  .inventory-summary-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .inventory-summary-table, .inventory-summary-table tbody { display: block; }
+  .inventory-summary-table tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); border-bottom: 1px solid var(--border-color, #444); }
+  .inventory-summary-table tr > th { grid-column: 1 / -1; padding-bottom: 0; }
+  .inventory-summary-table tr > td:last-child { grid-column: 1 / -1; }
+  .inventory-summary-table th, .inventory-summary-table td { border: 0; }
+  .inventory-summary-table td::before { content: attr(data-label); display: block; font-weight: 600; margin-bottom: .2rem; }
+}

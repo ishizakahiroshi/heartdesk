@@ -31,12 +31,9 @@ func (r *Runtime) initializeState() error {
 		r.ownedAuditDB = true
 	}
 
-	// Agent レポート保持の正本 = SQLite。
-	// vendorsvc.OpenDB で集約 DB を開き store.Stores を構築して
-	// monitor.SetAgentReportStores に注入する。これにより AgentReportHandler は
-	// SQLite（agent_reports_raw / agents）へ書き込む。注入されない場合のみ JSONL に
-	// フォールバックする（読み取り互換・移行用）。DB を開けない場合は致命的にせず
-	// JSONL フォールバックのまま起動を継続する（検証フェーズの可用性優先）。
+	// Keep existing report history on JSONL. Tenant is intentionally not
+	// injected, so monitor.currentAgentReportStores selects the JSONL path.
+	// The vendor database remains available for its existing ledger functions.
 	reportDBPath := filepath.Join(r.opts.DataDir, "vendor", "vendor.db")
 	if db, err := vendorsvc.OpenDB(reportDBPath); err != nil {
 		log.Printf("WARN: agent report SQLite open failed (path=%s): %v — JSONL フォールバックで起動します", reportDBPath, err)
@@ -47,7 +44,7 @@ func (r *Runtime) initializeState() error {
 			Report: store.NewReportStore(db),
 			Ledger: store.NewLedgerStore(db),
 		})
-		log.Printf("INFO: agent report store = SQLite (path=%s)", reportDBPath)
+		log.Printf("INFO: agent report store = JSONL; vendor ledger uses SQLite (path=%s)", reportDBPath)
 
 		// 旧 JSON ライセンス台帳（vendor_license_ledger.json）を license_ledger へ一度だけ取り込む。
 		// license_ledger に既存行があれば no-op（冪等）。元 JSON はバックアップとして残す。

@@ -19,7 +19,7 @@ import (
 // レポート未受信 / FreeBSD（updates 非対応）の場合は Unavailable=true を返す。
 func GetUpdatesData(agentID ...string) UpdatesData {
 	if len(agentID) > 0 && agentID[0] != "" {
-		return updatesDataFromAgentReport(agentID[0])
+		return withInventory(updatesDataFromAgentReport(agentID[0]), agentID[0])
 	}
 	// unattended-upgrades サービス状態
 	updateSvc := heartdesk.Run("systemctl is-active unattended-upgrades 2>/dev/null")
@@ -97,11 +97,11 @@ func GetUpdatesData(agentID ...string) UpdatesData {
 // UpdatesData に詰め直す。受信なし / FreeBSD等で updates が含まれない場合は Unavailable=true。
 func updatesDataFromAgentReport(agentID string) UpdatesData {
 	raw, ok := GetAgentLatestCollector(agentID, "updates")
-	if !ok || len(raw) == 0 || string(raw) == "null" {
+	if !ok || !collectorObject(raw, "update_count") {
 		return UpdatesData{Unavailable: true}
 	}
 	var d UpdatesData
-	if err := json.Unmarshal(raw, &d); err != nil {
+	if err := json.Unmarshal(raw, &d); err != nil || d.UpdateCount < 0 {
 		return UpdatesData{Unavailable: true}
 	}
 	// IsLocal は明示的に false（リモート Agent）にする

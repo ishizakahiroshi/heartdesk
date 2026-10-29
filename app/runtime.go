@@ -360,6 +360,7 @@ func New(options Options) (*Runtime, error) {
 	for _, n := range opts.Notifiers {
 		alerts.RegisterNotifier(n)
 	}
+	alerts.RegisterEventSource(monitor.InventoryAlertEvents, "inventory_changed", "inventory_stale", "inventory_collection_failed")
 	if opts.SchedulerOnly {
 		ctx, cancel := context.WithCancel(context.Background())
 		return &Runtime{opts: opts, config: cfg, ctx: ctx, cancel: cancel, handler: http.NotFoundHandler()}, nil

@@ -108,6 +108,21 @@ func (h *Handler) dispatchAPI(w http.ResponseWriter, r *http.Request, api string
 	if h.appCfg.IsLocalAgent(agentID) {
 		agentID = ""
 	}
+	// Inventory always refers to a reported agent, including the primary host.
+	// It shares the updates card ACL and the tenant check above.
+	if api == "inventory" {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			w.Header().Set("Allow", "GET, HEAD")
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if rawAgentID == "" {
+			http.Error(w, `{"error":"agent required"}`, http.StatusBadRequest)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(GetInventory(rawAgentID))
+		return
+	}
 	if endpoint, ok := endpointByName(extensionRegistry.APIs, api); ok {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			w.Header().Set("Allow", "GET, HEAD")
@@ -118,7 +133,11 @@ func (h *Handler) dispatchAPI(w http.ResponseWriter, r *http.Request, api string
 		return
 	}
 	if handler, ok := agentSimpleAPIByName[api]; ok {
-		if err := json.NewEncoder(w).Encode(handler(agentID)); err != nil {
+		result := handler(agentID)
+		if updates, ok := result.(UpdatesData); ok && api == "updates" && rawAgentID != "" && agentID == "" {
+			result = withInventory(updates, rawAgentID)
+		}
+		if err := json.NewEncoder(w).Encode(result); err != nil {
 			log.Printf("ERROR: monitor: api/%s encode error: %v", api, err)
 		}
 		return
@@ -273,6 +292,8 @@ func resolveCardIDForAPI(api string) (cardID string, mapped bool) {
 	}
 	// 別名・サブ API・レガシーキーの明示マップ（合成 ID は使わない）。
 	switch api {
+	case "inventory":
+		return navmeta.CardSecUpdates, true
 	case "backups", "disk":
 		return navmeta.CardSecDatabase, true
 	case "r2_metrics":

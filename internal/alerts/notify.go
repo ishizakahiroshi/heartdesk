@@ -88,13 +88,18 @@ func prepareNotifiers(cfg *config.AppConfig) {
 // 何も試みなかった場合、または試みた経路のどれか一つでも届いた場合は true。
 // 一つ以上を試み、すべて失敗した場合だけ false を返して再試行する。
 func sendAlert(rules AlertRules, ruleID, message string) bool {
+	result := sendAlertResult(rules, ruleID, message)
+	return !result.Attempted || result.Delivered
+}
+
+func sendAlertResult(rules AlertRules, ruleID, message string) DeliveryResult {
 	result := sendAlertMailResult(rules, ruleID, message)
 	for _, n := range registeredNotifiers() {
 		next := n.Notify(ruleID, message)
 		result.Attempted = result.Attempted || next.Attempted
 		result.Delivered = result.Delivered || (next.Attempted && next.Delivered)
 	}
-	return !result.Attempted || result.Delivered
+	return result
 }
 
 // mailSendFn は 1 通送る処理（テストで差し替え可能）。

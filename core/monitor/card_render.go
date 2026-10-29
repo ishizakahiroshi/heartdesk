@@ -64,7 +64,11 @@ func buildServerDetailCards(h *Handler, visibleCards []navmeta.MonitorCardMeta, 
 		case navmeta.CardSecStorageForecast:
 			data = GetStorageForecast(reportAgentID)
 		case navmeta.CardSecUpdates:
-			data = GetUpdatesData(agentID)
+			updates := GetUpdatesData(agentID)
+			if agentID == "" && len(requests) > 0 && requests[0] != nil {
+				updates = withInventory(updates, strings.TrimSpace(requests[0].URL.Query().Get("agent")))
+			}
+			data = updates
 		case navmeta.CardSecCronStatus:
 			data = GetCronStatus(agentID)
 		default:
@@ -151,7 +155,11 @@ func (h *Handler) APICard(w http.ResponseWriter, r *http.Request) {
 	}
 	switch card {
 	case "updates":
-		data = GetUpdatesData(agentID)
+		updates := GetUpdatesData(agentID)
+		if agentID == "" {
+			updates = withInventory(updates, strings.TrimSpace(r.URL.Query().Get("agent")))
+		}
+		data = updates
 	case "cron_status":
 		data = GetCronStatus(agentID)
 	case "storage_forecast":

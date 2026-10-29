@@ -328,11 +328,22 @@ func AgentReportHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if _, _, _, ok := currentAgentReportStores(); ok {
+	if _, _, reports, ok := currentAgentReportStores(); ok {
 		if err := saveAgentReportSQLite(r.Context(), tenantID, record); err != nil {
 			log.Printf("ERROR: agent_report: sqlite save error agent=%s: %v", agentID, err)
 			http.Error(w, `{"error":"save failed"}`, http.StatusInternalServerError)
 			return
+		}
+		if cfg.AgentReport.RetentionMonths > 0 {
+			if purge, ok := reports.(interface {
+				PurgeAgentRawReportsOlderThan(context.Context, string, string, time.Time) (int64, error)
+			}); ok {
+				if _, err := purge.PurgeAgentRawReportsOlderThan(r.Context(), tenantID, agentID, agentRetentionBoundary(time.Now(), cfg.AgentReport.RetentionMonths)); err != nil {
+					log.Printf("WARN: agent_report: sqlite retention failed agent=%s", agentID)
+				}
+			} else {
+				log.Printf("WARN: agent_report: sqlite retention unsupported agent=%s", agentID)
+			}
 		}
 	} else {
 		if err := saveAgentReport(record, cfg.AgentReport.RetentionMonths); err != nil {
@@ -364,6 +375,14 @@ func AgentReportHandler(w http.ResponseWriter, r *http.Request) {
 	AfterAgentReportSaved(cfg, report)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_, _ = w.Write([]byte(`{"ok":true}`))
+}
+
+// Keep the full cutoff month. JSONL cleanup used monthly files, so this
+// conservative boundary can retain one extra month but never deletes that
+// month's rows earlier merely because storage changed to SQLite.
+func agentRetentionBoundary(now time.Time, months int) time.Time {
+	cutoff := now.AddDate(0, -months, 0)
+	return time.Date(cutoff.Year(), cutoff.Month(), 1, 0, 0, 0, 0, now.Location())
 }
 
 // insertAuditLogIfPresent は collectors["audit_log"] が含まれていれば集約 SQLite に INSERT する。
@@ -513,6 +532,9 @@ func ensureAgentReportTenant(ctx context.Context, tenantStore store.TenantStore,
 		return err
 	}
 	if existing != nil {
+		if existing.DeletedAt != nil {
+			return fmt.Errorf("tenant is archived")
+		}
 		return nil
 	}
 	if err := tenantStore.CreateTenant(ctx, store.Tenant{

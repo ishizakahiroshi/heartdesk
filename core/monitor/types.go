@@ -358,21 +358,22 @@ type DiskData struct {
 
 // UpdatesData はシステムアップデート情報
 type UpdatesData struct {
-	UpdateSvc      string   `json:"update_svc"`
-	UpdateAuto     string   `json:"update_auto"`
-	AutoEnabled    bool     `json:"auto_enabled"` // 自動更新が有効か
-	UpdateCount    int      `json:"update_count"`
-	UpdateList     []string `json:"update_list"`
-	UpdateLog      string   `json:"update_log"`
-	UpdateLast     string   `json:"update_last"`      // 最終インストール（/var/log/apt/history.log mtime）
-	UpdateListLast string   `json:"update_list_last"` // 最終リスト更新（/var/lib/apt/periodic/update-success-stamp mtime）
-	UbuntuVer      string   `json:"ubuntu_version"`
-	KernelCurrent  string   `json:"kernel_current"`
-	KernelLatest   string   `json:"kernel_latest"`
-	KernelOutdated bool     `json:"kernel_outdated"`
-	HeldCount      int      `json:"held_count"`
-	HeldPackages   []string `json:"held_packages"`
-	Unavailable    bool     `json:"unavailable,omitempty"`
+	Inventory      *InventoryView `json:"inventory,omitempty"`
+	UpdateSvc      string         `json:"update_svc"`
+	UpdateAuto     string         `json:"update_auto"`
+	AutoEnabled    bool           `json:"auto_enabled"` // 自動更新が有効か
+	UpdateCount    int            `json:"update_count"`
+	UpdateList     []string       `json:"update_list"`
+	UpdateLog      string         `json:"update_log"`
+	UpdateLast     string         `json:"update_last"`      // 最終インストール（/var/log/apt/history.log mtime）
+	UpdateListLast string         `json:"update_list_last"` // 最終リスト更新（/var/lib/apt/periodic/update-success-stamp mtime）
+	UbuntuVer      string         `json:"ubuntu_version"`
+	KernelCurrent  string         `json:"kernel_current"`
+	KernelLatest   string         `json:"kernel_latest"`
+	KernelOutdated bool           `json:"kernel_outdated"`
+	HeldCount      int            `json:"held_count"`
+	HeldPackages   []string       `json:"held_packages"`
+	Unavailable    bool           `json:"unavailable,omitempty"`
 	// IsLocal は Monitor 本体（default_agent）か否か。
 	// テンプレート側で apt-get 操作ボタン群を出すかどうかの判定に使う。
 	IsLocal bool `json:"is_local,omitempty"`
