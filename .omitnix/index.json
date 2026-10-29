@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "generated": {
-    "commit": "6543845de1f7bb332caad30d9b326cfcfcc20a28",
-    "dirty": true,
+    "commit": "f76d8a0ae2d9f92c65110855df325ea7bfefe35d",
+    "dirty": false,
     "tool": "omitnix 0.1.4",
     "partial": false,
     "adapters": [
@@ -138,11 +138,11 @@
     "discovery_note": ""
   },
   "coverage": {
-    "discovered": 398,
+    "discovered": 402,
     "analyzed": 342,
     "unresolved": 21,
     "unknown": 3,
-    "unclaimed": 32,
+    "unclaimed": 36,
     "skipped_by_config": 0
   },
   "files": [
@@ -4264,6 +4264,38 @@
         }
       },
       "unresolved": []
+    },
+    {
+      "path": "docs/bot/http-outcome-classifier-20261030/FACTS.md",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.md'"
+    },
+    {
+      "path": "docs/bot/http-outcome-classifier-20261030/PROGRESS.md",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.md'"
+    },
+    {
+      "path": "docs/bot/http-outcome-classifier-20261030/README.md",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.md'"
+    },
+    {
+      "path": "docs/bot/http-outcome-classifier-20261030/REVIEW.md",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.md'"
     },
     {
       "path": "examples/config/config.toml.example",
