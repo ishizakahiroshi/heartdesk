@@ -447,6 +447,23 @@ func TestNCFileAccess_ServiceAccountNewIP(t *testing.T) {
 	}
 }
 
+func TestNCServiceTrustedIPIsLimitedToAccountAndRule(t *testing.T) {
+	env := newNCFATestEnv(t)
+	env.writeSettings(t, map[string]any{"audit_log_path": env.auditPath, "service_accounts": []string{"svc-app", "svc-other"}, "trusted_service_ips": map[string][]string{"svc-app": {"192.0.2.10"}}})
+	t0 := ncFABaseNow
+	withStubs(t, t0, nil)
+	rules := ncFARules(ruleNCServiceNewIP)
+	state := newAlertState()
+	writeFile(t, env.auditPath, "")
+	env.run(rules, state, t0)
+	t1 := t0.Add(4 * 24 * time.Hour)
+	appendFile(t, env.auditPath, ncFALoginLine(t1.Add(-time.Minute), "svc-app", "192.0.2.10")+ncFALoginLine(t1.Add(-time.Minute), "svc-app", "192.0.2.11")+ncFALoginLine(t1.Add(-time.Minute), "svc-other", "192.0.2.10"))
+	got := env.run(rules, state, t1)
+	if len(got) != 2 || countContaining(got, "svc-other") != 1 || countContaining(got, "192.0.2.11") != 1 {
+		t.Fatalf("unexpected alerts: %v", got)
+	}
+}
+
 // 連携アカウントの大量取得は既定（しきい値 0）では判定せず、値を入れると判定する。
 func TestNCFileAccess_ServiceVolumeNeedsExplicitThreshold(t *testing.T) {
 	env := newNCFATestEnv(t)

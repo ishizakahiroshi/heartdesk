@@ -24,6 +24,7 @@ import (
 	"hash/fnv"
 	"io"
 	"log"
+	"net"
 	"net/netip"
 	"os"
 	"path"
@@ -137,6 +138,9 @@ type ncFileAccessSettings struct {
 	// ServiceAccounts は連携用のサービスアカウント。キー自体が無ければ既定（無し）、
 	// 空配列でも「サービスアカウント無し」として扱う。
 	ServiceAccounts []string `json:"service_accounts"`
+	// TrustedServiceIPs excludes only the specified account and exact IP from
+	// the new-source rule. Other rules and other accounts remain active.
+	TrustedServiceIPs map[string][]string `json:"trusted_service_ips"`
 }
 
 func ncFileAccessSettingsPath() string {
@@ -1043,7 +1047,7 @@ func evaluateNCFileAccess(cfg *config.AppConfig, rules AlertRules, state *AlertS
 	ing.logSkipped(auditPath)
 
 	st.prune(now)
-	out := ncFAEvaluate(cfg, rules, state, st, now, services)
+	out := ncFAEvaluate(cfg, rules, state, st, now, services, settings.TrustedServiceIPs)
 	ncFAPruneCooldowns(state, now)
 
 	if err := saveNCFAState(statePath, st); err != nil {
@@ -1190,7 +1194,7 @@ func ncFAOverflowFirstStep(ruleID string) string {
 	return ncFAFirstStepUsers
 }
 
-func ncFAEvaluate(cfg *config.AppConfig, rules AlertRules, state *AlertState, st *ncFAState, now time.Time, services map[string]bool) []string {
+func ncFAEvaluate(cfg *config.AppConfig, rules AlertRules, state *AlertState, st *ncFAState, now time.Time, services map[string]bool, trusted map[string][]string) []string {
 	scope := ncFAScopeLabel(cfg)
 	jst := heartdesk.JST()
 	wsTime := now.Add(-ncFAWindow)
@@ -1218,6 +1222,9 @@ func ncFAEvaluate(cfg *config.AppConfig, rules AlertRules, state *AlertState, st
 				// 接続元を判定の単位（IPv6 は /64）にまとめる。本文には実際のアドレスを出す。
 				units := map[string]map[string]int{}
 				for ip, n := range agg.lines {
+					if ncFATrustedServiceIP(trusted[uid], ip) {
+						continue
+					}
 					unit := ncFAIPUnit(ip)
 					if units[unit] == nil {
 						units[unit] = map[string]int{}
@@ -1373,6 +1380,19 @@ func ncFAEvaluate(cfg *config.AppConfig, rules AlertRules, state *AlertState, st
 		}
 	}
 	return out
+}
+
+func ncFATrustedServiceIP(allowed []string, value string) bool {
+	ip := net.ParseIP(strings.TrimSpace(value))
+	if ip == nil {
+		return false
+	}
+	for _, entry := range allowed {
+		if candidate := net.ParseIP(strings.TrimSpace(entry)); candidate != nil && candidate.Equal(ip) {
+			return true
+		}
+	}
+	return false
 }
 
 // ncFAPruneCooldowns は本機能の cooldown キーのうち、十分に古いものを alert_state.json から消す

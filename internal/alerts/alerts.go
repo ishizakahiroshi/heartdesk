@@ -74,11 +74,12 @@ type AlertRules struct {
 //     uid（キーは "<スコープ>|<uid>"、値は作成検出時刻）。evaluateNCUserEvents 専用。
 //     ncPendingUserTTL を超えたエントリは古いものとして破棄する。
 type AlertState struct {
-	Active         map[string]bool      `json:"active"`
-	LastAlertTime  map[string]time.Time `json:"last_alert_time"`
-	FirstBreach    map[string]time.Time `json:"first_breach"`
-	Offsets        map[string]int64     `json:"offsets"`
-	PendingNCUsers map[string]time.Time `json:"pending_nc_users"`
+	Active            map[string]bool      `json:"active"`
+	LastAlertTime     map[string]time.Time `json:"last_alert_time"`
+	FirstBreach       map[string]time.Time `json:"first_breach"`
+	Offsets           map[string]int64     `json:"offsets"`
+	PendingNCUsers    map[string]time.Time `json:"pending_nc_users"`
+	DeliveredNCEvents map[string]time.Time `json:"delivered_nc_events,omitempty"`
 	// IntegrationHTTP: integration_http_error の未送信・送信済みの控え（キーはルール ID + 対象のハッシュ）。
 	IntegrationHTTP map[string]*IntegrationHTTPItem `json:"integration_http,omitempty"`
 }

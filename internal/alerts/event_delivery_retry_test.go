@@ -1,6 +1,7 @@
 package alerts
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -109,6 +110,45 @@ func TestEventDeliveryNCUserRetryRestoresOffsetsAndPending(t *testing.T) {
 				t.Fatal("successful creation/login pending transition lost")
 			}
 		})
+	}
+}
+
+func TestNCUserRetryDoesNotResendDeliveredEventsWithZeroCooldown(t *testing.T) {
+	dir := ncTestEnv(t)
+	now := time.Date(2026, 10, 21, 12, 0, 0, 0, time.UTC)
+	counts := map[string]int{}
+	n := &eventDeliveryNotifier{resultFor: func(message string) DeliveryResult {
+		counts[message]++
+		return DeliveryResult{Attempted: true, Delivered: !strings.Contains(message, "second") || counts[message] > 1}
+	}}
+	useEventDelivery(t, now, n)
+	rules := enabledNCRules()
+	rule := rules.Rules[ruleNCUserCreated]
+	rule.CooldownSec = 0
+	rules.Rules[ruleNCUserCreated] = rule
+	state := newAlertState()
+	path := filepath.Join(dir, "data", "logs", "nextcloud.jsonl")
+	writeFile(t, path, "")
+	evaluateNCUserEvents(nil, rules, state)
+	appendFile(t, path, ncCreatedLine("2026-10-21T11:59:00Z", "first")+ncCreatedLine("2026-10-21T11:59:01Z", "second"))
+	evaluateNCUserEvents(nil, rules, state)
+	// A scheduler restart must not forget which event was delivered.
+	serialized, err := json.Marshal(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state = newAlertState()
+	if err := json.Unmarshal(serialized, state); err != nil {
+		t.Fatal(err)
+	}
+	evaluateNCUserEvents(nil, rules, state)
+	for message, count := range counts {
+		if strings.Contains(message, "first") && count != 1 {
+			t.Fatalf("delivered event resent %d times", count)
+		}
+		if strings.Contains(message, "second") && count != 2 {
+			t.Fatalf("failed event retried %d times", count)
+		}
 	}
 }
 

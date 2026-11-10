@@ -3,6 +3,7 @@ package alerts
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -342,5 +343,56 @@ func TestEvaluateNCUserEvents_FileAppearingLaterSkipsBacklog(t *testing.T) {
 	got3 := evaluateNCUserEvents(cfg, rules, state)
 	if len(got3) != 1 || !contains(got3[0], "newstaff") {
 		t.Fatalf("expected 1 alert for newstaff, got %v", got3)
+	}
+}
+
+func TestNCSourcesOnlyAliasesPrimaryAgentOfLocalTenant(t *testing.T) {
+	ncTestEnv(t)
+	cfg := &config.AppConfig{}
+	cfg.VendorLicense.TenantID = "alpha"
+	cfg.Agents = map[string]config.AgentConfig{
+		"alpha-vps-local": {IsPrimary: true, Capabilities: []string{"module.nextcloud"}},
+		"alpha-vps-other": {Capabilities: []string{"module.nextcloud"}},
+		"beta-vps-local":  {IsPrimary: true, Capabilities: []string{"module.nextcloud"}},
+	}
+	sources := ncSources(cfg)
+	got := map[string]string{}
+	for _, source := range sources {
+		got[source.label] = source.eventScope
+	}
+	if got["alpha-vps-local"] != "local" || got["alpha-vps-other"] != "alpha-vps-other" || got["beta-vps-local"] != "beta-vps-local" {
+		t.Fatalf("unexpected source aliases: %v", got)
+	}
+}
+
+func TestNCUserCreatedDeduplicatesLocalPrimaryAgent(t *testing.T) {
+	dir := ncTestEnv(t)
+	now := time.Date(2026, 10, 21, 12, 0, 0, 0, time.UTC)
+	captured := withStubs(t, now, nil)
+	cfg := &config.AppConfig{}
+	cfg.VendorLicense.TenantID = "alpha"
+	cfg.Agents = map[string]config.AgentConfig{"alpha-vps-local": {IsPrimary: true, Capabilities: []string{"module.nextcloud"}}}
+	local := filepath.Join(dir, "data", "logs", "nextcloud.jsonl")
+	agent := filepath.Join(dir, "data", "logs", "agents", "alpha-vps-local", "audit.jsonl")
+	writeFile(t, local, "")
+	writeFile(t, agent, "")
+	state := newAlertState()
+	rules := enabledNCRules()
+	evaluateNCUserEvents(cfg, rules, state)
+	line := ncCreatedLine("2026-10-21T11:59:00Z", "sample")
+	appendFile(t, local, line)
+	appendFile(t, agent, line)
+	evaluateNCUserEvents(cfg, rules, state)
+	if len(*captured) != 1 {
+		t.Fatalf("wanted one alert, got %d", len(*captured))
+	}
+}
+
+func TestNCUserMessageValidatesIP(t *testing.T) {
+	if got := ncUserMessage("created", "sample", "alpha", "local", "time", "192.0.2.1"); !strings.Contains(got, "記録された接続元IP: 192.0.2.1") {
+		t.Fatalf("valid IP missing: %q", got)
+	}
+	if got := ncUserMessage("created", "sample", "alpha", "local", "time", "not-an-ip\nspoofed"); !strings.Contains(got, "記録された接続元IP: 不明") || strings.Contains(got, "spoofed") {
+		t.Fatalf("invalid IP must not be injected: %q", got)
 	}
 }

@@ -2,8 +2,10 @@ package alerts
 
 import (
 	"bufio"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -40,13 +42,15 @@ type ncLogLine struct {
 	TS   string `json:"ts"`
 	User string `json:"user"`
 	Msg  string `json:"msg"`
+	IP   string `json:"ip"`
 }
 
 // ncSource は 1 つの Nextcloud（Monitor 自身、または Nextcloud 連携ありの Agent 1 台）を表す。
 type ncSource struct {
-	scope string   // AlertState（PendingNCUsers・cooldown key）で使うスコープ識別子。"local" または agent_id。
-	label string   // 通知文に出す表示（テナント ID または agent_id）。
-	paths []string // 読み取り対象 JSONL のフルパス。
+	scope      string   // AlertState（PendingNCUsers・cooldown key）で使うスコープ識別子。"local" または agent_id。
+	label      string   // 通知文に出す表示（テナント ID または agent_id）。
+	paths      []string // 読み取り対象 JSONL のフルパス。
+	eventScope string   // 同一の Nextcloud を収集する経路だけ共通化する。
 }
 
 // ncLocalJSONLPath は Monitor 自身の Nextcloud（Agent 経由ではない）が書く
@@ -85,7 +89,7 @@ func ncSources(cfg *config.AppConfig) []ncSource {
 			localLabel = t
 		}
 	}
-	out := []ncSource{{scope: "local", label: localLabel, paths: []string{ncLocalJSONLPath()}}}
+	out := []ncSource{{scope: "local", label: localLabel, paths: []string{ncLocalJSONLPath()}, eventScope: "local"}}
 
 	if cfg == nil {
 		return out
@@ -112,7 +116,14 @@ func ncSources(cfg *config.AppConfig) []ncSource {
 		if !ok1 || !ok2 {
 			continue
 		}
-		out = append(out, ncSource{scope: id, label: id, paths: []string{auditPath, loginPath}})
+		scope := id
+		// A primary agent for this tenant observes the same host as the local
+		// collector. Keep unrelated primary agents and tenants isolated.
+		tenant := strings.TrimSpace(cfg.VendorLicense.TenantID)
+		if tenant != "" && strings.HasPrefix(id, tenant+"-") && cfg.Agents[id].IsPrimary {
+			scope = "local"
+		}
+		out = append(out, ncSource{scope: id, label: id, paths: []string{auditPath, loginPath}, eventScope: scope})
 	}
 	return out
 }
@@ -182,6 +193,14 @@ func evaluateNCUserEvents(cfg *config.AppConfig, rules AlertRules, state *AlertS
 
 	now := nowFn()
 	var out []string
+	if state.DeliveredNCEvents == nil {
+		state.DeliveredNCEvents = make(map[string]time.Time)
+	}
+	for key, at := range state.DeliveredNCEvents {
+		if now.Sub(at) > ncPendingUserTTL {
+			delete(state.DeliveredNCEvents, key)
+		}
+	}
 
 	for _, src := range ncSources(cfg) {
 		// Retain the source state until every attempted notification succeeds.
@@ -205,10 +224,12 @@ func evaluateNCUserEvents(cfg *config.AppConfig, rules AlertRules, state *AlertS
 		var createdEvents []struct {
 			Time string
 			UID  string
+			IP   string
 		}
 		var loginEvents []struct {
 			Time string
 			UID  string
+			IP   string
 		}
 
 		for _, path := range src.paths {
@@ -230,7 +251,8 @@ func evaluateNCUserEvents(cfg *config.AppConfig, rules AlertRules, state *AlertS
 					createdEvents = append(createdEvents, struct {
 						Time string
 						UID  string
-					}{Time: l.TS, UID: uid})
+						IP   string
+					}{Time: l.TS, UID: uid, IP: l.IP})
 					continue
 				}
 				if nclog.ExtractLoginResult(l.Msg) == "success" {
@@ -244,7 +266,8 @@ func evaluateNCUserEvents(cfg *config.AppConfig, rules AlertRules, state *AlertS
 					loginEvents = append(loginEvents, struct {
 						Time string
 						UID  string
-					}{Time: l.TS, UID: uid})
+						IP   string
+					}{Time: l.TS, UID: uid, IP: l.IP})
 				}
 			}
 		}
@@ -252,9 +275,14 @@ func evaluateNCUserEvents(cfg *config.AppConfig, rules AlertRules, state *AlertS
 		for _, ev := range createdEvents {
 			if createdDefined && createdRule.Enabled {
 				key := ruleNCUserCreated + ":" + src.scope + ":" + ev.UID
+				eventKey := fmt.Sprintf("%x", sha256.Sum256([]byte(ruleNCUserCreated+"\x00"+src.eventScope+"\x00"+ev.UID+"\x00"+ev.Time)))
 				snap := snapshotAlertKey(key, state)
-				if shouldAlert(key, 0, createdRule.CooldownSec, state, now) {
-					if msg, ok := fireTracked(rules, ruleNCUserCreated, key, state, snap, ncUserMessage("Nextcloud 新規ユーザー作成", ev.UID, src.label, ev.Time)); ok {
+				_, delivered := state.DeliveredNCEvents[eventKey]
+				if (!delivered || ev.Time == "") && shouldAlert(key, 0, createdRule.CooldownSec, state, now) {
+					if msg, ok := fireTracked(rules, ruleNCUserCreated, key, state, snap, ncUserMessage("Nextcloud 新規ユーザー作成", ev.UID, src.label, src.eventScope, ev.Time, ev.IP)); ok {
+						if ev.Time != "" {
+							state.DeliveredNCEvents[eventKey] = now
+						}
 						out = append(out, msg)
 					} else {
 						undelivered = true
@@ -284,9 +312,14 @@ func evaluateNCUserEvents(cfg *config.AppConfig, rules AlertRules, state *AlertS
 
 			if firstLoginDefined && firstLoginRule.Enabled {
 				key := ruleNCUserFirstLogin + ":" + pendingKey
+				eventKey := fmt.Sprintf("%x", sha256.Sum256([]byte(ruleNCUserFirstLogin+"\x00"+src.eventScope+"\x00"+ev.UID+"\x00"+ev.Time)))
 				snap := snapshotAlertKey(key, state)
-				if shouldAlert(key, 0, firstLoginRule.CooldownSec, state, now) {
-					if msg, ok := fireTracked(rules, ruleNCUserFirstLogin, key, state, snap, ncUserMessage("Nextcloud 新規ユーザー初回ログイン", ev.UID, src.label, ev.Time)); ok {
+				_, delivered := state.DeliveredNCEvents[eventKey]
+				if (!delivered || ev.Time == "") && shouldAlert(key, 0, firstLoginRule.CooldownSec, state, now) {
+					if msg, ok := fireTracked(rules, ruleNCUserFirstLogin, key, state, snap, ncUserMessage("Nextcloud 新規ユーザー初回ログイン", ev.UID, src.label, src.eventScope, ev.Time, ev.IP)); ok {
+						if ev.Time != "" {
+							state.DeliveredNCEvents[eventKey] = now
+						}
 						out = append(out, msg)
 					} else {
 						undelivered = true
@@ -324,10 +357,29 @@ func evaluateNCUserEvents(cfg *config.AppConfig, rules AlertRules, state *AlertS
 
 // ncUserMessage は通知文を組み立てる。どの Nextcloud（テナント/Agent）の誰の話かが
 // 受け取った側に分かるよう、label（テナント ID または agent_id）・uid・時刻を必ず入れる。
-func ncUserMessage(label, uid, scopeLabel, ts string) string {
+func ncUserMessage(label, uid, scopeLabel, eventScope, ts, ip string) string {
+	cleanUID := strings.Map(func(r rune) rune {
+		if r < 32 || r == 127 {
+			return -1
+		}
+		return r
+	}, uid)
+	if cleanUID != uid {
+		cleanUID = "不明"
+	}
+	uid = cleanUID
+	if _, ok := nclog.ParseTime(ts); !ok {
+		ts = ""
+	}
 	msg := fmt.Sprintf("%s: %s (%s)", label, uid, scopeLabel)
 	if ts != "" {
 		msg += " " + ts
+	}
+	msg += "\nユーザーID: " + uid + "\n収集元: " + eventScope
+	if parsed := net.ParseIP(strings.TrimSpace(ip)); parsed != nil {
+		msg += "\n記録された接続元IP: " + parsed.String()
+	} else {
+		msg += "\n記録された接続元IP: 不明"
 	}
 	return msg
 }
