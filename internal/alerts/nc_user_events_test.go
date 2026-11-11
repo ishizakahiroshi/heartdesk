@@ -389,10 +389,76 @@ func TestNCUserCreatedDeduplicatesLocalPrimaryAgent(t *testing.T) {
 }
 
 func TestNCUserMessageValidatesIP(t *testing.T) {
-	if got := ncUserMessage("created", "sample", "alpha", "local", "time", "192.0.2.1"); !strings.Contains(got, "記録された接続元IP: 192.0.2.1") {
+	if got := ncUserMessage("created", "sample", "alpha", "local", "time", "192.0.2.1", ""); !strings.Contains(got, "記録された接続元IP: 192.0.2.1") {
 		t.Fatalf("valid IP missing: %q", got)
 	}
-	if got := ncUserMessage("created", "sample", "alpha", "local", "time", "not-an-ip\nspoofed"); !strings.Contains(got, "記録された接続元IP: 不明") || strings.Contains(got, "spoofed") {
+	if got := ncUserMessage("created", "sample", "alpha", "local", "time", "not-an-ip\nspoofed", ""); !strings.Contains(got, "記録された接続元IP: 不明") || strings.Contains(got, "spoofed") {
 		t.Fatalf("invalid IP must not be injected: %q", got)
+	}
+}
+
+// 実機の監査ログと同じ形（occ で作成: ua が "--"・method なし／Python から初回ログイン）が
+// JSONL から通知文まで流れることを確かめる。
+func TestEvaluateNCUserEvents_DetailLinesFromJSONL(t *testing.T) {
+	dir := ncTestEnv(t)
+	now := time.Date(2026, 5, 31, 9, 0, 0, 0, time.UTC)
+	withStubs(t, now, nil)
+	localPath := filepath.Join(dir, "data/logs/nextcloud.jsonl")
+	writeFile(t, localPath, ncCreatedLine("2026-01-01T09:00:00+09:00", "oldstaff"))
+
+	cfg := &config.AppConfig{}
+	cfg.VendorLicense.TenantID = "alpha"
+	rules := enabledNCRules()
+	state := newAlertState()
+	evaluateNCUserEvents(cfg, rules, state)
+
+	appendFile(t, localPath, `{"ts":"2026-05-31T09:05:00+09:00","source":"audit","user":"--","ip":"","ua":"--","msg":"User created: \"svc_gateway\""}`+"\n")
+	got := evaluateNCUserEvents(cfg, rules, state)
+	if len(got) != 1 || !strings.Contains(got[0], "\n作成方法: サーバー上のコマンド（occ）") {
+		t.Fatalf("created message lacks method line: %v", got)
+	}
+
+	appendFile(t, localPath, `{"ts":"2026-05-31T09:08:00+09:00","source":"app","user":"svc_gateway","ip":"192.0.2.9","ua":"Python-urllib/3.12","msg":"Login successful: \"svc_gateway\""}`+"\n")
+	got = evaluateNCUserEvents(cfg, rules, state)
+	if len(got) != 1 || !strings.Contains(got[0], "\n接続ソフト: Python-urllib/3.12") {
+		t.Fatalf("first-login message lacks client line: %v", got)
+	}
+}
+
+func TestNCCreatedDetail(t *testing.T) {
+	cases := []struct{ method, ua, want string }{
+		{"", "--", "作成方法: サーバー上のコマンド（occ）"},
+		{"POST", "synthetic-test-agent", "作成方法: 画面または API 経由（POST）"},
+		{"post", "", "作成方法: 画面または API 経由（POST）"},
+		{"", "", "作成方法: 不明"},
+		{"", "synthetic-test-agent", "作成方法: 不明"},
+		{"POST\nspoof", "--", "作成方法: サーバー上のコマンド（occ）"},
+	}
+	for _, c := range cases {
+		if got := ncCreatedDetail(c.method, c.ua); got != c.want {
+			t.Errorf("ncCreatedDetail(%q,%q)=%q want %q", c.method, c.ua, got, c.want)
+		}
+	}
+}
+
+func TestNCLoginDetail(t *testing.T) {
+	if got := ncLoginDetail("Python-urllib/3.12"); got != "接続ソフト: Python-urllib/3.12" {
+		t.Fatalf("got %q", got)
+	}
+	for _, empty := range []string{"", "--", "  "} {
+		if got := ncLoginDetail(empty); got != "接続ソフト: 不明" {
+			t.Fatalf("empty %q -> %q", empty, got)
+		}
+	}
+	got := ncLoginDetail("agent\nspoofed: line" + strings.Repeat("x", 300))
+	if strings.Contains(got, "\n") || len([]rune(got)) > len([]rune("接続ソフト: "))+100 {
+		t.Fatalf("not sanitised: %q", got)
+	}
+}
+
+func TestNCUserMessageAppendsDetail(t *testing.T) {
+	got := ncUserMessage("created", "sample", "alpha", "local", "time", "192.0.2.1", "作成方法: 不明")
+	if !strings.HasSuffix(got, "\n作成方法: 不明") {
+		t.Fatalf("detail not appended: %q", got)
 	}
 }

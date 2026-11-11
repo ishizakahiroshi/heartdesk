@@ -39,10 +39,69 @@ var ncAgentIDPattern = regexp.MustCompile(`^[a-z0-9_]+-[a-z0-9_][a-z0-9_-]*$`)
 // ncLogLine は nextcloud.jsonl / agents/<id>/{audit,nextcloud_login}.jsonl の
 // 1 レコードのうち、判定に使うフィールドだけを取り出す最小デコード対象。
 type ncLogLine struct {
-	TS   string `json:"ts"`
-	User string `json:"user"`
-	Msg  string `json:"msg"`
-	IP   string `json:"ip"`
+	TS     string `json:"ts"`
+	User   string `json:"user"`
+	Msg    string `json:"msg"`
+	IP     string `json:"ip"`
+	Method string `json:"method"`
+	UA     string `json:"ua"`
+}
+
+// ncUserEvent は通知 1 件の元になる、作成またはログインの 1 イベント。
+type ncUserEvent struct {
+	Time  string
+	UID   string
+	IP    string
+	Extra string // 通知文の末尾に足す補足行（作成方法・接続ソフト）。無ければ空。
+}
+
+// ncCreatedDetail は作成イベントの「作成方法」行を返す。
+//
+// Nextcloud の監査ログは、サーバー上の occ で作ると userAgent が "--" で method が空になる。
+// 画面や API から作ると method（POST 等）が入る。どちらにも当てはまらないときは断定しない。
+// URL は顧客のフォルダ名などを含みうるので通知文には出さない。
+func ncCreatedDetail(method, ua string) string {
+	method = strings.ToUpper(strings.TrimSpace(method))
+	switch {
+	case method != "" && ncSafeToken(method):
+		return "作成方法: 画面または API 経由（" + method + "）"
+	case strings.TrimSpace(ua) == "--":
+		return "作成方法: サーバー上のコマンド（occ）"
+	default:
+		return "作成方法: 不明"
+	}
+}
+
+// ncLoginDetail はログインイベントの「接続ソフト」行を返す（User-Agent の先頭 100 文字）。
+func ncLoginDetail(ua string) string {
+	cleaned := strings.Map(func(r rune) rune {
+		if r < 32 || r == 127 {
+			return -1
+		}
+		return r
+	}, strings.TrimSpace(ua))
+	runes := []rune(cleaned)
+	if len(runes) > 100 {
+		runes = runes[:100]
+	}
+	cleaned = string(runes)
+	if cleaned == "" || cleaned == "--" {
+		return "接続ソフト: 不明"
+	}
+	return "接続ソフト: " + cleaned
+}
+
+// ncSafeToken は method のような短い英大文字だけの語かを返す（通知文へ出してよい形か）。
+func ncSafeToken(s string) bool {
+	if s == "" || len(s) > 16 {
+		return false
+	}
+	for _, r := range s {
+		if r < 'A' || r > 'Z' {
+			return false
+		}
+	}
+	return true
 }
 
 // ncSource は 1 つの Nextcloud（Monitor 自身、または Nextcloud 連携ありの Agent 1 台）を表す。
@@ -221,16 +280,8 @@ func evaluateNCUserEvents(cfg *config.AppConfig, rules AlertRules, state *AlertS
 			}
 		}
 		undelivered := false
-		var createdEvents []struct {
-			Time string
-			UID  string
-			IP   string
-		}
-		var loginEvents []struct {
-			Time string
-			UID  string
-			IP   string
-		}
+		var createdEvents []ncUserEvent
+		var loginEvents []ncUserEvent
 
 		for _, path := range src.paths {
 			prevOffset, seenBefore := state.Offsets[path]
@@ -248,11 +299,7 @@ func evaluateNCUserEvents(cfg *config.AppConfig, rules AlertRules, state *AlertS
 			}
 			for _, l := range lines {
 				if uid := nclog.ExtractUserCreated(l.Msg); uid != "" {
-					createdEvents = append(createdEvents, struct {
-						Time string
-						UID  string
-						IP   string
-					}{Time: l.TS, UID: uid, IP: l.IP})
+					createdEvents = append(createdEvents, ncUserEvent{Time: l.TS, UID: uid, IP: l.IP, Extra: ncCreatedDetail(l.Method, l.UA)})
 					continue
 				}
 				if nclog.ExtractLoginResult(l.Msg) == "success" {
@@ -263,11 +310,7 @@ func evaluateNCUserEvents(cfg *config.AppConfig, rules AlertRules, state *AlertS
 					if uid == "" {
 						continue
 					}
-					loginEvents = append(loginEvents, struct {
-						Time string
-						UID  string
-						IP   string
-					}{Time: l.TS, UID: uid, IP: l.IP})
+					loginEvents = append(loginEvents, ncUserEvent{Time: l.TS, UID: uid, IP: l.IP, Extra: ncLoginDetail(l.UA)})
 				}
 			}
 		}
@@ -279,7 +322,7 @@ func evaluateNCUserEvents(cfg *config.AppConfig, rules AlertRules, state *AlertS
 				snap := snapshotAlertKey(key, state)
 				_, delivered := state.DeliveredNCEvents[eventKey]
 				if (!delivered || ev.Time == "") && shouldAlert(key, 0, createdRule.CooldownSec, state, now) {
-					if msg, ok := fireTracked(rules, ruleNCUserCreated, key, state, snap, ncUserMessage("Nextcloud 新規ユーザー作成", ev.UID, src.label, src.eventScope, ev.Time, ev.IP)); ok {
+					if msg, ok := fireTracked(rules, ruleNCUserCreated, key, state, snap, ncUserMessage("Nextcloud 新規ユーザー作成", ev.UID, src.label, src.eventScope, ev.Time, ev.IP, ev.Extra)); ok {
 						if ev.Time != "" {
 							state.DeliveredNCEvents[eventKey] = now
 						}
@@ -316,7 +359,7 @@ func evaluateNCUserEvents(cfg *config.AppConfig, rules AlertRules, state *AlertS
 				snap := snapshotAlertKey(key, state)
 				_, delivered := state.DeliveredNCEvents[eventKey]
 				if (!delivered || ev.Time == "") && shouldAlert(key, 0, firstLoginRule.CooldownSec, state, now) {
-					if msg, ok := fireTracked(rules, ruleNCUserFirstLogin, key, state, snap, ncUserMessage("Nextcloud 新規ユーザー初回ログイン", ev.UID, src.label, src.eventScope, ev.Time, ev.IP)); ok {
+					if msg, ok := fireTracked(rules, ruleNCUserFirstLogin, key, state, snap, ncUserMessage("Nextcloud 新規ユーザー初回ログイン", ev.UID, src.label, src.eventScope, ev.Time, ev.IP, ev.Extra)); ok {
 						if ev.Time != "" {
 							state.DeliveredNCEvents[eventKey] = now
 						}
@@ -357,7 +400,7 @@ func evaluateNCUserEvents(cfg *config.AppConfig, rules AlertRules, state *AlertS
 
 // ncUserMessage は通知文を組み立てる。どの Nextcloud（テナント/Agent）の誰の話かが
 // 受け取った側に分かるよう、label（テナント ID または agent_id）・uid・時刻を必ず入れる。
-func ncUserMessage(label, uid, scopeLabel, eventScope, ts, ip string) string {
+func ncUserMessage(label, uid, scopeLabel, eventScope, ts, ip, extra string) string {
 	cleanUID := strings.Map(func(r rune) rune {
 		if r < 32 || r == 127 {
 			return -1
@@ -380,6 +423,9 @@ func ncUserMessage(label, uid, scopeLabel, eventScope, ts, ip string) string {
 		msg += "\n記録された接続元IP: " + parsed.String()
 	} else {
 		msg += "\n記録された接続元IP: 不明"
+	}
+	if extra != "" {
+		msg += "\n" + extra
 	}
 	return msg
 }
