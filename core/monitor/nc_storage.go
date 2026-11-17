@@ -145,7 +145,10 @@ func GetNcStorage(cfg *config.AppConfig) NcStorageData {
 	} else {
 		ocs, _ := usersJSON["ocs"].(map[string]interface{})
 		data, _ := ocs["data"].(map[string]interface{})
-		uids, _ := data["users"].([]interface{})
+		uids, ok := data["users"].([]interface{})
+		if !ok {
+			errors["users"] = "unexpected response format"
+		}
 		for _, uid := range uids {
 			uidStr, ok := uid.(string)
 			if !ok {
@@ -184,9 +187,25 @@ func GetNcStorage(cfg *config.AppConfig) NcStorageData {
 		if gfList == nil {
 			gfList, _ = gfJSON["data"].(map[string]interface{})
 		}
+		// FrontpageRoute returns the folder map directly, without an OCS wrapper.
+		if gfList == nil {
+			if _, hasOCS := gfJSON["ocs"]; !hasOCS {
+				if _, hasData := gfJSON["data"]; !hasData {
+					gfList = gfJSON
+				}
+			}
+		}
+		if gfList == nil {
+			errors["groupfolders"] = "unexpected response format"
+		}
 		for _, v := range gfList {
 			f, ok := v.(map[string]interface{})
 			if !ok {
+				errors["groupfolders"] = "unexpected response format"
+				continue
+			}
+			if _, ok := f["size"]; !ok {
+				errors["groupfolders"] = "unexpected response format"
 				continue
 			}
 			size := parseInt64(f["size"])

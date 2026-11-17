@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"os/exec"
@@ -111,6 +113,29 @@ type resourcePoint struct {
 	disk float64
 }
 
+// readResourceLine skips oversized records without preventing later samples
+// from being read, and bounds memory used for a single report.
+func readResourceLine(r *bufio.Reader) ([]byte, error) {
+	const maxRecord = 8 * 1024 * 1024
+	var line []byte
+	tooLarge := false
+	for {
+		part, err := r.ReadSlice('\n')
+		if !tooLarge {
+			if len(line)+len(part) > maxRecord {
+				line = nil
+				tooLarge = true
+			} else {
+				line = append(line, part...)
+			}
+		}
+		if errors.Is(err, bufio.ErrBufferFull) {
+			continue
+		}
+		return line, err
+	}
+}
+
 // readResourcePoints は agent_reports JSONL から直近7日分のリソース履歴を返す
 func readResourcePoints(agentID string) []resourcePoint {
 	dir := agentReportDirPath()
@@ -128,11 +153,13 @@ func readResourcePoints(agentID string) []resourcePoint {
 		if err != nil {
 			continue
 		}
-		scanner := bufio.NewScanner(f)
-		scanner.Buffer(make([]byte, 256*1024), 256*1024)
-		for scanner.Scan() {
-			line := scanner.Bytes()
+		reader := bufio.NewReaderSize(f, 256*1024)
+		for {
+			line, readErr := readResourceLine(reader)
 			if len(line) == 0 {
+				if readErr != nil {
+					break
+				}
 				continue
 			}
 			var rec agentReportRecord
@@ -163,6 +190,9 @@ func readResourcePoints(agentID string) []resourcePoint {
 				mem:  sys.Memory.UsagePercent,
 				disk: diskPct,
 			})
+			if readErr != nil && !errors.Is(readErr, io.EOF) {
+				break
+			}
 		}
 		_ = f.Close()
 	}
