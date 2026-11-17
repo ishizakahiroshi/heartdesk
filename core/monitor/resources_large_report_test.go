@@ -66,3 +66,32 @@ func TestResourceHistorySkipsUnchangedOldFilesAndRejectsCorruption(t *testing.T)
 		t.Fatalf("corrupt history should not produce a forecast: %+v", got)
 	}
 }
+
+func BenchmarkResourceHistory(b *testing.B) {
+	base := b.TempDir()
+	b.Setenv("HEARTDESK_BASE_DIR", base)
+	dir := filepath.Join(base, "data", "json", "agent_reports")
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		b.Fatal(err)
+	}
+	f, err := os.Create(filepath.Join(dir, "report_alpha-vps-host_202611.jsonl"))
+	if err != nil {
+		b.Fatal(err)
+	}
+	line := fmt.Sprintf(`{"reported_at":%q,"padding":%q,"collectors":{"system":{"disk":[{"mount_point":"/","usage_percent":25}]}}}`+"\n", time.Now().Format(time.RFC3339), strings.Repeat("x", 4096))
+	for i := 0; i < 16384; i++ {
+		if _, err := f.WriteString(line); err != nil {
+			b.Fatal(err)
+		}
+	}
+	if err := f.Close(); err != nil {
+		b.Fatal(err)
+	}
+	b.SetBytes(int64(len(line) * 16384))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if got := GetStorageForecast("alpha-vps-host"); !got.HasData {
+			b.Fatal("missing forecast")
+		}
+	}
+}

@@ -146,6 +146,7 @@ func readResourcePoints(agentID string) ([]resourcePoint, bool) {
 	}
 
 	cutoff := time.Now().Add(-7 * 24 * time.Hour)
+	location := heartdesk.JST()
 	var points []resourcePoint
 	incomplete := false
 
@@ -179,7 +180,15 @@ func readResourcePoints(agentID string) ([]resourcePoint, bool) {
 				}
 				continue
 			}
-			var rec agentReportRecord
+			// Only decode the collector used by this view. Agent reports can
+			// contain large unrelated collectors; copying all of them for every
+			// history point creates avoidable memory pressure.
+			var rec struct {
+				ReportedAt string `json:"reported_at"`
+				Collectors struct {
+					System json.RawMessage `json:"system"`
+				} `json:"collectors"`
+			}
 			if err := json.Unmarshal(line, &rec); err != nil {
 				incomplete = true
 				continue
@@ -192,9 +201,9 @@ func readResourcePoints(agentID string) ([]resourcePoint, bool) {
 			if ts.Before(cutoff) {
 				continue
 			}
-			sys, ok := decodeSystemCollectorResult(rec.Collectors["system"])
+			sys, ok := decodeSystemCollectorResult(rec.Collectors.System)
 			if !ok {
-				if _, present := rec.Collectors["system"]; present {
+				if len(rec.Collectors.System) > 0 {
 					incomplete = true
 				}
 				continue
@@ -209,10 +218,11 @@ func readResourcePoints(agentID string) ([]resourcePoint, bool) {
 				}
 			}
 			if !foundRoot {
+				incomplete = true
 				continue
 			}
 			points = append(points, resourcePoint{
-				ts:   ts.In(heartdesk.JST()),
+				ts:   ts.In(location),
 				cpu:  sys.CPU.UsagePercent,
 				mem:  sys.Memory.UsagePercent,
 				disk: diskPct,
