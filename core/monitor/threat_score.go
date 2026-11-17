@@ -2,10 +2,12 @@ package monitor
 
 import (
 	"bufio"
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"sort"
 	"strconv"
@@ -14,6 +16,7 @@ import (
 
 	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
+	"github.com/ishizakahiroshi/heartdesk/internal/httpevents"
 )
 
 func threatScoreCSVPath() string {
@@ -709,27 +712,38 @@ func GetThreatEventHistory(ip string, agentID ...string) ThreatEventHistoryRespo
 
 	// 4. NC 4xx（直近3ヶ月）
 	if id != "" {
-		_ = ScanJSONL[NginxLogEvent](webAccessJSONLPath(id), func(ev NginxLogEvent) bool {
-			if ev.IP != ip || ev.Status < 400 || ev.Status >= 500 {
-				return true
+		rows, err := httpevents.Load(context.Background(), webAccessJSONLPath(id), now, now.AddDate(0, -3, 0))
+		if err != nil {
+			log.Printf("threat event classification: %s", err.Error())
+		}
+		for _, row := range rows {
+			ev := row.Result.Event
+			if row.IP != ip || ev.Status < 400 || ev.Status >= 500 {
+				continue
 			}
 			pathOnly := strings.SplitN(ev.Path, "?", 2)[0]
 			if pathOnly != nextcloudPath && !strings.HasPrefix(pathOnly, nextcloudPath+"/") {
-				return true
+				continue
 			}
 			unixTs, tsStr := parseFlexTime(ev.TS)
 			if unixTs == 0 {
-				return true
+				continue
 			}
 			detail := truncateRunes(fmt.Sprintf("%s %s → %d", ev.Method, pathOnly, ev.Status), 100)
-			uaInfo := ParseUA(ev.UA)
+			uaInfo := ParseUA(row.UA)
+			category, delta := "4XX", wNC4xx
+			if row.Result.Kind == "expected" {
+				category, delta = "正常", 0
+			}
+			if row.Result.Kind == "integration_error" {
+				category, delta = "連携エラー", 0
+			}
 			events = append(events, rawEvent{
-				unixTs: unixTs, ts: tsStr, category: "4XX",
-				scoreDelta: wNC4xx, detail: detail,
+				unixTs: unixTs, ts: tsStr, category: category,
+				scoreDelta: delta, detail: detail,
 				uaLabel: uaInfo.Label, uaDevice: uaInfo.Device,
 			})
-			return true
-		})
+		}
 	} else {
 		for i := 0; i <= 2; i++ {
 			ym := now.AddDate(0, -i, 0).Format("200601")

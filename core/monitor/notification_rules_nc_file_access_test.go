@@ -60,7 +60,7 @@ func TestAlertRuleDefsIncludesNCFileAccessRules(t *testing.T) {
 func fullRulesPayload() map[string]map[string]string {
 	p := map[string]map[string]string{}
 	for _, id := range AlertRuleDefOrder {
-		th := "0"
+		th := formatFloat(AlertRuleDefs[id].DefaultThreshold)
 		if d, ok := ncFileAccessRuleDefaults[id]; ok {
 			th = formatFloat(d.threshold)
 		}

@@ -131,15 +131,17 @@ func f2bJSONLPath(agentID ...string) string {
 
 // NginxLogEvent は logs/nginx.jsonl の1レコード
 type NginxLogEvent struct {
-	TS      string `json:"ts"`
-	IP      string `json:"ip"`
-	Method  string `json:"method"`
-	Path    string `json:"path"`
-	Status  int    `json:"status"`
-	Bytes   int    `json:"bytes"`
-	UA      string `json:"ua"`
-	Referer string `json:"referer"`
-	RespMs  int    `json:"resp_ms"`
+	RequestID string `json:"request_id,omitempty"`
+	AgentID   string `json:"agent_id,omitempty"`
+	TS        string `json:"ts"`
+	IP        string `json:"ip"`
+	Method    string `json:"method"`
+	Path      string `json:"path"`
+	Status    int    `json:"status"`
+	Bytes     int    `json:"bytes"`
+	UA        string `json:"ua"`
+	Referer   string `json:"referer"`
+	RespMs    int    `json:"resp_ms"`
 }
 
 // nginxJSONLPath は data/logs/nginx.jsonl のフルパスを返す

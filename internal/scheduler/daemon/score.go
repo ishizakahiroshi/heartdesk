@@ -24,6 +24,7 @@ import (
 
 	"github.com/ishizakahiroshi/heartdesk/internal"
 	"github.com/ishizakahiroshi/heartdesk/internal/config"
+	"github.com/ishizakahiroshi/heartdesk/internal/httpevents"
 )
 
 const (
@@ -149,6 +150,12 @@ func ScoreEngine(ctx context.Context, cfg *config.SchedulerConfig) error {
 	}
 
 	inputs := collectScoreInputs(ctx, paths, cutoff, ncFailSkip, logLine)
+	if inputs.httpReadError != nil {
+		return inputs.httpReadError
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	scanHits, scanCriticals := inputs.scanHits, inputs.scanCriticals
 	authFails, ncFails, nc4xxHits := inputs.authFails, inputs.ncFails, inputs.nc4xxHits
 	banned := inputs.banned
@@ -243,6 +250,9 @@ func ScoreEngine(ctx context.Context, cfg *config.SchedulerConfig) error {
 		logLine("ERROR", "threat score csv write failed: "+err.Error())
 		return err
 	}
+	if err := httpevents.WriteSnapshot(heartdesk.Path("data/json/http_integration_errors.json"), httpevents.Snapshot(inputs.httpRows, time.Now())); err != nil {
+		return err
+	}
 	if err := appendThreatScoreHistory(paths.ScoreHistoryPath, nowTS, rows); err != nil {
 		logLine("WARN", "threat score history update failed: "+err.Error())
 	}
@@ -256,6 +266,8 @@ func ScoreEngine(ctx context.Context, cfg *config.SchedulerConfig) error {
 
 // scoreInputs はスコア計算の入力（IP ごとの件数と BAN 済みの集合）。
 type scoreInputs struct {
+	httpRows       []httpevents.Row
+	httpReadError  error
 	scanHits       map[string]int
 	scanCriticals  map[string]int
 	authFails      map[string]int
@@ -276,7 +288,14 @@ func collectScoreInputs(ctx context.Context, paths scorePaths, cutoff time.Time,
 		in.scanHits, in.scanCriticals = collectHoneypotEventCounts(ctx, filepath.Join(paths.AgentEventDir, "honeypot.jsonl"), cutoff, logLine)
 		in.authFails = collectAuth401EventCounts(ctx, filepath.Join(paths.AgentEventDir, "web_access.jsonl"), cutoff, logLine)
 		in.ncFails = collectNCFailEventCounts(ctx, filepath.Join(paths.AgentEventDir, "nextcloud_login.jsonl"), cutoff, ncFailSkip, logLine)
-		in.nc4xxHits = collectNC4xxEventCounts(ctx, filepath.Join(paths.AgentEventDir, "web_access.jsonl"), cutoff, logLine)
+		in.httpRows, in.httpReadError = httpevents.Load(ctx, filepath.Join(paths.AgentEventDir, "web_access.jsonl"), time.Now(), cutoff)
+		if in.httpReadError != nil {
+			logLine("WARN", in.httpReadError.Error())
+			if !httpevents.IsFatal(in.httpReadError) {
+				in.httpReadError = nil
+			}
+		}
+		in.nc4xxHits = classifiedNC4xxCounts(in.httpRows)
 		in.banned = collectBannedIPsFromEvents(ctx, filepath.Join(paths.AgentEventDir, "fail2ban.jsonl"), cutoff, logLine)
 		in.autobanEnabled = false
 		logLine("", "agent event score input enabled; monitor-side autoban disabled")
@@ -689,26 +708,24 @@ func collectNC4xxCounts(ctx context.Context, dir string, cutoff time.Time, logLi
 }
 
 func collectNC4xxEventCounts(ctx context.Context, path string, cutoff time.Time, logLine func(string, string)) map[string]int {
-	out := make(map[string]int)
-	_ = readJSONL(path, func(line []byte) {
-		if ctx.Err() != nil {
-			return
-		}
-		var rec webAccessLine
-		if err := json.Unmarshal(line, &rec); err != nil || !isIPv4(rec.IP) || rec.Status < 400 || rec.Status >= 500 {
-			return
-		}
-		pathOnly := strings.SplitN(rec.Path, "?", 2)[0]
-		if pathOnly != "/nextcloud" && !strings.HasPrefix(pathOnly, "/nextcloud/") {
-			return
-		}
-		t, err := parseFlexTimestamp(rec.TS)
-		if err != nil || t.Before(cutoff) {
-			return
-		}
-		out[rec.IP]++
-	})
+	rows, err := httpevents.Load(ctx, path, time.Now(), cutoff)
+	if err != nil {
+		logLine("WARN", err.Error())
+	}
+	out := classifiedNC4xxCounts(rows)
 	logLine("", fmt.Sprintf("agent nc4xx parsed: ip=%d", len(out)))
+	return out
+}
+
+func classifiedNC4xxCounts(rows []httpevents.Row) map[string]int {
+	out := map[string]int{}
+	for _, row := range rows {
+		rec := row.Result.Event
+		path := strings.SplitN(rec.Path, "?", 2)[0]
+		if row.Result.Kind == "threat" && isIPv4(row.IP) && rec.Status >= 400 && rec.Status < 500 && (path == "/nextcloud" || strings.HasPrefix(path, "/nextcloud/")) {
+			out[row.IP]++
+		}
+	}
 	return out
 }
 

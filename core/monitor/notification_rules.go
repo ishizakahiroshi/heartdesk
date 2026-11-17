@@ -44,6 +44,7 @@ var alertRulesMu sync.RWMutex
 
 // AlertRuleDefOrder はルール定義の表示順
 var AlertRuleDefOrder = []string{
+	"integration_http_error",
 	"memory_high",
 	"disk_high",
 	"service_down_nginx",
@@ -65,6 +66,11 @@ const ncCountThresholdMax = 100000
 
 // AlertRuleDefs はアラートルールの静的定義
 var AlertRuleDefs = map[string]AlertRuleDef{
+	"integration_http_error": {
+		Label: "連携ファイル取得エラー", Desc: "確認済み連携のファイル取得失敗を対象ごとにまとめて通知",
+		HasThreshold: true, ThresholdMin: 1, ThresholdMax: ncCountThresholdMax, IntegerThreshold: true,
+		DefaultThreshold: 1, DefaultCooldownSec: 10800,
+	},
 	"memory_high": {
 		Label: "メモリ高騰", Desc: "使用量/合計メモリ", HasThreshold: true, HasRecovery: true, HasSustain: true,
 	},

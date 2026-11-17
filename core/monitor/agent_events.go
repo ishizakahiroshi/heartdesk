@@ -101,7 +101,7 @@ func normalizeAgentEvent(record agentReportRecord, collectorName string, ev map[
 	out["ts"] = ts
 
 	dedupeKey := eventString(ev, "dedupe_key")
-	if dedupeKey == "" {
+	if dedupeKey == "" || source == "http_outcome" {
 		dedupeKey = buildAgentEventDedupeKey(source, ts, ev)
 	}
 	out["dedupe_key"] = dedupeKey
@@ -120,6 +120,8 @@ func eventKindAndSource(collectorName string, ev map[string]interface{}) (string
 		return "fail2ban", "fail2ban"
 	case "honeypot":
 		return "honeypot", "honeypot"
+	case "http_outcome":
+		return "http_outcome", "http_outcome"
 	case "nextcloud":
 		if eventString(ev, "source") == "audit" {
 			return "audit", "audit"
@@ -131,6 +133,14 @@ func eventKindAndSource(collectorName string, ev map[string]interface{}) (string
 }
 
 func buildAgentEventDedupeKey(source, ts string, ev map[string]interface{}) string {
+	if source == "http_outcome" {
+		// Request-scoped receipt fields distinguish independent operations without
+		// putting raw resources in the key. The collector's authenticity is checked
+		// by the existing signed Agent report boundary.
+		b, _ := json.Marshal([]string{source, ts, eventString(ev, "request_id"), eventString(ev, "method"), eventString(ev, "path_hash"), eventString(ev, "status"), eventString(ev, "operation"), eventString(ev, "outcome")})
+		sum := sha256.Sum256(b)
+		return source + "|" + ts + "|" + hex.EncodeToString(sum[:])
+	}
 	parts := []string{
 		source,
 		ts,
