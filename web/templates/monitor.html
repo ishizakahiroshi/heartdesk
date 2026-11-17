@@ -183,7 +183,9 @@ document.addEventListener('click', function(ev) {
 		<div class="card-header-actions"></div>
 	</div>
 	<div class="card-body">
-		{{if not .HasData}}
+		{{if .Incomplete}}
+		<p class="section-error">履歴の一部を読み取れないため、予測を表示できません。</p>
+		{{else if not .HasData}}
 		<p class="empty">データ収集中...5分ごとに記録されます</p>
 		{{else}}
 		<div class="stats-grid stats-grid-child">

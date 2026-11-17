@@ -33,7 +33,6 @@ var ssrCardByID = map[string]apiCardRender{
 // buildServerDetailCards は表示可能カードのHTMLを構築する（SSRカードのみ）
 func buildServerDetailCards(h *Handler, visibleCards []navmeta.MonitorCardMeta, cardModes map[string]string, agentID string, requests ...*http.Request) map[string]template.HTML {
 	cards := map[string]template.HTML{}
-	sfData := GetStorageForecast(agentID)
 	for _, card := range visibleCards {
 		if cardModes[card.ID] == "hidden" {
 			continue
@@ -63,7 +62,7 @@ func buildServerDetailCards(h *Handler, visibleCards []navmeta.MonitorCardMeta, 
 		}
 		switch card.ID {
 		case navmeta.CardSecStorageForecast:
-			data = sfData
+			data = GetStorageForecast(agentID)
 		case navmeta.CardSecUpdates:
 			data = GetUpdatesData(agentID)
 		case navmeta.CardSecCronStatus:

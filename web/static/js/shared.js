@@ -2839,8 +2839,9 @@ function renderNcStorageCard(container, data, r2Data) {
 	}
 
 	var errors = data.errors || {};
-	if (errors.users || errors.groupfolders) {
+	if (errors.config || errors.users || errors.groupfolders) {
 		var errLine = [];
+		if (errors.config) errLine.push('Nextcloud の接続設定を確認してください');
 		if (errors.users) errLine.push('ユーザー取得: ' + errors.users);
 		if (errors.groupfolders) errLine.push('グループフォルダー取得: ' + errors.groupfolders);
 		var errBox = document.createElement('div');
@@ -2852,22 +2853,24 @@ function renderNcStorageCard(container, data, r2Data) {
 	var grid = document.createElement('div');
 	grid.className = 'stats-grid stats-grid-child';
 
-	var userBox = buildQuotaStatBox(
+	var userBox = (errors.config || errors.users) ? document.createElement('div') : buildQuotaStatBox(
 		'ユーザー合計',
 		data.users ? data.users.used : 0,
 		data.users ? data.users.quota : 0,
 		data.users ? data.users.unlimited : 0,
 		data.users ? data.users.users : 0
 	);
+	if (errors.config || errors.users) { userBox.className = 'stat-box'; userBox.textContent = 'ユーザー合計: 取得できません'; }
 	grid.appendChild(userBox);
 
-	var gfBox = buildQuotaStatBox(
+	var gfBox = (errors.config || errors.groupfolders) ? document.createElement('div') : buildQuotaStatBox(
 		'グループフォルダー合計',
 		data.groupfolders_totals ? data.groupfolders_totals.size : 0,
 		data.groupfolders_totals ? data.groupfolders_totals.quota : 0,
 		data.groupfolders_totals ? data.groupfolders_totals.unlimited : 0,
 		data.groupfolders ? data.groupfolders.length : 0
 	);
+	if (errors.config || errors.groupfolders) { gfBox.className = 'stat-box'; gfBox.textContent = 'グループフォルダー合計: 取得できません'; }
 	grid.appendChild(gfBox);
 
 	var r2Box = document.createElement('div');

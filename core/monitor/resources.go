@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"os/exec"
@@ -111,36 +113,80 @@ type resourcePoint struct {
 	disk float64
 }
 
+// readResourceLine skips oversized records without preventing later samples
+// from being read, and bounds memory used for a single report.
+func readResourceLine(r *bufio.Reader) ([]byte, bool, error) {
+	const maxRecord = 8 * 1024 * 1024
+	var line []byte
+	tooLarge := false
+	for {
+		part, err := r.ReadSlice('\n')
+		if !tooLarge {
+			if len(line)+len(part) > maxRecord {
+				line = nil
+				tooLarge = true
+			} else {
+				line = append(line, part...)
+			}
+		}
+		if errors.Is(err, bufio.ErrBufferFull) {
+			continue
+		}
+		return line, tooLarge, err
+	}
+}
+
 // readResourcePoints は agent_reports JSONL から直近7日分のリソース履歴を返す
-func readResourcePoints(agentID string) []resourcePoint {
+func readResourcePoints(agentID string) ([]resourcePoint, bool) {
 	dir := agentReportDirPath()
 	pattern := filepath.Join(dir, fmt.Sprintf("report_%s_*.jsonl", agentID))
 	matches, err := filepath.Glob(pattern)
 	if err != nil || len(matches) == 0 {
-		return nil
+		return nil, err != nil
 	}
 
 	cutoff := time.Now().Add(-7 * 24 * time.Hour)
 	var points []resourcePoint
+	incomplete := false
 
 	for _, fpath := range matches {
 		f, err := os.Open(fpath)
 		if err != nil {
+			incomplete = true
 			continue
 		}
-		scanner := bufio.NewScanner(f)
-		scanner.Buffer(make([]byte, 256*1024), 256*1024)
-		for scanner.Scan() {
-			line := scanner.Bytes()
+		info, err := f.Stat()
+		if err != nil {
+			incomplete = true
+			_ = f.Close()
+			continue
+		}
+		// Reports are appended on receipt. A file not modified during the
+		// window cannot contain reports received in that window.
+		if info.ModTime().Before(cutoff) {
+			_ = f.Close()
+			continue
+		}
+		reader := bufio.NewReaderSize(f, 256*1024)
+		for {
+			line, tooLarge, readErr := readResourceLine(reader)
+			if tooLarge || (readErr != nil && !errors.Is(readErr, io.EOF)) {
+				incomplete = true
+			}
 			if len(line) == 0 {
+				if readErr != nil {
+					break
+				}
 				continue
 			}
 			var rec agentReportRecord
 			if err := json.Unmarshal(line, &rec); err != nil {
+				incomplete = true
 				continue
 			}
 			ts, err := time.Parse(time.RFC3339, rec.ReportedAt)
 			if err != nil {
+				incomplete = true
 				continue
 			}
 			if ts.Before(cutoff) {
@@ -148,14 +194,22 @@ func readResourcePoints(agentID string) []resourcePoint {
 			}
 			sys, ok := decodeSystemCollectorResult(rec.Collectors["system"])
 			if !ok {
+				if _, present := rec.Collectors["system"]; present {
+					incomplete = true
+				}
 				continue
 			}
 			diskPct := 0.0
+			foundRoot := false
 			for _, d := range sys.Disk {
 				if d.MountPoint == "/" {
 					diskPct = d.UsagePercent
+					foundRoot = true
 					break
 				}
+			}
+			if !foundRoot {
+				continue
 			}
 			points = append(points, resourcePoint{
 				ts:   ts.In(heartdesk.JST()),
@@ -163,15 +217,18 @@ func readResourcePoints(agentID string) []resourcePoint {
 				mem:  sys.Memory.UsagePercent,
 				disk: diskPct,
 			})
+			if readErr != nil && !errors.Is(readErr, io.EOF) {
+				break
+			}
 		}
 		_ = f.Close()
 	}
-	return points
+	return points, incomplete
 }
 
 // GetResourceGraph は agent_reports JSONL を読んで24h/7d集計を返す
 func GetResourceGraph(agentID string) ResourceGraphData {
-	points := readResourcePoints(agentID)
+	points, incomplete := readResourcePoints(agentID)
 
 	now := time.Now().In(heartdesk.JST())
 	cutoff24h := now.Add(-24 * time.Hour)
@@ -249,7 +306,7 @@ func GetResourceGraph(agentID string) ResourceGraphData {
 	}
 
 	empty := len(hourAcc) == 0 && len(dayAcc) == 0
-	return ResourceGraphData{H24: h24, D7: d7, H24Keys: h24Keys, D7Keys: d7Keys, Empty: empty}
+	return ResourceGraphData{H24: h24, D7: d7, H24Keys: h24Keys, D7Keys: d7Keys, Empty: empty, Incomplete: incomplete}
 }
 
 // GetProcesses は ps aux から CPU/MEM Top プロセス一覧を取得する。
@@ -340,7 +397,10 @@ func StatusLabelClass(status string) (label, class string) {
 
 // GetStorageForecast は直近7日ディスク使用率を線形回帰して逼迫予測を返す
 func GetStorageForecast(agentID string) StorageForecastData {
-	points := readResourcePoints(agentID)
+	points, incomplete := readResourcePoints(agentID)
+	if incomplete {
+		return StorageForecastData{Incomplete: true}
+	}
 
 	now := time.Now().In(heartdesk.JST())
 	cutoff := now.Add(-7 * 24 * time.Hour)

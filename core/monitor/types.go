@@ -215,16 +215,18 @@ type ResourcePoint struct {
 
 // ResourceGraphData は resource_graph カードのデータ
 type ResourceGraphData struct {
-	H24     map[string]ResourcePoint // key: "00"~"23"
-	D7      map[string]ResourcePoint // key: "2026-04-08"
-	H24Keys []string                 // 時刻順キー（古い→新しい, 24要素）
-	D7Keys  []string                 // 日付順キー（古い→新しい, 7要素）
-	Empty   bool
+	H24        map[string]ResourcePoint // key: "00"~"23"
+	D7         map[string]ResourcePoint // key: "2026-04-08"
+	H24Keys    []string                 // 時刻順キー（古い→新しい, 24要素）
+	D7Keys     []string                 // 日付順キー（古い→新しい, 7要素）
+	Empty      bool
+	Incomplete bool
 }
 
 // StorageForecastData はストレージ逼迫予測カードのデータ
 type StorageForecastData struct {
 	HasData     bool
+	Incomplete  bool
 	Current     float64
 	SlopePerDay float64
 	ETA90       *float64 // nil = slope <= 0
