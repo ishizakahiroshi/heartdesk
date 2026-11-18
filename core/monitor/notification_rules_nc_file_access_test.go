@@ -19,6 +19,7 @@ var ncFileAccessRuleDefaults = map[string]struct {
 	cooldown  int
 }{
 	"nc_mass_access":       {300, 10800},
+	"nc_mass_delete":       {300, 10800},
 	"nc_folder_sweep":      {50, 10800},
 	"nc_new_ip_access":     {50, 10800},
 	"nc_off_hours_access":  {100, 86400},

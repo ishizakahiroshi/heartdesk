@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "generated": {
-    "commit": "716d19bcbcf027383294dcbb6bd6adc82f9ae8ae",
-    "dirty": true,
+    "commit": "b3cead0283b4cb619c0931b31fbe291b7919d18d",
+    "dirty": false,
     "tool": "omitnix 0.1.4",
     "partial": false,
     "adapters": [
@@ -138,8 +138,8 @@
     "discovery_note": ""
   },
   "coverage": {
-    "discovered": 425,
-    "analyzed": 370,
+    "discovered": 426,
+    "analyzed": 371,
     "unresolved": 21,
     "unknown": 3,
     "unclaimed": 31,
@@ -5370,6 +5370,35 @@
     },
     {
       "path": "internal/alerts/nc_file_access_test.go",
+      "adapter": "go",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "none_observed",
+          "value": null
+        },
+        "authentication": {
+          "state": "not_configured"
+        },
+        "authorization": {
+          "state": "not_configured"
+        },
+        "reads": {
+          "state": "none_observed",
+          "value": []
+        },
+        "writes": {
+          "state": "none_observed",
+          "value": []
+        },
+        "screen_to_api": {
+          "state": "out_of_scope"
+        }
+      },
+      "unresolved": []
+    },
+    {
+      "path": "internal/alerts/nc_mass_delete_test.go",
       "adapter": "go",
       "status": "analyzed",
       "fields": {

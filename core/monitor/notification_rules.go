@@ -52,6 +52,7 @@ var AlertRuleDefOrder = []string{
 	"nc_user_created",
 	"nc_user_first_login",
 	"nc_mass_access",
+	"nc_mass_delete",
 	"nc_folder_sweep",
 	"nc_new_ip_access",
 	"nc_off_hours_access",
@@ -92,6 +93,11 @@ var AlertRuleDefs = map[string]AlertRuleDef{
 	// しきい値は 1 以上の整数（nc_service_volume だけは 0＝判定しない も可）。
 	"nc_mass_access": {
 		Label: "Nextcloud 大量取得", Desc: "1人の直近60分の取得件数",
+		HasThreshold: true, ThresholdMin: 1, ThresholdMax: ncCountThresholdMax, IntegerThreshold: true,
+		DefaultThreshold: 300, DefaultCooldownSec: 10800,
+	},
+	"nc_mass_delete": {
+		Label: "Nextcloud 大量削除", Desc: "1人の直近60分の削除件数（連携アカウントは対象外）",
 		HasThreshold: true, ThresholdMin: 1, ThresholdMax: ncCountThresholdMax, IntegerThreshold: true,
 		DefaultThreshold: 300, DefaultCooldownSec: 10800,
 	},

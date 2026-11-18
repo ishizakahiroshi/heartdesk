@@ -44,6 +44,7 @@ import (
 // ルール ID は core/monitor の AlertRuleDefs と一致させる（ラベルの写しは labels.go）。
 const (
 	ruleNCMassAccess      = "nc_mass_access"
+	ruleNCMassDelete      = "nc_mass_delete"
 	ruleNCFolderSweep     = "nc_folder_sweep"
 	ruleNCNewIPAccess     = "nc_new_ip_access"
 	ruleNCOffHoursAccess  = "nc_off_hours_access"
@@ -62,6 +63,7 @@ type ncFADefault struct {
 
 var ncFADefaults = map[string]ncFADefault{
 	ruleNCMassAccess:      {threshold: 300, cooldown: 10800},
+	ruleNCMassDelete:      {threshold: 300, cooldown: 10800},
 	ruleNCFolderSweep:     {threshold: 50, cooldown: 10800},
 	ruleNCNewIPAccess:     {threshold: 50, cooldown: 10800},
 	ruleNCOffHoursAccess:  {threshold: 100, cooldown: 86400},
@@ -121,6 +123,9 @@ var (
 var (
 	// 取得の行: File with id "123" accessed: "/alice@example.com/files/営業/a.pdf"
 	reNCFileAccessed = regexp.MustCompile(`^File with id "?\d+"? accessed: "?(.*?)"?$`)
+	// 削除の行: File with id "123" deleted: "/alice@example.com/files/営業/a.pdf"
+	// 行頭・行末に固定する（ファイル名に同じ文言を入れた行や、ゴミ箱からの復元の行を数えないため）。
+	reNCFileDeleted = regexp.MustCompile(`^File with id "?\d+"? deleted: "?(.*?)"?$`)
 	// 公開リンクの行（Nextcloud の audit.log に出る形）:
 	//   The shared folder with the token "XXXX" by "<持ち主>" has been accessed.
 	//   The shared file with the token "XXXX" by "<持ち主>" has been accessed.
@@ -252,6 +257,10 @@ type ncFABucket struct {
 	ByIP     map[string]int `json:"ip,omitempty"`
 	ByDevice map[string]int `json:"dev,omitempty"`
 	Lines    map[string]int `json:"lines,omitempty"`
+	// Deleted・DelByIP は削除の件数と接続元（取得の Count・ByIP とは別に数える。
+	// 取得のルール（初めての接続元など）に削除が混ざらないようにするため）。
+	Deleted int            `json:"del,omitempty"`
+	DelByIP map[string]int `json:"dip,omitempty"`
 }
 
 type ncFAUser struct {
@@ -820,6 +829,14 @@ func (g *ncFAIngester) add(raw []byte) {
 				g.addFolder(uid, u, p, ts)
 			}
 		}
+	} else if _, ok := ncFAParseDelete(msg); ok {
+		if uid != "" {
+			b := bucketFor(&g.st.user(uid).Buckets, minute)
+			b.Deleted++
+			if ip != "" {
+				incr(&b.DelByIP, ip)
+			}
+		}
 	} else if token, owner, ok := ncFAParsePublicLink(msg); ok && uid == "" {
 		// 公開リンクの行は user が空（または --）。user が入っている行は公開リンクとして数えない。
 		key := ncFATokenKey(token)
@@ -893,6 +910,15 @@ func ncFANormUser(u string) string {
 // ncFAParseAccess は取得の行からファイルのパスを取り出す。
 func ncFAParseAccess(msg string) (string, bool) {
 	m := reNCFileAccessed.FindStringSubmatch(msg)
+	if m == nil {
+		return "", false
+	}
+	return m[1], true
+}
+
+// ncFAParseDelete は削除の行からファイルのパスを取り出す。
+func ncFAParseDelete(msg string) (string, bool) {
+	m := reNCFileDeleted.FindStringSubmatch(msg)
 	if m == nil {
 		return "", false
 	}
@@ -1080,6 +1106,8 @@ func ncFARuleParams(rules AlertRules, ruleID string) (float64, int, bool) {
 
 type ncFAAgg struct {
 	count    int
+	deleted  int
+	delByIP  map[string]int
 	offHours int
 	byIP     map[string]int
 	byDevice map[string]int
@@ -1087,9 +1115,13 @@ type ncFAAgg struct {
 }
 
 func ncFAAggregate(bs []*ncFABucket) ncFAAgg {
-	a := ncFAAgg{byIP: map[string]int{}, byDevice: map[string]int{}, lines: map[string]int{}}
+	a := ncFAAgg{byIP: map[string]int{}, byDevice: map[string]int{}, lines: map[string]int{}, delByIP: map[string]int{}}
 	for _, b := range bs {
 		a.count += b.Count
+		a.deleted += b.Deleted
+		for k, v := range b.DelByIP {
+			a.delByIP[k] += v
+		}
 		a.offHours += b.OffHours
 		for k, v := range b.ByIP {
 			a.byIP[k] += v
@@ -1160,7 +1192,7 @@ const (
 
 // ncFARuleOrder は通知を組み立てる順（ルールごとの上限もこの単位で数える）。
 var ncFARuleOrder = []string{
-	ruleNCMassAccess, ruleNCFolderSweep, ruleNCNewIPAccess, ruleNCOffHoursAccess,
+	ruleNCMassAccess, ruleNCMassDelete, ruleNCFolderSweep, ruleNCNewIPAccess, ruleNCOffHoursAccess,
 	ruleNCPublicLinkBurst, ruleNCServiceNewIP, ruleNCServiceVolume,
 }
 
@@ -1257,10 +1289,16 @@ func ncFAEvaluate(cfg *config.AppConfig, rules AlertRules, state *AlertState, st
 			continue
 		}
 
+		firstStep := fmt.Sprintf(ncFAFirstStepUserFmt, ncFAShellArg(name))
+		// 削除だけをした利用者（取得が 0 件）も対象にするので、取得が 0 件の判定より前に置く。
+		if th, cd, ok := ncFARuleParams(rules, ruleNCMassDelete); ok && agg.deleted > 0 && float64(agg.deleted) >= th {
+			body := fmt.Sprintf("%s が直近 %d 分で %d 件削除（主な接続元 %s）",
+				name, windowMin, agg.deleted, orUnknown(ncFASanitize(ncFATopKey(agg.delByIP), 64)))
+			add(ruleNCMassDelete, cd, ncFACand{subject: uid, label: name, body: body, firstStep: firstStep})
+		}
 		if agg.count == 0 {
 			continue
 		}
-		firstStep := fmt.Sprintf(ncFAFirstStepUserFmt, ncFAShellArg(name))
 		folders := len(u.Folders)
 
 		if th, cd, ok := ncFARuleParams(rules, ruleNCMassAccess); ok && float64(agg.count) >= th {

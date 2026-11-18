@@ -15,6 +15,7 @@ var ruleLabels = map[string]string{
 	"nc_user_created":        "Nextcloud 新規ユーザー作成",
 	"nc_user_first_login":    "Nextcloud 新規ユーザー初回ログイン",
 	"nc_mass_access":         "Nextcloud 大量取得",
+	"nc_mass_delete":         "Nextcloud 大量削除",
 	"nc_folder_sweep":        "Nextcloud 多数フォルダ巡回",
 	"nc_new_ip_access":       "Nextcloud 初めての接続元からの取得",
 	"nc_off_hours_access":    "Nextcloud 夜間・土日の取得",
