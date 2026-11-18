@@ -31,7 +31,7 @@ var ssrCardByID = map[string]apiCardRender{
 }
 
 // buildServerDetailCards は表示可能カードのHTMLを構築する（SSRカードのみ）
-func buildServerDetailCards(h *Handler, visibleCards []navmeta.MonitorCardMeta, cardModes map[string]string, agentID string, requests ...*http.Request) map[string]template.HTML {
+func buildServerDetailCards(h *Handler, visibleCards []navmeta.MonitorCardMeta, cardModes map[string]string, agentID, reportAgentID string, requests ...*http.Request) map[string]template.HTML {
 	cards := map[string]template.HTML{}
 	for _, card := range visibleCards {
 		if cardModes[card.ID] == "hidden" {
@@ -62,7 +62,7 @@ func buildServerDetailCards(h *Handler, visibleCards []navmeta.MonitorCardMeta, 
 		}
 		switch card.ID {
 		case navmeta.CardSecStorageForecast:
-			data = GetStorageForecast(agentID)
+			data = GetStorageForecast(reportAgentID)
 		case navmeta.CardSecUpdates:
 			data = GetUpdatesData(agentID)
 		case navmeta.CardSecCronStatus:
@@ -110,6 +110,7 @@ func (h *Handler) APICard(w http.ResponseWriter, r *http.Request) {
 	}
 	var data interface{}
 	agentID := strings.TrimSpace(r.URL.Query().Get("agent"))
+	reportAgentID := agentID
 	// APICard も dispatchAPI と同様に agent_id を厳格検証する。
 	// 形式チェック → tenant 越境チェック → ローカル agent の同視化 の順で適用する。
 	if agentID != "" && !isValidAgentID(agentID) {
@@ -154,7 +155,7 @@ func (h *Handler) APICard(w http.ResponseWriter, r *http.Request) {
 	case "cron_status":
 		data = GetCronStatus(agentID)
 	case "storage_forecast":
-		data = GetStorageForecast(agentID)
+		data = GetStorageForecast(reportAgentID)
 	default:
 		if cardMeta.ID == navmeta.CardSecAgentStatus {
 			data = GetAgentStatusForConfig(h.appCfg)

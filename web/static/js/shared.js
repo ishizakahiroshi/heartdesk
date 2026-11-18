@@ -2902,8 +2902,8 @@ function renderNcStorageCard(container, data, r2Data) {
 			var box = buildQuotaStatBox(
 				name,
 				parseInt(f.size || 0),
-				f.quota ? parseInt(f.quota) : 0,
-				0,
+				f.quota == null ? 0 : parseInt(f.quota),
+				f.quota == null ? 1 : 0,
 				0
 			);
 			gfGrid.appendChild(box);
@@ -3015,7 +3015,7 @@ function buildQuotaStatBox(title, used, quota, unlimited, count) {
 
 	var usedStr = formatBytes(parseInt(used || 0));
 	var quotaStr = unlimited > 0 ? '無制限' : formatBytes(parseInt(quota || 0));
-	if (unlimited > 0) {
+	if (unlimited > 0 && count > 0) {
 		quotaStr += ' (無制限' + formatCount(unlimited) + '件)';
 	}
 	var suffix = count ? ' / ' + formatCount(count) + '件' : '';

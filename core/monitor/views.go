@@ -633,7 +633,7 @@ func (h *Handler) renderServerDetail(w http.ResponseWriter, r *http.Request) {
 	if isLocal {
 		ssrAgentID = ""
 	}
-	cards := buildServerDetailCards(h, visibleCards, cardModes, ssrAgentID, r)
+	cards := buildServerDetailCards(h, visibleCards, cardModes, ssrAgentID, seen.AgentID, r)
 
 	data := ServerDetailPageData{
 		PageTitle:                 CurrentMonitorIdentity().AppName,
