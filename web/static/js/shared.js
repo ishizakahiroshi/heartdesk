@@ -3014,12 +3014,12 @@ function buildQuotaStatBox(title, used, quota, unlimited, count) {
 	val.className = 'stat-value';
 
 	var usedStr = formatBytes(parseInt(used || 0));
-	var quotaStr = quota > 0 ? formatBytes(parseInt(quota)) : '無制限';
+	var quotaStr = unlimited > 0 ? '無制限' : formatBytes(parseInt(quota || 0));
 	if (unlimited > 0) {
 		quotaStr += ' (無制限' + formatCount(unlimited) + '件)';
 	}
 	var suffix = count ? ' / ' + formatCount(count) + '件' : '';
-	if (quota > 0) {
+	if (quota > 0 && unlimited === 0) {
 		var pct = Math.min((used / quota * 100), 100).toFixed(1);
 		val.textContent = usedStr + ' / ' + quotaStr + ' (' + pct + '%)' + suffix;
 		var colorClass = barColorClass(pct);

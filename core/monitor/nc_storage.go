@@ -110,12 +110,12 @@ func GetNcStorage(cfg *config.AppConfig) NcStorageData {
 				return nil
 			}
 			n, err := strconv.ParseInt(s, 10, 64)
-			if err != nil || n <= 0 {
+			if err != nil || n < 0 {
 				return nil
 			}
 			return &n
 		case float64:
-			if val <= 0 {
+			if val < 0 {
 				return nil
 			}
 			n := int64(val)
