@@ -54,6 +54,38 @@ func TestPolicyTable(t *testing.T) {
 		// receipt outcome disagrees with the policy
 		{"MKCOL", 405, OpEnsureCollection, "integration_error", Unclassified},
 		{"GET", 404, OpFetchFile, "expected", Unclassified},
+		// 423 on a fetch: the file is locked (integration's own failure)
+		{"GET", 423, OpFetchFile, "integration_error", IntegrationError},
+		// 499 only through the producer's own receipt, with the operation's method
+		{"GET", 499, OpFetchFile, "expected", Expected},
+		{"GET", 499, OpPreviewFile, "expected", Expected},
+		{"PUT", 499, OpUploadFile, "expected", Expected},
+		{"PROPFIND", 499, OpFetchFile, "expected", Unclassified},
+		{"GET", 499, OpFetchFile, "integration_error", Unclassified},
+		// uploads
+		{"PUT", 201, OpUploadFile, "success", Success},
+		{"PUT", 412, OpUploadFile, "expected", Expected},
+		{"PUT", 404, OpUploadFile, "integration_error", IntegrationError},
+		{"PUT", 423, OpUploadFile, "integration_error", IntegrationError},
+		{"PUT", 403, OpUploadFile, "integration_error", Unclassified},
+		{"MOVE", 412, OpUploadFile, "expected", Unclassified},
+		{"MKCOL", 405, OpUploadSession, "expected", Expected},
+		{"PUT", 423, OpUploadChunk, "integration_error", IntegrationError},
+		{"PUT", 412, OpUploadChunk, "expected", Unclassified},
+		{"MOVE", 412, OpUploadAssemble, "expected", Expected},
+		{"MOVE", 423, OpUploadAssemble, "integration_error", IntegrationError},
+		{"MOVE", 201, OpUploadAssemble, "success", Success},
+		{"PUT", 201, OpUploadAssemble, "success", Unclassified},
+		// deletes
+		{"DELETE", 404, OpDeleteFile, "expected", Expected},
+		{"DELETE", 404, OpDeleteUploadSession, "expected", Expected},
+		{"DELETE", 403, OpDeleteFile, "expected", Unclassified},
+		{"GET", 404, OpDeleteFile, "expected", Unclassified},
+		// lookups
+		{"PROPFIND", 404, OpFileID, "integration_error", IntegrationError},
+		{"PROPFIND", 404, OpListChildren, "expected", Expected},
+		{"PROPFIND", 401, OpListChildren, "expected", Unclassified},
+		{"PROPFIND", 207, OpFileID, "success", Success},
 	}
 	for _, c := range cases {
 		raw, rc := pair(c.method, c.status, c.op, c.outc)

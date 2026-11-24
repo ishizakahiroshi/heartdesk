@@ -2,6 +2,34 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.3.8] - 2026-11-24
+
+### Added
+
+- Inventory history and freshness: the monitor stores the agent's opt-in configuration
+  snapshot (heartpost `inventory`), keeps a bounded history, and marks stale or
+  partially collected snapshots. Alert rules `inventory_changed`, `inventory_stale` and
+  `inventory_collection_failed` (all disabled by default).
+- `nc_mass_delete` alert rule (disabled by default): counts file deletions per user in
+  the Nextcloud audit log over 60 minutes (default threshold 300, cooldown 3h).
+  Deletions never feed the access rules; service accounts are excluded.
+- Nextcloud new-user alerts show how the user was created (occ, web/API or unknown)
+  and first-login alerts show the client (first 100 characters of the User-Agent).
+- `httpclassification`: the operations heartpost 0.3.4 adds for uploads, deletes and
+  lookups, each bound to the methods it uses. A 499 is excused only when the producer's
+  own receipt for the same request says it cancelled the call; a 499 without that
+  receipt keeps scoring. `fetch_file` 423 (locked) is an integration error.
+
+### Fixed
+
+- Nextcloud user notifications are deduplicated.
+- Storage monitoring distinguishes a zero quota from an unlimited one and keeps the
+  local agent in the storage forecast.
+
+### Changed
+
+- Resource history scans read less data per request.
+
 ## [0.3.7] - 2026-10-30
 
 ### Added

@@ -55,13 +55,51 @@ func (c Class) String() string {
 	}
 }
 
-// Operation names written by the producer.
+// Operation names written by the producer (heartpost httpoutcome).
 const (
-	OpEnsureCollection = "ensure_collection"
-	OpPathExists       = "path_exists"
-	OpFetchFile        = "fetch_file"
-	OpPreviewFile      = "preview_file"
+	OpEnsureCollection    = "ensure_collection"
+	OpPathExists          = "path_exists"
+	OpFetchFile           = "fetch_file"
+	OpPreviewFile         = "preview_file"
+	OpUploadFile          = "upload_file"
+	OpUploadSession       = "upload_session"
+	OpUploadChunk         = "upload_chunk"
+	OpUploadAssemble      = "upload_assemble"
+	OpDeleteFile          = "delete_file"
+	OpDeleteUploadSession = "delete_upload_session"
+	OpFileID              = "file_id"
+	OpListChildren        = "list_children"
 )
+
+// StatusClientClosedRequest is the status nginx logs, and the producer
+// records, when the producer cancelled the request before a response arrived.
+const StatusClientClosedRequest = 499
+
+// operationMethods lists the methods each operation really uses. A receipt
+// only explains an event made with one of its operation's methods.
+var operationMethods = map[string][]string{
+	OpEnsureCollection:    {"MKCOL"},
+	OpPathExists:          {"PROPFIND"},
+	OpFetchFile:           {"GET", "HEAD"},
+	OpPreviewFile:         {"GET"},
+	OpUploadFile:          {"PUT"},
+	OpUploadSession:       {"MKCOL"},
+	OpUploadChunk:         {"PUT"},
+	OpUploadAssemble:      {"MOVE"},
+	OpDeleteFile:          {"DELETE"},
+	OpDeleteUploadSession: {"DELETE"},
+	OpFileID:              {"PROPFIND"},
+	OpListChildren:        {"PROPFIND"},
+}
+
+func operationUses(op, method string) bool {
+	for _, m := range operationMethods[op] {
+		if m == method {
+			return true
+		}
+	}
+	return false
+}
 
 // RawEvent is one access-log event. Scope identifies the agent/source the
 // event came from; a receipt only matches events with the same Scope.
@@ -119,34 +157,52 @@ func ValidRequestID(s string) bool { return reRequestID.MatchString(s) }
 // policyOutcome returns the outcome the policy assigns to (operation, method,
 // status), or "" when the combination is not covered. The receipt's own
 // outcome is only checked for consistency with this; it never decides.
+//
+// A 499 is covered only through a receipt: the producer writes one when it
+// cancelled the request itself, and the event must carry the same request id,
+// method, path and status. A 499 without that receipt stays Unclassified.
 func policyOutcome(op, method string, status int) (Class, string) {
-	if status >= 200 && status < 300 {
-		// Only the method that operation really uses counts as success evidence.
-		switch {
-		case op == OpEnsureCollection && method == "MKCOL",
-			op == OpPathExists && method == "PROPFIND",
-			op == OpFetchFile && (method == "GET" || method == "HEAD"),
-			op == OpPreviewFile && method == "GET":
-			return Success, "success"
-		}
+	// Only the methods an operation really uses count as evidence.
+	if !operationUses(op, method) {
 		return Unclassified, ""
 	}
+	if status >= 200 && status < 300 {
+		return Success, "success"
+	}
+	if status == StatusClientClosedRequest {
+		return Expected, "expected"
+	}
 	switch op {
-	case OpEnsureCollection:
-		if method == "MKCOL" && status == 405 {
+	case OpEnsureCollection, OpUploadSession:
+		if status == 405 {
 			return Expected, "expected"
 		}
-	case OpPathExists:
-		if method == "PROPFIND" && status == 404 {
+	case OpPathExists, OpListChildren:
+		if status == 404 {
 			return Expected, "expected"
 		}
 	case OpFetchFile:
-		if (method == "GET" || method == "HEAD") && status == 404 {
+		if status == 404 || status == 423 {
 			return IntegrationError, "integration_error"
 		}
-	case OpPreviewFile:
-		if method == "GET" && status == 404 {
+	case OpPreviewFile, OpFileID:
+		if status == 404 {
 			return IntegrationError, "integration_error"
+		}
+	case OpUploadFile, OpUploadAssemble:
+		switch status {
+		case 412:
+			return Expected, "expected"
+		case 404, 409, 423:
+			return IntegrationError, "integration_error"
+		}
+	case OpUploadChunk:
+		if status == 404 || status == 423 {
+			return IntegrationError, "integration_error"
+		}
+	case OpDeleteFile, OpDeleteUploadSession:
+		if status == 404 {
+			return Expected, "expected"
 		}
 	}
 	return Unclassified, ""
